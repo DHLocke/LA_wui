@@ -1,0 +1,658 @@
+---
+title: "test_summarize_raster"
+author: "Dexter H. Locke, PhD"
+date: "`r format(Sys.time())`"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## 0 set up
+```{r}
+# load libraries
+# packages we'll be using
+packs <- c('tidyverse',      # a must have!
+           'tidylog',        # makes things very verbose for 2x checking 
+           'magrittr',       # all of the pipes
+           'sf',             # simple features
+           'stars',          # faster raster
+           'raster',         # raster
+           'rgdal',          # for gdal
+           'gdalUtils',      # more gdal support
+           'tictoc',         # you speed freak
+           'doParallel',     # for parallelizing
+           'mapview'         # quick webmaps for zoom/pan viz
+           )         
+
+# check for all of the libraries
+if (length(setdiff(packs, rownames(installed.packages()))) > 0) {
+  install.packages(setdiff(packs, rownames(installed.packages())))
+}
+
+lapply(packs, library, character.only = TRUE)
+
+
+# DONUTS https://github.com/r-spatial/sf/issues/346
+st_erase <- function(x, y) st_difference(x, st_union(st_combine(y)))
+# st_erase(x,y) will erase y from x.
+
+library(rstudioapi)
+if (Sys.getenv("RSTUDIO") == "1" && !nzchar(Sys.getenv("RSTUDIO_TERM")) && 
+    Sys.info()["sysname"] == "Darwin" && getRversion() >= "4.0.0") {
+    if(versionInfo()$version < "1.3.1056"){
+	parallel:::setDefaultClusterOptions(setup_strategy = "sequential")
+}  
+}
+
+
+# create temp folder if doesn't exist
+temp_name <- '_temp_gdal_outs'
+ifelse(!dir.exists(file.path(temp_name)), dir.create(file.path(temp_name)), FALSE)
+temp_dir <- paste(getwd(), temp_name, sep = '/') # directory for temporary files
+
+```
+
+
+## 1 get raster data
+```{r}
+#raster_file <- file.path('data/OLD_Woosley_data_and_scripts/LandCover/landcover_2016_cwpp6.v1.tif')
+raster_file <- file.path('data/WoosleyFire_eCogOuput_06Dec2019/LandCover/98.tif')
+
+raster_file <- file.path('data/WUI-selected/landcover.tif')
+
+#raster_file <- file.path('data/WoosleyFire_eCogOuput_06Dec2019/LandCover/test.tif')
+#raster_file2 <- file.path('data/WoosleyFire_eCogOuput_06Dec2019/LandCover/97.tif')
+
+#rast <- raster::raster(raster_file)
+
+system.time(lc_stars  <- stars::read_stars(raster_file, proxy = TRUE))
+
+(pxl_conv <- .75*.75) # TODO; IS THIS correct?
+
+#system.time(lc_stars2 <- stars::read_stars(raster_file2, proxy = TRUE))
+
+# %>% 
+#   
+
+#lc_stars %>% filter(lc_stars$test.tif > 0) %>% plot()
+#   
+# 
+# plot(st_mosaic(lc_stars, lc_stars2))
+# dev.off()
+# 
+# plot(c(lc_stars, lc_stars2))
+# dev.off()
+
+
+plot(lc_stars); #plot(lc_stars2)
+dev.off()
+
+
+# virtual raster (for multiple readers)
+# vrt_name <- 'CWPP_Unit_virtual.vrt'    # GDAL DOES NOT LIKE SPACES IN NAMES!!
+vrt_name <- 'virtual.vrt'    # GDAL DOES NOT LIKE SPACES IN NAMES!!
+
+# build a virtual raster
+tic(); gdalbuildvrt(gdalfile = raster_file,
+                    output.vrt = file.path(temp_dir, vrt_name),
+                    verbose = TRUE); toc()
+
+virtual_raster_file <- file.path(temp_dir, vrt_name)
+
+```
+
+
+## 2 get polygons
+```{r}
+# GIS DATA from MIRANDA
+# st_layers(paste0(getwd(), '/data/Outgoing_BuildingSumms_DHL20200423.gdb'))
+
+# get a bounding box, for testing reasons
+#bb <- st_bbox(lc_stars) %>% st_as_sfc() %>% st_as_sf()
+
+build <- read_sf(dsn = paste0(getwd(), '/data/Outgoing_BuildingSumms_DHL20200423.gdb'),
+                      layer = 'Buildings_ParcelID_DINS',
+                      quiet = FALSE) %>%
+  tidylog::select(ID_Build) %>% 
+  tidylog::distinct(ID_Build) %>% 
+  #rowid_to_column(var = 'id') %>% 
+  st_transform(crs = st_crs(lc_stars)) 
+ # st_join(., bb, join = st_within, left = FALSE)
+  
+#mapview(bb, alpha.regions = .15) + 
+mapview(build)
+
+build %>% distinct(ID_Build)
+build$ID_Build[build$ID_Build %in% build$ID_Build[duplicated(build$ID_Build)] ]
+all.equal(length(unique(build$ID_Build)), dim(build)[1])
+max(build$ID_Build)
+
+#build %>% ggplot(aes(id, ID_Build)) + geom_point()
+
+# 
+# all.equal(crs(rast), crs(build))
+# all.equal(st_crs(rast), st_crs(build))
+# 
+# all.equal(st_crs(lc_stars), st_crs(build))
+# all.equal(st_crs(lc_stars), st_crs(rast))
+
+
+#%>% st_transform(crs = st_crs(raster_test))
+#all.equal(st_crs(build), st_crs(raster_test))
+
+#mapview(build) # a little slow..
+
+# buffer
+tic(); build_10  <- build %>% st_buffer(., dist = 10); 
+       build_100 <- build %>% st_buffer(., dist = 100);
+       build_200 <- build %>% st_buffer(., dist = 200);
+       build_300 <- build %>% st_buffer(., dist = 300); toc() # around 10 seconds
+
+# initialize lists
+donut_300 <-donut_200<-donut_100<-donut_10<-rep(list(data.frame(ID_Build  = NA_integer_)), nrow(build))
+
+# kind of slow, hence parallizaiton
+# tic(); for(i in 1:nrow(build)){
+# donut_10[[i]]  <- st_erase(build_10[i,],  build[i,])
+# donut_100[[i]] <- st_erase(build_100[i,], build[i,])
+# donut_200[[i]] <- st_erase(build_200[i,], build[i,])
+# donut_300[[i]] <- st_erase(build_300[i,], build[i,])
+# }; toc() # 500 seconds
+
+
+
+detectCores()
+split <- 12
+
+# 10
+tic()
+cl <- makeCluster(split); registerDoParallel(cl)
+donut_10 <- foreach(i = 1:nrow(build), .export=c('st_difference','st_union','st_combine')) %dopar% {
+  st_erase(build_10[i,],  build[i,])
+}; stopCluster(cl); toc()
+
+
+# 100
+tic()
+cl <- makeCluster(split); registerDoParallel(cl)
+donut_100 <- foreach(i = 1:nrow(build), .export=c('st_difference','st_union','st_combine')) %dopar% {
+  st_erase(build_100[i,],  build[i,])
+}; stopCluster(cl); toc()
+
+
+# 200
+tic()
+cl <- makeCluster(split); registerDoParallel(cl)
+donut_200 <- foreach(i = 1:nrow(build), .export=c('st_difference','st_union','st_combine')) %dopar% {
+  st_erase(build_200[i,],  build[i,])
+}; stopCluster(cl); toc()
+
+
+# 300
+tic()
+cl <- makeCluster(split); registerDoParallel(cl)
+donut_300 <- foreach(i = 1:nrow(build), .export=c('st_difference','st_union','st_combine')) %dopar% {
+  st_erase(build_300[i,],  build[i,])
+}; stopCluster(cl); toc()
+
+stopImplicitCluster()
+
+
+tic();donut_10  %<>% bind_rows()
+donut_100 %<>% bind_rows() 
+donut_200 %<>% bind_rows() 
+donut_300 %<>% bind_rows(); toc()
+
+
+#mapview(donut_300[1:10,]) + mapview(donut_200[1:10,]) +
+  mapview(donut_100[1:10,]) + mapview(donut_10[1:10,])
+
+
+mapview(donut_100[50:110,]) + mapview(donut_10[50:110,])
+
+#build %>% slice(1:50) %>% mapview() + build_10 %>% slice(1:50) %>% mapview()
+
+# optional clean up?
+rm(build_10, build_100, build_200, build_300)
+```
+
+
+## 3 try some land cover summaries
+### donut 10
+```{r}
+# work flow wants an "sp" class. Could convert above on inmport, or delete build?
+#tic(); shp <- build_10 %>% rowid_to_column(var = 'id') %>% as_Spatial() ; toc()
+
+# FIXME but the id biz above in the buffer?
+# FIXME use an existing id as iterator in the loop below?
+# REQUIRES SEQUNETIAL ID's
+donut_10 %>% st_drop_geometry() %>% count(ID_Build) %>% arrange(desc(n))
+
+tic(); shp <- donut_10 %>% 
+  #slice(800 : 1200) %>% 
+  as_Spatial(); toc()
+
+split <- 12
+start_12_cores <- proc.time()
+
+cl <- makeCluster(split)
+registerDoParallel(cl)
+
+results_10 <- rep(list(data.frame(polygon_id  = NA, class = NA,  pixel_count = NA)), nrow(shp))
+
+# FIXME requires sequential IDs
+results_10 <- foreach(i = 1:nrow(shp), .export=c('writeOGR','raster','values')) %dopar% {
+
+#results_10 <- foreach(i = seq_long(shp@data$ID_Build)), .export=c('writeOGR','raster','values')) %dopar% {
+
+    # subsets polygons
+    writeOGR(shp[i,],
+             dsn = temp_dir,
+             layer = paste0('temp_poly_', i),
+             driver = 'ESRI Shapefile')
+
+    # name / locate the temporary files.
+    temp_shp <- file.path(paste0(temp_dir, '/temp_poly_', i, '.shp'))
+    temp_tif <- file.path(paste0(temp_dir, '/temp_extracted_', i, '.tif'))
+
+    # the work horse of the whole operation (set up)
+    call_args <- paste('-crop_to_cutline -overwrite -dstnodata NULL -cutline',
+                       temp_shp,           # the individual polygon shapefile
+                       virtual_raster_file,# virtual raster
+                       temp_tif)           # the selected, cropped down pixels within temp_shp
+
+    # call gdalwarp to clip circle raster.
+    system2(command = "gdalwarp", args = call_args)
+
+    # read in the clipped raster and tabulate the number of cells by type
+    # note extensive testing with microbenchmark looking at nesting the raster, table, and values
+    # functions like this was the fastest, but not by much.
+    clipped_raster <- raster::raster(temp_tif)
+    out <- table(raster::values(clipped_raster))
+
+    # Delete temp files , clean up
+    system2(command = "rm", args = paste(temp_tif)) # delete the *.tif
+    system2(command = 'rm',                         # delete shapefile friends
+            args = paste0(temp_dir, '/temp_poly_', i, c('.shp','.shx','.dbf','.prj')))
+
+    # Output is returned as a long-form data frame with a column for plot ID, pixel class, and pixel count.
+    # Error catching code is included so that if there are no values in the circle (entirely outside raster),
+    # TODO make this a tibble
+    # TODO change column names?
+    # it will return an empty dataframe
+    # if (length(out) > 0) {
+      return(data.frame(polygon_id = i, class = names(out), pixel_count = as.numeric(out)))
+    # } else {
+    #   return(data.frame(polygon_id = integer(0), class = character(0), pixel_count = numeric(0)))
+    #}
+
+  }
+
+stopCluster(cl)
+
+(time_12_cores_10ft_buff <- proc.time() - start_12_cores)
+
+min(shp@data$ID_Build)
+max(shp@data$ID_Build)
+
+results_10[[11140]]
+
+results_10 %>%
+#results %>%
+  map_df(., tibble) %>%
+  tidylog::filter(class !=0) %>%
+  mutate(class = recode_factor(class,
+                        '1' = 'tree',
+                        '2' = 'grass',
+                        '3' = 'soil',
+                        '4' = 'water',
+                        '5' = 'building',
+                        '6' = 'road',
+                        '7' = 'other_paved',
+                        '8' = 'shrub', .ordered = TRUE),
+         area = pixel_count*pxl_conv) %>% #%T>% print %>%  
+  pivot_wider(id_cols = polygon_id, names_from = class, names_prefix = 'a_', names_sort = TRUE,
+              values_from = area, values_fill = 0) %>% 
+  mutate(a_total = rowSums(.[,-1])) %>% # TODO;make kthis more specific?
+#   dplyr::select(id, # FIXME what if a land cover class is not present?
+#                 a_tree, a_grass, a_soil, a_water, a_building, a_road, a_other_paved,
+#                 a_total) %>% # just cosmetic reordering
+  mutate(p_tree        = 100*(a_tree        / a_total),
+         p_grass       = 100*(a_grass       / a_total),
+         p_soil        = 100*(a_soil        / a_total),
+         p_water       = 100*(a_water       / a_total),
+         p_building    = 100*(a_building    / a_total),
+         p_road        = 100*(a_road        / a_total),
+         p_other_paved = 100*(a_other_paved / a_total),
+         p_shrub       = 100*(a_shrub       / a_total),
+         `Impervious Surface (%)` = 100*((a_building + a_road + a_other_paved) /
+                                      (a_tree + a_grass + a_soil + a_building + a_road + a_other_paved))) %>% 
+  write_csv(., paste0('output_data/donut_10_summaries_', Sys.Date(), '.csv'))
+
+```
+
+### donut 100
+```{r}
+tic(); shp <- donut_100 %>% as_Spatial(); toc()
+
+split <- 14
+start_12_cores <- proc.time()
+
+cl <- makeCluster(split)
+registerDoParallel(cl)
+
+results_100 <- rep(list(data.frame(polygon_id  = NA, class = NA,  pixel_count = NA)), nrow(shp))
+
+# FIXME requires sequential IDs
+results_100 <- foreach(i = 1:nrow(shp), .export=c('writeOGR','raster','values')) %dopar% {
+
+#results_10 <- foreach(i = seq_long(shp@data$ID_Build)), .export=c('writeOGR','raster','values')) %dopar% {
+
+    # subsets polygons
+    writeOGR(shp[i,],
+             dsn = temp_dir,
+             layer = paste0('temp_poly_', i),
+             driver = 'ESRI Shapefile')
+
+    # name / locate the temporary files.
+    temp_shp <- file.path(paste0(temp_dir, '/temp_poly_', i, '.shp'))
+    temp_tif <- file.path(paste0(temp_dir, '/temp_extracted_', i, '.tif'))
+
+    # the work horse of the whole operation (set up)
+    call_args <- paste('-crop_to_cutline -overwrite -dstnodata NULL -cutline',
+                       temp_shp,           # the individual polygon shapefile
+                       virtual_raster_file,# virtual raster
+                       temp_tif)           # the selected, cropped down pixels within temp_shp
+
+    # call gdalwarp to clip circle raster.
+    system2(command = "gdalwarp", args = call_args)
+
+    # read in the clipped raster and tabulate the number of cells by type
+    # note extensive testing with microbenchmark looking at nesting the raster, table, and values
+    # functions like this was the fastest, but not by much.
+    clipped_raster <- raster::raster(temp_tif)
+    out <- table(raster::values(clipped_raster))
+
+    # Delete temp files , clean up
+    system2(command = "rm", args = paste(temp_tif)) # delete the *.tif
+    system2(command = 'rm',                         # delete shapefile friends
+            args = paste0(temp_dir, '/temp_poly_', i, c('.shp','.shx','.dbf','.prj')))
+
+    # Output is returned as a long-form data frame with a column for plot ID, pixel class, and pixel count.
+    # Error catching code is included so that if there are no values in the circle (entirely outside raster),
+    # TODO make this a tibble
+    # TODO change column names?
+    # it will return an empty dataframe
+    # if (length(out) > 0) {
+      return(data.frame(polygon_id = i, class = names(out), pixel_count = as.numeric(out)))
+    # } else {
+    #   return(data.frame(polygon_id = integer(0), class = character(0), pixel_count = numeric(0)))
+    #}
+
+  }
+
+stopCluster(cl)
+
+(time_12_cores_100ft_buff <- proc.time() - start_12_cores)
+
+min(shp@data$ID_Build)
+max(shp@data$ID_Build)
+
+results_100[[11140]]
+
+results_100 %>%
+#results %>%
+  map_df(., tibble) %>%
+  tidylog::filter(class !=0) %>%
+  mutate(class = recode_factor(class,
+                        '1' = 'tree',
+                        '2' = 'grass',
+                        '3' = 'soil',
+                        '4' = 'water',
+                        '5' = 'building',
+                        '6' = 'road',
+                        '7' = 'other_paved',
+                        '8' = 'shrub', .ordered = TRUE),
+         area = pixel_count*pxl_conv) %>% #%T>% print %>%  
+  pivot_wider(id_cols = polygon_id, names_from = class, names_prefix = 'a_', names_sort = TRUE,
+              values_from = area, values_fill = 0) %>% 
+  mutate(a_total = rowSums(.[,-1])) %>% # TODO;make kthis more specific?
+#   dplyr::select(id, # FIXME what if a land cover class is not present?
+#                 a_tree, a_grass, a_soil, a_water, a_building, a_road, a_other_paved,
+#                 a_total) %>% # just cosmetic reordering
+  mutate(p_tree        = 100*(a_tree        / a_total),
+         p_grass       = 100*(a_grass       / a_total),
+         p_soil        = 100*(a_soil        / a_total),
+         p_water       = 100*(a_water       / a_total),
+         p_building    = 100*(a_building    / a_total),
+         p_road        = 100*(a_road        / a_total),
+         p_other_paved = 100*(a_other_paved / a_total),
+         p_shrub       = 100*(a_shrub       / a_total),
+         `Impervious Surface (%)` = 100*((a_building + a_road + a_other_paved) /
+                                      (a_tree + a_grass + a_soil + a_building + a_road + a_other_paved))) %>% 
+  write_csv(., paste0('output_data/donut_100_summaries_', Sys.Date(), '.csv'))
+
+```
+
+
+
+### donut 200
+```{r}
+tic(); shp <- donut_200 %>% as_Spatial(); toc()
+
+split <- 14
+start_12_cores <- proc.time()
+
+cl <- makeCluster(split)
+registerDoParallel(cl)
+
+results_200 <- rep(list(data.frame(polygon_id  = NA, class = NA,  pixel_count = NA)), nrow(shp))
+
+# FIXME requires sequential IDs
+results_200 <- foreach(i = 1:nrow(shp), .export=c('writeOGR','raster','values')) %dopar% {
+
+#results_10 <- foreach(i = seq_long(shp@data$ID_Build)), .export=c('writeOGR','raster','values')) %dopar% {
+
+    # subsets polygons
+    writeOGR(shp[i,],
+             dsn = temp_dir,
+             layer = paste0('temp_poly_', i),
+             driver = 'ESRI Shapefile')
+
+    # name / locate the temporary files.
+    temp_shp <- file.path(paste0(temp_dir, '/temp_poly_', i, '.shp'))
+    temp_tif <- file.path(paste0(temp_dir, '/temp_extracted_', i, '.tif'))
+
+    # the work horse of the whole operation (set up)
+    call_args <- paste('-crop_to_cutline -overwrite -dstnodata NULL -cutline',
+                       temp_shp,           # the individual polygon shapefile
+                       virtual_raster_file,# virtual raster
+                       temp_tif)           # the selected, cropped down pixels within temp_shp
+
+    # call gdalwarp to clip circle raster.
+    system2(command = "gdalwarp", args = call_args)
+
+    # read in the clipped raster and tabulate the number of cells by type
+    # note extensive testing with microbenchmark looking at nesting the raster, table, and values
+    # functions like this was the fastest, but not by much.
+    clipped_raster <- raster::raster(temp_tif)
+    out <- table(raster::values(clipped_raster))
+
+    # Delete temp files , clean up
+    system2(command = "rm", args = paste(temp_tif)) # delete the *.tif
+    system2(command = 'rm',                         # delete shapefile friends
+            args = paste0(temp_dir, '/temp_poly_', i, c('.shp','.shx','.dbf','.prj')))
+
+    # Output is returned as a long-form data frame with a column for plot ID, pixel class, and pixel count.
+    # Error catching code is included so that if there are no values in the circle (entirely outside raster),
+    # TODO make this a tibble
+    # TODO change column names?
+    # it will return an empty dataframe
+    # if (length(out) > 0) {
+      return(data.frame(polygon_id = i, class = names(out), pixel_count = as.numeric(out)))
+    # } else {
+    #   return(data.frame(polygon_id = integer(0), class = character(0), pixel_count = numeric(0)))
+    #}
+
+  }
+
+stopCluster(cl)
+
+(time_12_cores_200ft_buff <- proc.time() - start_12_cores)
+
+min(shp@data$ID_Build)
+max(shp@data$ID_Build)
+
+results_200[[11140]]
+
+results_200 %>%
+#results %>%
+  map_df(., tibble) %>%
+  tidylog::filter(class !=0) %>%
+  mutate(class = recode_factor(class,
+                        '1' = 'tree',
+                        '2' = 'grass',
+                        '3' = 'soil',
+                        '4' = 'water',
+                        '5' = 'building',
+                        '6' = 'road',
+                        '7' = 'other_paved',
+                        '8' = 'shrub', .ordered = TRUE),
+         area = pixel_count*pxl_conv) %>% #%T>% print %>%  
+  pivot_wider(id_cols = polygon_id, names_from = class, names_prefix = 'a_', names_sort = TRUE,
+              values_from = area, values_fill = 0) %>% 
+  mutate(a_total = rowSums(.[,-1])) %>% # TODO;make kthis more specific?
+#   dplyr::select(id, # FIXME what if a land cover class is not present?
+#                 a_tree, a_grass, a_soil, a_water, a_building, a_road, a_other_paved,
+#                 a_total) %>% # just cosmetic reordering
+  mutate(p_tree        = 100*(a_tree        / a_total),
+         p_grass       = 100*(a_grass       / a_total),
+         p_soil        = 100*(a_soil        / a_total),
+         p_water       = 100*(a_water       / a_total),
+         p_building    = 100*(a_building    / a_total),
+         p_road        = 100*(a_road        / a_total),
+         p_other_paved = 100*(a_other_paved / a_total),
+         p_shrub       = 100*(a_shrub       / a_total),
+         `Impervious Surface (%)` = 100*((a_building + a_road + a_other_paved) /
+                                      (a_tree + a_grass + a_soil + a_building + a_road + a_other_paved))) %>% 
+  write_csv(., paste0('output_data/donut_200_summaries_', Sys.Date(), '.csv'))
+
+```
+
+
+
+### donut 300
+```{r}
+tic(); shp <- donut_300 %>% as_Spatial(); toc()
+
+split <- 14
+start_12_cores <- proc.time()
+
+cl <- makeCluster(split)
+registerDoParallel(cl)
+
+results_300 <- rep(list(data.frame(polygon_id  = NA, class = NA,  pixel_count = NA)), nrow(shp))
+
+# FIXME requires sequential IDs
+results_300 <- foreach(i = 1:nrow(shp), .export=c('writeOGR','raster','values')) %dopar% {
+
+#results_10 <- foreach(i = seq_long(shp@data$ID_Build)), .export=c('writeOGR','raster','values')) %dopar% {
+
+    # subsets polygons
+    writeOGR(shp[i,],
+             dsn = temp_dir,
+             layer = paste0('temp_poly_', i),
+             driver = 'ESRI Shapefile')
+
+    # name / locate the temporary files.
+    temp_shp <- file.path(paste0(temp_dir, '/temp_poly_', i, '.shp'))
+    temp_tif <- file.path(paste0(temp_dir, '/temp_extracted_', i, '.tif'))
+
+    # the work horse of the whole operation (set up)
+    call_args <- paste('-crop_to_cutline -overwrite -dstnodata NULL -cutline',
+                       temp_shp,           # the individual polygon shapefile
+                       virtual_raster_file,# virtual raster
+                       temp_tif)           # the selected, cropped down pixels within temp_shp
+
+    # call gdalwarp to clip circle raster.
+    system2(command = "gdalwarp", args = call_args)
+
+    # read in the clipped raster and tabulate the number of cells by type
+    # note extensive testing with microbenchmark looking at nesting the raster, table, and values
+    # functions like this was the fastest, but not by much.
+    clipped_raster <- raster::raster(temp_tif)
+    out <- table(raster::values(clipped_raster))
+
+    # Delete temp files , clean up
+    system2(command = "rm", args = paste(temp_tif)) # delete the *.tif
+    system2(command = 'rm',                         # delete shapefile friends
+            args = paste0(temp_dir, '/temp_poly_', i, c('.shp','.shx','.dbf','.prj')))
+
+    # Output is returned as a long-form data frame with a column for plot ID, pixel class, and pixel count.
+    # Error catching code is included so that if there are no values in the circle (entirely outside raster),
+    # TODO make this a tibble
+    # TODO change column names?
+    # it will return an empty dataframe
+    # if (length(out) > 0) {
+      return(data.frame(polygon_id = i, class = names(out), pixel_count = as.numeric(out)))
+    # } else {
+    #   return(data.frame(polygon_id = integer(0), class = character(0), pixel_count = numeric(0)))
+    #}
+
+  }
+
+stopCluster(cl)
+
+(time_12_cores_300ft_buff <- proc.time() - start_12_cores)
+
+min(shp@data$ID_Build)
+max(shp@data$ID_Build)
+
+results_300[[11140]]
+
+results_300 %>%
+#results %>%
+  map_df(., tibble) %>%
+  tidylog::filter(class !=0) %>%
+  mutate(class = recode_factor(class,
+                        '1' = 'tree',
+                        '2' = 'grass',
+                        '3' = 'soil',
+                        '4' = 'water',
+                        '5' = 'building',
+                        '6' = 'road',
+                        '7' = 'other_paved',
+                        '8' = 'shrub', .ordered = TRUE),
+         area = pixel_count*pxl_conv) %>% #%T>% print %>%  
+  pivot_wider(id_cols = polygon_id, names_from = class, names_prefix = 'a_', names_sort = TRUE,
+              values_from = area, values_fill = 0) %>% 
+  mutate(a_total = rowSums(.[,-1])) %>% # TODO;make kthis more specific?
+#   dplyr::select(id, # FIXME what if a land cover class is not present?
+#                 a_tree, a_grass, a_soil, a_water, a_building, a_road, a_other_paved,
+#                 a_total) %>% # just cosmetic reordering
+  mutate(p_tree        = 100*(a_tree        / a_total),
+         p_grass       = 100*(a_grass       / a_total),
+         p_soil        = 100*(a_soil        / a_total),
+         p_water       = 100*(a_water       / a_total),
+         p_building    = 100*(a_building    / a_total),
+         p_road        = 100*(a_road        / a_total),
+         p_other_paved = 100*(a_other_paved / a_total),
+         p_shrub       = 100*(a_shrub       / a_total),
+         `Impervious Surface (%)` = 100*((a_building + a_road + a_other_paved) /
+                                      (a_tree + a_grass + a_soil + a_building + a_road + a_other_paved))) %>% 
+  write_csv(., paste0('output_data/donut_300_summaries_', Sys.Date(), '.csv'))
+
+```
+
+
+
+```{r}
+system.time(save.image(file = paste0('saved_sessions/test_summarize_raster_',
+                                     gsub('[[:punct:]]', '-', Sys.time()), '.RData')))
+```
+

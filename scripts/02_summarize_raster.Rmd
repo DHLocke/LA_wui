@@ -13,13 +13,6 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 
-# get building distanct to shrub
-# get building distanct to tree
-# make a distance raster (shrub, repeat for tree)
-# make very small buffer around buildings (like one pixel)
-# zonal to get the min distance to veg
-
-
 ## 0 set up
 ```{r}
 # load libraries

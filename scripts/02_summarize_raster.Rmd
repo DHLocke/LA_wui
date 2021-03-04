@@ -7,6 +7,8 @@ editor_options:
   chunk_output_type: console
 ---
 
+TODO get Near data
+TODO clean up and consolidate scripts
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -59,7 +61,7 @@ temp_dir <- paste(getwd(), temp_name, sep = '/') # directory for temporary files
 ```
 
 
-## 1 get raster data
+## 1 get land cover data
 ```{r}
 #raster_file <- file.path('data/OLD_Woosley_data_and_scripts/LandCover/landcover_2016_cwpp6.v1.tif')
 #raster_file <- file.path('data/WoosleyFire_eCogOuput_06Dec2019/LandCover/98.tif')
@@ -112,7 +114,7 @@ virtual_raster_file <- file.path(temp_dir, vrt_name)
 ```
 
 
-## 2 get polygons
+## 2 get building polygons and buffer
 ```{r}
 # GIS DATA from MIRANDA
 # st_layers(paste0(getwd(), '/data/Outgoing_BuildingSumms_DHL20200423.gdb'))
@@ -130,7 +132,7 @@ build <- read_sf(dsn = paste0(getwd(), '/data/Outgoing_BuildingSumms_DHL20200423
  # st_join(., bb, join = st_within, left = FALSE)
   
 #mapview(bb, alpha.regions = .15) + 
-mapview(build)
+# mapview(build)
 
 build %>% distinct(ID_Build)
 build$ID_Build[build$ID_Build %in% build$ID_Build[duplicated(build$ID_Build)] ]
@@ -151,16 +153,22 @@ max(build$ID_Build)
 #all.equal(st_crs(build), st_crs(raster_test))
 
 #mapview(build) # a little slow..
+sqrt(pxl_conv)
 
 # buffer
-tic(); build_10  <- build %>% st_buffer(., dist = 10); 
+tic(); build_1   <- build %>% st_buffer(., dist = 1); 
+       build_10  <- build %>% st_buffer(., dist = 10); 
        build_100 <- build %>% st_buffer(., dist = 100);
        build_200 <- build %>% st_buffer(., dist = 200);
        build_300 <- build %>% st_buffer(., dist = 300); toc() # around 10 seconds
 
 # initialize lists
-donut_300 <-donut_200<-donut_100<-donut_10<-rep(list(data.frame(ID_Build  = NA_integer_)), nrow(build))
+donut_300 <-donut_200<-donut_100<-donut_10<-donut_1<-rep(list(data.frame(ID_Build  = NA_integer_)), nrow(build))
+```
 
+
+## 3 make donuts & save out
+```{r eval=FALSE, include=FALSE}
 # kind of slow, hence parallizaiton
 # tic(); for(i in 1:nrow(build)){
 # donut_10[[i]]  <- st_erase(build_10[i,],  build[i,])
@@ -170,9 +178,17 @@ donut_300 <-donut_200<-donut_100<-donut_10<-rep(list(data.frame(ID_Build  = NA_i
 # }; toc() # 500 seconds
 
 
-
 detectCores()
-split <- 12
+split <- 10
+
+
+# 1
+tic()
+cl <- makeCluster(split); registerDoParallel(cl)
+donut_1 <- foreach(i = 1:nrow(build), .export=c('st_difference','st_union','st_combine')) %dopar% {
+  st_erase(build_1[i,],  build[i,])
+}; stopCluster(cl); toc()
+
 
 # 10
 tic()
@@ -208,28 +224,56 @@ donut_300 <- foreach(i = 1:nrow(build), .export=c('st_difference','st_union','st
 stopImplicitCluster()
 
 
-tic();donut_10  %<>% bind_rows()
+tic();donut_1 %<>% bind_rows()
+donut_10  %<>% bind_rows()
 donut_100 %<>% bind_rows() 
 donut_200 %<>% bind_rows() 
 donut_300 %<>% bind_rows(); toc()
 
 
-#mapview(donut_300[1:10,]) + mapview(donut_200[1:10,]) +
-  mapview(donut_100[1:10,]) + mapview(donut_10[1:10,])
+mapview(donut_100[1:10,]) + mapview(donut_10[1:10,])
 
+#mapview(donut_200[50:110,]) + mapview(donut_300[50:110,])
+mapview(donut_200[c(1, 10, 100),]) + mapview(donut_300[c(1, 10, 100),])
+
+mapview(donut_200[c(1, 30, 90),]) + mapview(donut_300[c(1, 30, 90),])
 
 mapview(donut_100[50:110,]) + mapview(donut_10[50:110,])
 
-#build %>% slice(1:50) %>% mapview() + build_10 %>% slice(1:50) %>% mapview()
+mapview(donut_1[1000:1010,])
 
 # optional clean up?
-rm(build_10, build_100, build_200, build_300)
+rm(build_1, build_10, build_100, build_200, build_300)
+
+# write out the polygons
+part_path <- '/data/building_buff_donuts'
+donut_1  %>% st_write(., paste0(getwd(), part_path, '/donut_1.shp'))
+donut_10 %>% st_write(., paste0(getwd(), part_path, '/donut_10.shp'))
+donut_100%>% st_write(., paste0(getwd(), part_path, '/donut_100.shp'))
+donut_200%>% st_write(., paste0(getwd(), part_path, '/donut_200.shp'))
+donut_300%>% st_write(., paste0(getwd(), part_path, '/donut_300.shp'))
+
 ```
 
 
-## 3 try some land cover summaries
-### donut 10
+## 4 read donuts in
 ```{r}
+
+part_path <- '/data/building_buff_donuts'
+donut_1 <- st_read(paste0(getwd(), part_path, '/donut_1.shp'))
+donut_10 <- st_read(paste0(getwd(), part_path, '/donut_10.shp'))
+donut_300<- st_read(paste0(getwd(), part_path, '/donut_300.shp'))
+donut_200<- st_read(paste0(getwd(), part_path, '/donut_200.shp'))
+donut_100<- st_read(paste0(getwd(), part_path, '/donut_100.shp'))
+
+```
+
+
+
+
+## 5 try some land cover summaries
+### donut 10
+```{r eval=FALSE, include=FALSE}
 # work flow wants an "sp" class. Could convert above on inmport, or delete build?
 #tic(); shp <- build_10 %>% rowid_to_column(var = 'id') %>% as_Spatial() ; toc()
 
@@ -242,8 +286,9 @@ tic(); shp <- donut_10 %>%
   #slice(800 : 1200) %>% 
   as_Spatial(); toc()
 
-split <- 12
-start_12_cores <- proc.time()
+
+split <- 10
+start_10_cores <- proc.time()
 
 cl <- makeCluster(split)
 registerDoParallel(cl)
@@ -300,7 +345,8 @@ results_10 <- foreach(i = 1:nrow(shp), .export=c('writeOGR','raster','values')) 
 
 stopCluster(cl)
 
-(time_12_cores_10ft_buff <- proc.time() - start_12_cores)
+(time_10_cores_10ft_buff <- proc.time() - start_10_cores)
+
 
 min(shp@data$ID_Build)
 max(shp@data$ID_Build)
@@ -341,12 +387,13 @@ results_10 %>%
 
 ```
 
+
 ### donut 100
-```{r}
+```{r eval=FALSE, include=FALSE}
 tic(); shp <- donut_100 %>% as_Spatial(); toc()
 
-split <- 14
-start_12_cores <- proc.time()
+split <- 10
+start_10_cores <- proc.time()
 
 cl <- makeCluster(split)
 registerDoParallel(cl)
@@ -403,7 +450,7 @@ results_100 <- foreach(i = 1:nrow(shp), .export=c('writeOGR','raster','values'))
 
 stopCluster(cl)
 
-(time_12_cores_100ft_buff <- proc.time() - start_12_cores)
+(time_12_cores_100ft_buff <- proc.time() - start_10_cores)
 
 min(shp@data$ID_Build)
 max(shp@data$ID_Build)
@@ -445,13 +492,12 @@ results_100 %>%
 ```
 
 
-
 ### donut 200
-```{r}
+```{r eval=FALSE, include=FALSE}
 tic(); shp <- donut_200 %>% as_Spatial(); toc()
 
-split <- 14
-start_12_cores <- proc.time()
+split <- 10
+start_10_cores <- proc.time()
 
 cl <- makeCluster(split)
 registerDoParallel(cl)
@@ -508,7 +554,7 @@ results_200 <- foreach(i = 1:nrow(shp), .export=c('writeOGR','raster','values'))
 
 stopCluster(cl)
 
-(time_12_cores_200ft_buff <- proc.time() - start_12_cores)
+(time_12_cores_200ft_buff <- proc.time() - start_10_cores)
 
 min(shp@data$ID_Build)
 max(shp@data$ID_Build)
@@ -550,13 +596,12 @@ results_200 %>%
 ```
 
 
-
 ### donut 300
-```{r}
+```{r eval=FALSE, include=FALSE}
 tic(); shp <- donut_300 %>% as_Spatial(); toc()
 
-split <- 14
-start_12_cores <- proc.time()
+split <- 10
+start_10_cores <- proc.time()
 
 cl <- makeCluster(split)
 registerDoParallel(cl)
@@ -613,7 +658,7 @@ results_300 <- foreach(i = 1:nrow(shp), .export=c('writeOGR','raster','values'))
 
 stopCluster(cl)
 
-(time_12_cores_300ft_buff <- proc.time() - start_12_cores)
+(time_12_cores_300ft_buff <- proc.time() - start_10_cores)
 
 min(shp@data$ID_Build)
 max(shp@data$ID_Build)
@@ -653,6 +698,223 @@ results_300 %>%
   write_csv(., paste0('output_data/donut_300_summaries_', Sys.Date(), '.csv'))
 
 ```
+
+
+
+## 6  distance summaries
+### tree raster
+```{r}
+
+list.files('../data/WUI-selected/')
+
+raster_file <- file.path('../data/WUI-selected/treeDist.tif')
+
+
+system.time(lc_stars  <- stars::read_stars(raster_file, proxy = TRUE))
+
+(pxl_conv <- .75*.75) # TODO; IS THIS correct?
+
+#sqrt(pxl_conv)
+
+plot(lc_stars); #plot(lc_stars2)
+dev.off()
+
+
+vrt_name <- 'virtual_tree_dists.vrt'    # GDAL DOES NOT LIKE SPACES IN NAMES!!
+
+# build a virtual raster
+tic(); gdalbuildvrt(gdalfile = raster_file,
+                    output.vrt = file.path(temp_dir, vrt_name),
+                    verbose = TRUE); toc()
+
+virtual_raster_file <- file.path(temp_dir, vrt_name)
+
+```
+
+
+### donut 1 trees
+```{r}
+
+tic(); shp <- donut_1 %>% as_Spatial(); toc()
+
+split <- 10
+start_10_cores <- proc.time()
+
+cl <- makeCluster(split)
+registerDoParallel(cl)
+
+results_tree_dist <- rep(list(data.frame(polygon_id  = NA, min_dist_tree =  NA)), nrow(shp))
+
+# FIXME requires sequential IDs
+results_tree_dist <- foreach(i = 1:nrow(shp), .export=c('writeOGR','raster','values')) %dopar% {
+
+#results_10 <- foreach(i = seq_long(shp@data$ID_Build)), .export=c('writeOGR','raster','values')) %dopar% {
+
+    # subsets polygons
+    writeOGR(shp[i,],
+             dsn = temp_dir,
+             layer = paste0('temp_poly_', i),
+             driver = 'ESRI Shapefile')
+
+    # name / locate the temporary files.
+    temp_shp <- file.path(paste0(temp_dir, '/temp_poly_', i, '.shp'))
+    temp_tif <- file.path(paste0(temp_dir, '/temp_extracted_', i, '.tif'))
+
+    # the work horse of the whole operation (set up)
+    call_args <- paste('-crop_to_cutline -overwrite -dstnodata NULL -cutline',
+                       temp_shp,           # the individual polygon shapefile
+                       virtual_raster_file,# virtual raster
+                       temp_tif)           # the selected, cropped down pixels within temp_shp
+
+    # call gdalwarp to clip circle raster.
+    system2(command = "gdalwarp", args = call_args)
+
+    # read in the clipped raster and tabulate the number of cells by type
+    # note extensive testing with microbenchmark looking at nesting the raster, table, and values
+    # functions like this was the fastest, but not by much.
+    clipped_raster <- raster::raster(temp_tif)
+    out <- min(raster::values(clipped_raster), na.rm = TRUE)
+
+    # Delete temp files , clean up
+    system2(command = "rm", args = paste(temp_tif)) # delete the *.tif
+    system2(command = 'rm',                         # delete shapefile friends
+            args = paste0(temp_dir, '/temp_poly_', i, c('.shp','.shx','.dbf','.prj')))
+
+    # Output is returned as a long-form data frame with a column for plot ID, pixel class, and pixel count.
+    # Error catching code is included so that if there are no values in the circle (entirely outside raster),
+    # TODO make this a tibble
+    # TODO change column names?
+    # it will return an empty dataframe
+    # if (length(out) > 0) {
+      return(data.frame(polygon_id = i, min_dist_tree = as.numeric(out)))
+    # } else {
+    #   return(data.frame(polygon_id = integer(0), class = character(0), pixel_count = numeric(0)))
+    #}
+
+  }
+
+stopCluster(cl)
+
+(time_12_cores_300ft_buff <- proc.time() - start_10_cores)
+
+min(shp@data$ID_Build)
+max(shp@data$ID_Build)
+
+results_tree_dist[[11140]]
+
+results_tree_dist %>%
+  map_df(., tibble) %>%
+  write_csv(., paste0('output_data/min_dist_tree_', Sys.Date(), '.csv'))
+```
+
+
+## 7 shrub raster
+```{r}
+
+list.files('../data/WUI-selected/')
+
+raster_file <- file.path('../data/WUI-selected/shrubDist.tif')
+
+
+system.time(lc_stars  <- stars::read_stars(raster_file, proxy = TRUE))
+
+(pxl_conv <- .75*.75) # TODO; IS THIS correct?
+
+#sqrt(pxl_conv)
+
+plot(lc_stars); #plot(lc_stars2)
+dev.off()
+
+
+vrt_name <- 'virtual_shrub_dists.vrt'    # GDAL DOES NOT LIKE SPACES IN NAMES!!
+
+# build a virtual raster
+tic(); gdalbuildvrt(gdalfile = raster_file,
+                    output.vrt = file.path(temp_dir, vrt_name),
+                    verbose = TRUE); toc()
+
+virtual_raster_file <- file.path(temp_dir, vrt_name)
+
+```
+
+
+### donut 1 shrubs
+```{r}
+
+tic(); shp <- donut_1 %>% as_Spatial(); toc()
+
+split <- 10
+start_10_cores <- proc.time()
+
+cl <- makeCluster(split)
+registerDoParallel(cl)
+
+results_shrub_dist <- rep(list(data.frame(polygon_id  = NA, min_dist_shrub =  NA)), nrow(shp))
+
+# FIXME requires sequential IDs
+results_shrub_dist <- foreach(i = 1:nrow(shp), .export=c('writeOGR','raster','values')) %dopar% {
+
+#results_10 <- foreach(i = seq_long(shp@data$ID_Build)), .export=c('writeOGR','raster','values')) %dopar% {
+
+    # subsets polygons
+    writeOGR(shp[i,],
+             dsn = temp_dir,
+             layer = paste0('temp_poly_', i),
+             driver = 'ESRI Shapefile')
+
+    # name / locate the temporary files.
+    temp_shp <- file.path(paste0(temp_dir, '/temp_poly_', i, '.shp'))
+    temp_tif <- file.path(paste0(temp_dir, '/temp_extracted_', i, '.tif'))
+
+    # the work horse of the whole operation (set up)
+    call_args <- paste('-crop_to_cutline -overwrite -dstnodata NULL -cutline',
+                       temp_shp,           # the individual polygon shapefile
+                       virtual_raster_file,# virtual raster
+                       temp_tif)           # the selected, cropped down pixels within temp_shp
+
+    # call gdalwarp to clip circle raster.
+    system2(command = "gdalwarp", args = call_args)
+
+    # read in the clipped raster and tabulate the number of cells by type
+    # note extensive testing with microbenchmark looking at nesting the raster, table, and values
+    # functions like this was the fastest, but not by much.
+    clipped_raster <- raster::raster(temp_tif)
+    out <- min(raster::values(clipped_raster), na.rm = TRUE)
+
+    # Delete temp files , clean up
+    system2(command = "rm", args = paste(temp_tif)) # delete the *.tif
+    system2(command = 'rm',                         # delete shapefile friends
+            args = paste0(temp_dir, '/temp_poly_', i, c('.shp','.shx','.dbf','.prj')))
+
+    # Output is returned as a long-form data frame with a column for plot ID, pixel class, and pixel count.
+    # Error catching code is included so that if there are no values in the circle (entirely outside raster),
+    # TODO make this a tibble
+    # TODO change column names?
+    # it will return an empty dataframe
+    # if (length(out) > 0) {
+      return(data.frame(polygon_id = i, min_dist_shrub = as.numeric(out)))
+    # } else {
+    #   return(data.frame(polygon_id = integer(0), class = character(0), pixel_count = numeric(0)))
+    #}
+
+  }
+
+stopCluster(cl)
+
+(time_12_cores_300ft_buff <- proc.time() - start_10_cores)
+
+min(shp@data$ID_Build)
+max(shp@data$ID_Build)
+
+results_shrub_dist[[11140]]
+
+results_shrub_dist %>%
+  map_df(., tibble) %>%
+  write_csv(., paste0('output_data/min_dist_shrub_', Sys.Date(), '.csv'))
+
+```
+
+
 
 
 

@@ -7,7 +7,18 @@ editor_options:
   chunk_output_type: console
 ---
 
+
+TODO combine land cover summaries to buildings (from new analyses)
+TODO bring distance shrub
+
+
+TODO 'final' double checks
+
+TODO fit models suggested by Alex.
+
 DUPE BUILDINGS STILL ?!?!?
+
+
 
 TODO We want to drop parcels without any building on them for the building analyses.
 

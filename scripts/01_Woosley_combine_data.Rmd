@@ -171,7 +171,7 @@ pxl_to_ft_conversion <- 0.75
 set.seed(19870630)
 
 ## Make a 'figures' subdirectory if one doesn't exist
-ifelse(!dir.exists(file.path('figures')), dir.create(file.path('figures')), FALSE)
+# ifelse(!dir.exists(file.path('figures')), dir.create(file.path('figures')), FALSE)
 ```
 
 
@@ -208,7 +208,8 @@ build <- read_sf(dsn = paste0(getwd(), '/data/Outgoing_BuildingSumms_DHL20200423
                      structures_DAMAGE == 'Affected (1-9%)' ~ 2,
                      structures_DAMAGE == 'Minor (10-25%)' ~ 3,
                      structures_DAMAGE == 'Major (26-50%)' ~ 4,
-                     structures_DAMAGE == 'Destroyed (>50%)' ~ 5))
+                     structures_DAMAGE == 'Destroyed (>50%)' ~ 5)) %>% 
+  distinct(ID_Build, Shape, .keep_all = TRUE)
 
 # define & refine the dependent variable versions: numeric (0/1), categorical (survived/destroyed),
 # and severeity?
@@ -238,8 +239,7 @@ glimpse(build)
 ### 2a building distance to building
 ```{r}
 # BUILDING DISTANCE TO BUILDING
-data_path <- 'data/WoosleyFire_eCogOuput_06Dec2019/Building_dist_Building'
-data_path # building dist build
+(data_path <- 'data/WoosleyFire_eCogOuput_06Dec2019/Building_dist_Building') # building dist build
 
 # update? https://twitter.com/kc_analytics/status/1345434428059881480/photo/2
 files <- dir(data_path, recursive = TRUE, pattern = "*.csv"); files # get file names
@@ -294,11 +294,23 @@ build %<>%
 ```
 
 
-
-### 2b building tree overhang
+### 2b building distance veg
 ```{r}
-data_path <- 'data/WoosleyFire_eCogOuput_06Dec2019/Building_TreeOverhang'
-data_path # building tree overhang
+
+(min_dist_shrub <- read_csv('output_data/min_dist_shrub_2021-03-16.csv'))
+(min_dist_tree  <- read_csv('output_data/min_dist_tree_2021-03-16.csv'))
+
+build %<>% 
+  left_join(., min_dist_tree, by = c('ID_Build' = 'polygon_id')) %>% 
+  left_join(., min_dist_shrub, by = c('ID_Build' = 'polygon_id'))
+
+```
+
+
+
+### 2c building tree overhang
+```{r}
+(data_path <- 'data/WoosleyFire_eCogOuput_06Dec2019/Building_TreeOverhang') # building tree overhang
 
 files <- dir(data_path, recursive = TRUE, pattern = "*.csv"); files # get file names
 
@@ -322,7 +334,7 @@ build_tree_overhang <-
                                          mean_n_dsm_tree_canopy_sub_objects, NA)),
          overhang_ht = ifelse(is.na(overhang_ht), 0, overhang_ht),
          perc_overhang = rel_area_of_sub_objects_tree_canopy_1) %>% 
-  select(ID_Build = id_build_buildings,
+  tidylog::select(ID_Build = id_build_buildings,
          has_tree_overhang,
          overhang_ht,
          perc_overhang) %>% 
@@ -350,10 +362,9 @@ build %<>%
 ```
 
 
-### 2c building land cover buffer
-```{r}
-data_path <- 'data/WoosleyFire_eCogOuput_06Dec2019/Building_LandCoverBuff'
-data_path # building dist build
+### 2d building land cover buffer
+```{r eval=FALSE, include=FALSE}
+(data_path <- 'data/WoosleyFire_eCogOuput_06Dec2019/Building_LandCoverBuff') # building dist build
 
 files <- dir(data_path, recursive = TRUE, pattern = "*.csv"); files # get file names
 
@@ -416,14 +427,69 @@ glimpse(build)
 ```
 
 
-### 2d double check land cover values
-```{r eval=FALSE, include=FALSE}
-build %>% mapview(., zcol = 'build_build_10')
+
+### 2d ALT building land cover buffer
+```{r}
+build %>% distinct(ID_Build)
+
+(data_path <- 'output_data') # donut buffer land cover summaries
+
+files <- dir(data_path, recursive = TRUE, pattern = "^donut"); files # get file names
+
+#(files <- files[-1]) # drop the 10
+
+build_tree_landcover_buff <- tibble(filename = files) %>% # create a data frame, holding the file names
+  mutate(file_contents = map(filename,  # read files into
+                             ~ read.csv(file.path(data_path, .), sep = ','))) %>%  # a new data column
+  unnest() %>%
+  clean_names() %>% 
+  arrange(polygon_id) %>% # cosmetic
+  tidylog::select(filename, polygon_id, starts_with('p_')) %>% 
+  mutate(buff_distance = # FIXME kind of sloppy
+           as.integer(str_remove(str_remove(filename, '_summaries_2021-03-16.csv'), 'donut_'))) %>%
+  pivot_wider(id_cols = polygon_id, names_from = buff_distance, values_from = p_tree:p_shrub) %>% 
+  rename_at(vars(starts_with('p_')), ~(str_replace(., 'p_', 'build_p_'))) %>% 
+  glimpse
+
+
+build %<>% 
+  left_join(., build_tree_landcover_buff, by = c('ID_Build' = 'polygon_id'))
+
+```
+
+
+### 2e double check land cover values
+```{r}
+# build %>% mapview(., zcol = 'build_p_tree_10')
 
 # build %>% st_drop_geometry() %>% 
 #   write.csv(., paste0(getwd(), '/output_data/test_joiner_',
 #                       gsub('[[:punct:]]', '_', Sys.time()), '.csv'),
 #             row.names = TRUE)
+
+
+build %>% 
+  st_drop_geometry() %>% 
+  tidylog::select(ID_Build, contains('build_p_')) %>% 
+  pivot_longer(-ID_Build) %>% 
+  mutate(#buff_dist = as.numeric(str_remove_all(name, '\\D')),
+         var = str_remove(name, 'build_p_')) %>% 
+  separate(var, into = c('var', 'buff_dist'), sep = '_', convert = TRUE) %>% 
+  ggplot(aes(x = value)) + 
+  # geom_density() + 
+  geom_histogram() +
+  #facet_wrap(~var + buff_dist, ncol = 4) +
+  facet_grid(buff_dist ~ var) +
+  theme_bw() + 
+  # ggsave(file = paste0(getwd(), '/figures/donut_buff_landcover_',
+  #                   gsub('[[:punct:]]', '_', Sys.time()), '.png')) +
+  NULL
+
+
+build %>% ggplot(aes(min_dist_tree)) + geom_histogram(binwidth = 2)
+build %>% ggplot(aes(min_dist_shrub)) + geom_histogram(binwidth = 2)
+
+
 ```
 
 
@@ -431,14 +497,14 @@ build %>% mapview(., zcol = 'build_build_10')
 ```{r}
 
 
-<!-- Effective Year 1 -->
-<!--   zero and NA should become NA. (random forest can handel this, regression maybe not.) -->
-<!--   need to investigate -->
-<!--   make a most recent year built var? -->
-<!--   Include Year Built IN ADDITION to Effective Year built -->
-  
-  Roll_ImpValue - might indicate
-  Roll_HomeOwnersExempt - owner occupied?
+# <!-- Effective Year 1 -->
+# <!--   zero and NA should become NA. (random forest can handel this, regression maybe not.) -->
+# <!--   need to investigate -->
+# <!--   make a most recent year built var? -->
+# <!--   Include Year Built IN ADDITION to Effective Year built -->
+#   
+#   Roll_ImpValue - might indicate
+#   Roll_HomeOwnersExempt - owner occupied?
 
 
 # Miranda's parcels
@@ -449,7 +515,7 @@ parcel_complete_atts     <- read_sf(dsn = paste0(getwd(), '/data/Outgoing_Buildi
 parcel <- read_sf(dsn = paste0(getwd(), '/data/Outgoing_BuildingSumms_DHL20200423.gdb'),
                   layer = 'Parcels_fireperim_LC',
                   quiet = FALSE) %>% # glimpse
-  select(AIN, UseType, UseDescription, Roll_ImpValue, Roll_HomeOwnersExemp,
+  tidylog::select(AIN, UseType, UseDescription, Roll_ImpValue, Roll_HomeOwnersExemp,
          Can_P : Imperv_P, # ) %>%  #,
          starts_with('EffectiveYear'),
          #starts_with('YearBuilt')
@@ -458,11 +524,12 @@ parcel <- read_sf(dsn = paste0(getwd(), '/data/Outgoing_BuildingSumms_DHL2020042
   # mutate_at(vars(starts_with("EffectiveYear")), ~ifelse(. == 0, NA, .)) %>% 
   # mutate_at(vars(starts_with("YearBuilt")),     as.numeric) %>% 
   # mutate_at(vars(starts_with("YearBuilt")),     ~ifelse(. == 0, NA, .)) %>% 
-  rename_at(vars(-Shape), ~paste0('parcel_',.)) # %>% glimpse()
+  rename_at(vars(-Shape), ~paste0('parcel_',.)) %>% # glimpse()
+  distinct(parcel_AIN, Shape, .keep_all = TRUE)
 
 
 parcel %>% 
-  select(parcel_AIN,
+  tidylog::select(parcel_AIN,
          starts_with("parcel_EffectiveYear")) %>% 
          #starts_with("parcel_YearBuilt")) %>%
   st_drop_geometry() #%>% View()
@@ -474,7 +541,7 @@ parcel %>%
 # create most-recent year build column
 (
   parcel %>% 
-  select(parcel_AIN,
+  tidylog::select(parcel_AIN,
          starts_with("parcel_EffectiveYear") #, starts_with("parcel_YearBuilt")
          ) %>%
   st_drop_geometry() %>% 
@@ -489,7 +556,7 @@ parcel %<>% left_join(., parcel_recent)
 
 # which ones didn't join completely?
 parcel_na_recent <- parcel %>% filter(is.na(parcel_recent)) %>% 
-  select(parcel_AIN:parcel_Roll_HomeOwnersExemp, parcel_Build_P) # these records don't have year built info
+  tidylog::select(parcel_AIN:parcel_Roll_HomeOwnersExemp, parcel_Build_P) # these records don't have year built info
 
 
 # where are they?
@@ -525,16 +592,21 @@ parcel_na_recent %>%
   arrange(desc(n))
 
 
-parcel_na_recent %>%
+(parcel_na_recent %>%
   filter(parcel_AIN %in% parcel_na_recent_zeros$parcel_AIN) %>% # ok to have not year built, in theory
   tabyl(parcel_UseDescription) %>% 
   as_tibble() %>% 
-  arrange(desc(n))
+  arrange(desc(n)) -> parcel_use_type_freqs)
 
+parcel_use_type_freqs %>% 
+  ggplot(aes(reorder(parcel_UseDescriptionShape, valid_percent), valid_percent)) +
+  geom_bar(stat = 'identity') + 
+  coord_flip() + 
+  theme_bw()
 
 
 parcel %>% 
-  select(starts_with("parcel_Effective"),
+  tidylog::select(starts_with("parcel_Effective"),
          #starts_with("parcel_YearBuilt"),
          parcel_recent) %>% # are these NA parcels undeveloped
   map(., ~sum(is.na(.)))
@@ -550,11 +622,11 @@ parcel %>% filter(parcel_Roll_ImpValue == 0) %>% mapview()
 # join buildings to their containing parcel
 # takes about 1 minute!
 system.time(
-build %<>% st_join(parcel,           # spatial join
-                   left = FALSE,     # if FALSE, only intersection be returned, instead of all
+build %<>% st_join(st_make_valid(parcel), # spatial join
+                   left = FALSE, # if FALSE, only intersection be returned, instead of all
                    largest = TRUE) %>% 
   mutate(parcel_recent = ifelse(parcel_AIN %in% parcel_na_recent_zeros, 0, parcel_recent)))  # and attributes of intersection
-                                     # largest = TRUE is AMAZING, but makes things much slower.
+                      # largest = TRUE is AMAZING, but makes things much slower.
 glimpse(build)
 ```
 
@@ -564,7 +636,7 @@ glimpse(build)
 # YEAR BUILT
 # Only living quarters are given a year built info
 build %>% 
-  select(ID_Build, starts_with("parcel_Effective"), parcel_recent,
+  tidylog::select(ID_Build, starts_with("parcel_Effective"), parcel_recent,
            #, starts_with("parcel_YearBuilt")
          ) %>% 
   st_drop_geometry() %>% 
@@ -615,10 +687,10 @@ build %>% #st_drop_geometry() %>%
 
 
 build %>% st_drop_geometry() %>% 
-  describe #%>%
-  # write.csv(., paste0(getwd(), '/output_data/describe_',
-  #                     gsub('[[:punct:]]', '_', Sys.time(), '.csv')),
-  #           row.names = TRUE)
+  describe %>%
+  write.csv(., paste0(getwd(), '/output_data/describe_',
+                      gsub('[[:punct:]]', '_', Sys.time()), '.csv'),
+            row.names = TRUE)
 
 glimpse(build)
 
@@ -626,7 +698,9 @@ box_plot_dat <- build %>%
   st_drop_geometry() %>% 
   select(damage_cat,
          starts_with('build_'),
-         starts_with('parcel_')) %>% data.frame %>% glimpse
+         starts_with('parcel_') &
+         !parcel_AIN & !parcel_UseType & !parcel_UseDescription &
+           -contains('Year')) %>% data.frame %>% glimpse
 
 # for(i in 2:ncol(box_plot_dat)){
 #   print(names(box_plot_dat)[i])
@@ -640,7 +714,7 @@ box_plot_dat <- build %>%
 
 
 
-
+tk
 ## 5 fit models
 ### A a little prep
 ```{r}
@@ -648,7 +722,7 @@ box_plot_dat <- build %>%
 build_bin <- build %>% 
   st_drop_geometry() %>% 
   select(damage_binary, starts_with('build'), starts_with('parcel'),
-         -build_has_tree_overhang) %>% 
+         -has_tree_overhang) %>% 
   select(-starts_with('parcel_Effective')) %>% 
   filter(!is.na(build_Meandistroad),
          !is.na(build_dist_to_build_ft)) %>% glimpse() # strangly glimpse doesn't store the glimpse

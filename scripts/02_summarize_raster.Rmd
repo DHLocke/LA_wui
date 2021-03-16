@@ -364,7 +364,7 @@ results_10 %>%
                         '4' = 'water',
                         '5' = 'building',
                         '6' = 'road',
-                        '7' = 'other_paved',
+                        '7' = 'otherpaved',
                         '8' = 'shrub', .ordered = TRUE),
          area = pixel_count*pxl_conv) %>% #%T>% print %>%  
   pivot_wider(id_cols = polygon_id, names_from = class, names_prefix = 'a_', names_sort = TRUE,
@@ -379,10 +379,10 @@ results_10 %>%
          p_water       = 100*(a_water       / a_total),
          p_building    = 100*(a_building    / a_total),
          p_road        = 100*(a_road        / a_total),
-         p_other_paved = 100*(a_other_paved / a_total),
+         p_otherpaved  = 100*(a_otherpaved / a_total),
          p_shrub       = 100*(a_shrub       / a_total),
-         `Impervious Surface (%)` = 100*((a_building + a_road + a_other_paved) /
-                                      (a_tree + a_grass + a_soil + a_building + a_road + a_other_paved))) %>% 
+         `Impervious Surface (%)` = 100*((a_building + a_road + a_otherpaved) /
+                                      (a_tree + a_grass + a_soil + a_building + a_road + a_otherpaved))) %>% 
   write_csv(., paste0('output_data/donut_10_summaries_', Sys.Date(), '.csv'))
 
 ```
@@ -468,7 +468,7 @@ results_100 %>%
                         '4' = 'water',
                         '5' = 'building',
                         '6' = 'road',
-                        '7' = 'other_paved',
+                        '7' = 'otherpaved',
                         '8' = 'shrub', .ordered = TRUE),
          area = pixel_count*pxl_conv) %>% #%T>% print %>%  
   pivot_wider(id_cols = polygon_id, names_from = class, names_prefix = 'a_', names_sort = TRUE,
@@ -483,10 +483,10 @@ results_100 %>%
          p_water       = 100*(a_water       / a_total),
          p_building    = 100*(a_building    / a_total),
          p_road        = 100*(a_road        / a_total),
-         p_other_paved = 100*(a_other_paved / a_total),
+         p_otherpaved  = 100*(a_otherpaved  / a_total),
          p_shrub       = 100*(a_shrub       / a_total),
-         `Impervious Surface (%)` = 100*((a_building + a_road + a_other_paved) /
-                                      (a_tree + a_grass + a_soil + a_building + a_road + a_other_paved))) %>% 
+         `Impervious Surface (%)` = 100*((a_building + a_road + a_otherpaved) /
+                                      (a_tree + a_grass + a_soil + a_building + a_road + a_otherpaved))) %>% 
   write_csv(., paste0('output_data/donut_100_summaries_', Sys.Date(), '.csv'))
 
 ```
@@ -572,7 +572,7 @@ results_200 %>%
                         '4' = 'water',
                         '5' = 'building',
                         '6' = 'road',
-                        '7' = 'other_paved',
+                        '7' = 'otherpaved',
                         '8' = 'shrub', .ordered = TRUE),
          area = pixel_count*pxl_conv) %>% #%T>% print %>%  
   pivot_wider(id_cols = polygon_id, names_from = class, names_prefix = 'a_', names_sort = TRUE,
@@ -587,10 +587,10 @@ results_200 %>%
          p_water       = 100*(a_water       / a_total),
          p_building    = 100*(a_building    / a_total),
          p_road        = 100*(a_road        / a_total),
-         p_other_paved = 100*(a_other_paved / a_total),
+         p_otherpaved  = 100*(a_otherpaved  / a_total),
          p_shrub       = 100*(a_shrub       / a_total),
-         `Impervious Surface (%)` = 100*((a_building + a_road + a_other_paved) /
-                                      (a_tree + a_grass + a_soil + a_building + a_road + a_other_paved))) %>% 
+         `Impervious Surface (%)` = 100*((a_building + a_road + a_otherpaved) /
+                                      (a_tree + a_grass + a_soil + a_building + a_road + a_otherpaved))) %>% 
   write_csv(., paste0('output_data/donut_200_summaries_', Sys.Date(), '.csv'))
 
 ```
@@ -676,7 +676,7 @@ results_300 %>%
                         '4' = 'water',
                         '5' = 'building',
                         '6' = 'road',
-                        '7' = 'other_paved',
+                        '7' = 'otherpaved',
                         '8' = 'shrub', .ordered = TRUE),
          area = pixel_count*pxl_conv) %>% #%T>% print %>%  
   pivot_wider(id_cols = polygon_id, names_from = class, names_prefix = 'a_', names_sort = TRUE,
@@ -691,10 +691,10 @@ results_300 %>%
          p_water       = 100*(a_water       / a_total),
          p_building    = 100*(a_building    / a_total),
          p_road        = 100*(a_road        / a_total),
-         p_other_paved = 100*(a_other_paved / a_total),
+         p_otherpaved  = 100*(a_otherpaved  / a_total),
          p_shrub       = 100*(a_shrub       / a_total),
-         `Impervious Surface (%)` = 100*((a_building + a_road + a_other_paved) /
-                                      (a_tree + a_grass + a_soil + a_building + a_road + a_other_paved))) %>% 
+         `Impervious Surface (%)` = 100*((a_building + a_road + a_otherpaved) /
+                                      (a_tree + a_grass + a_soil + a_building + a_road + a_otherpaved))) %>% 
   write_csv(., paste0('output_data/donut_300_summaries_', Sys.Date(), '.csv'))
 
 ```
@@ -733,7 +733,7 @@ virtual_raster_file <- file.path(temp_dir, vrt_name)
 
 
 ### donut 1 trees
-```{r}
+```{r eval=FALSE, include=FALSE}
 
 tic(); shp <- donut_1 %>% as_Spatial(); toc()
 

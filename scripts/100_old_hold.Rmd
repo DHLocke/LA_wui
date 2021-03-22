@@ -1,0 +1,390 @@
+---
+title: "100_old_hold"
+author: "Dexter H. Locke, PhD"
+date: "`r format(Sys.time())`"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+## 2 bring in parcels
+### 2a polygons
+```{r eval=FALSE, include=FALSE}
+parcels_sf <- read_sf('data/WoosleyFire_eCogOuput_06Dec2019/Parcels/1.shp') %>% 
+  st_transform(crs = st_crs(build_sf)) %>% # step even needed
+  mutate(area_from_st = st_area(.))
+
+parcels_sf
+```
+
+### 2b
+```{r eval=FALSE, include=FALSE}
+data_path <- 'data/WoosleyFire_eCogOuput_06Dec2019/LandCover_per_Parcel'; data_path # building dist build
+files <- dir(data_path, recursive = TRUE, pattern = "*.csv"); files # get file names
+
+parcel_land_cover <-
+  tibble(filename = files) %>% # create a data frame, holding the file names
+  mutate(file_contents = map(filename,  # read files into
+                             ~ read.csv(file.path(data_path, .),
+                                        fileEncoding='latin1',
+                                        colClasses = c('character'),
+                                        sep = ';'))) %>%  # a new data column
+  unnest() %>%
+  clean_names() %>%
+  mutate_at(vars(starts_with('rel_')), as.numeric) %>% 
+  mutate_at(vars(starts_with('rel_')), list(~. * 100)) %>% 
+  select(ID_Parcel = id_parcel_parcels,
+         area_ft_survey,
+         pct_tree_can = rel_area_of_sub_objects_tree_canopy_1,
+         pct_grass = rel_area_of_sub_objects_grass_1,
+         pct_soil = rel_area_of_sub_objects_bare_soil_1,
+         pct_water = rel_area_of_sub_objects_water_1,
+         pct_build = rel_area_of_sub_objects_buildings_1,
+         pct_road = rel_area_of_sub_objects_roads_1,
+         pct_oth_imp = rel_area_of_sub_objects_other_impervious_1,
+         pct_shrub = rel_area_of_sub_objects_shrub_1) %>% 
+  filter(ID_Parcel != 'undefined') %>% 
+  mutate(ID_Parcel = as.numeric(ID_Parcel)) %>% 
+  arrange(ID_Parcel) %>% 
+  group_by(ID_Parcel) %>% 
+  arrange(desc(pct_tree_can),
+          desc(pct_grass),
+          desc(pct_soil),
+          desc(pct_water),
+          desc(pct_build),
+          desc(pct_road),
+          desc(pct_oth_imp),
+          desc(pct_shrub), .by_group = TRUE) %>% 
+  slice(1) %>%                  # grabs the first record
+  ungroup()
+
+# parcel_land_cover # FIXME TOO LONG
+# parcel_land_cover %>% 
+#   group_by(ID_Parcel) %>% 
+#   count() %>% 
+#   arrange(desc(n)) -> dup_parcel_land_cover
+
+parcels_sf %>% 
+  left_join(parcel_land_cover,
+            by = c('ID_Parcel' = 'ID_Parcel'))
+
+```
+
+
+
+
+
+```{r sandbox, eval=FALSE, include=FALSE}
+# 
+# csv2 <- read.csv('data/WoosleyFire_MappingBlocks_Output_v1/Building_dist_Building/2.csv', sep = ';') %>% View()
+# 
+# csv20 <- read.csv('data/WoosleyFire_MappingBlocks_Output_v1/Building_dist_Building/20.csv', sep = ';') %>% View()
+# 
+# csv6 <- read.csv('data/WoosleyFire_MappingBlocks_Output_v1/Building_dist_Building/6.csv', sep = ';') %>% View()
+# 
+# 
+# 
+# read_plus <- function(flnm) {
+#     read_csv(flnm) %>% 
+#         mutate(filename = flnm)
+# }
+# 
+# tbl_with_sources <-
+#     list.files(path = data_path, full.names = TRUE, pattern = "*.csv") %>% 
+#     map_df(~read_plus(.)) %>% 
+#   separate("inner_x;inner_y;level_name;class_name;Distance to Buildings (Pxl);\"ID_Build\"  Buildings",
+#            into = c('x', 'y', 'level', 'dist', 'id', 'build'), sep = ';') %>% 
+#   filter(build == '2637')
+# 
+#   
+#   
+#   
+#   as_tibble() %>% 
+#   clean_names() %>%
+#   mutate(dist_to_build_ft = pxl_to_ft_conversion*as.numeric(distance_to_buildings_pxl)) %>% # throws and NA error, we want those NAs. OK!
+#   select(ID_Build = id_build_buildings,
+#          dist_to_build_ft) %>%
+#   group_by(ID_Build) %>%           # used for degubbing, lots of duplicate ID_Build
+#   add_tally(name = 'n_build_obs') %>% 
+#   arrange(desc(n_build_obs), desc(dist_to_build_ft)) %>% # sorting for ease of debug
+#   ungroup() %>% 
+#   filter(ID_Build != 'undefined')                 
+# 
+
+#dat_csv <- plyr::ldply(paste(data_path, files, sep = '/'), read_csv)
+
+
+
+
+
+build %>% left_join(st_drop_geometry(parcel_perim), by = c('ID_Parcel.x' = 'ID_Build')
+```
+
+
+
+
+## old/ sandbox
+```{r}
+#table(build_dins$Buildings_ParcelID_DINS_intersects_DAMAGE, useNA = 'ifany')
+# test out the joins
+build <- build_dins %>% left_join(st_drop_geometry(build_sf), by = c('ID_Build' = 'ID_Build'))
+
+
+# read in the building polygons
+build_sf <- read_sf(paste0(getwd(), '/data/Woosley_Buildings_ParcelID'), quiet = FALSE)
+build_sf
+
+build %>% left_join(st_drop_geometry(build_sf), by = c('ID_Build' = 'ID_Build'))
+
+
+# is ID_Build unique for each row?
+identical(length(unique(build_sf$ID_Build)), dim(build_sf)[1]) # yes
+
+# what is the building to parcel relationship (1:M)
+build_sf %>%
+     st_drop_geometry() %>%    # droping spatial data for ease of reading
+     group_by(ID_Parcel) %>%   # grouping data by thing
+     count() %>%               # counting elements in the group
+     arrange(desc(n)) -> build_per_parcel
+
+plot(build_per_parcel$n, main = 'Are we cool with this?')
+abline(h = mean(build_per_parcel$n), col = 'red')
+abline(h = median(build_per_parcel$n), col = 'blue')
+text(x = 3000, y = 125, labels = paste0('mean # buildings per parcel: ',
+                                        round(mean(build_per_parcel$n), 3), '\n',
+                                        'median # of buildings per parcel: ',
+                                        median(build_per_parcel$n)))
+# lets look at the map
+# mapview(build_sf) # looks good
+
+```
+
+
+
+### B glm REMOVE? Demote?
+```{r}
+
+build_bin_MM_temp <- build %>% 
+  st_drop_geometry() %>% 
+  select(damage_binary, 
+         build_treecan10, #build_grass10, build_shrub_10,
+         parcel_EffectiveYear1, 
+         build_Meanelev_30m,
+         build_Meanslope_30m_DEM,
+         build_Meanaspect_30m_DEM,
+         build_Meandistroad,
+         build_Meanbuilddens,
+         build_Meandistall_road) %>% 
+  drop_na() %>% 
+  glimpse() # strangly glimpse doesn't store the glimpse
+
+# names(build_rforest_bin)
+
+updated_mod_20200924_MM  <- glm(damage_binary ~ build_treecan10 + # build_grass10 + build_shrub_10 +
+                                  parcel_EffectiveYear1 + build_Meanelev_30m + build_Meanslope_30m_DEM +
+                                  build_Meanaspect_30m_DEM + build_Meandistroad + build_Meanbuilddens +
+                                  build_Meandistall_road,
+                                data = build_bin_MM_temp, family = 'binomial')
+
+
+performance::check_model(updated_mod_20200924_MM)
+
+tab_model(updated_mod_20200924_MM)
+         # file = paste0(getwd(),
+         #               '/output_data/veg_logistic_reg_',
+         #               gsub('[[:punct:]]', '_', Sys.time()), '.html'))
+```
+
+
+
+
+
+### D fit Jeffrey Evan's worked example: randomForest
+```{r}
+# modeled after and adapted from this page
+# from https://evansmurphy.wixsite.com/evansspatial/random-forest-sdm
+
+# abbridged from J Evan's second chunk (chunk 1 accesses data)
+library(randomForest)
+library(rfUtilities)
+
+b <- 1001                                     # Number of Bootstrap replicates
+# snip
+# chunks 3 and 4 import raster dadta and extract variables from raster to absence/present point locations
+# snip
+
+
+# # minor prep
+# build_rforest_cat <- build %>% 
+#   st_drop_geometry() %>% 
+#   select(damage_binary, starts_with('build'), starts_with('parcel'),
+#          -build_has_tree_overhang) %>% 
+#   mutate(damage_binary = as.factor(damage_binary)) %>% # PAY ATTENTION HERE
+#   filter(!is.na(build_Meandistroad),
+#          !is.na(build_dist_to_build_ft))
+# 
+# build_rforest_cat %>% tabyl(damage_binary)
+
+build_bin %>% tabyl(damage_binary)
+
+# cl <- multi.collinear(sdata@data[,3:ncol(sdata@data)], p=0.05) # the example
+# cl <- multi.collinear(build_rforest_cat[,2:ncol(build_rforest_cat)], p = 0.05) # earlier version
+
+build_bin %<>% mutate(damage_binary = as.factor(damage_binary)) # PAY ATTENTION HERE
+build_bin %>% glimpse
+
+cl <- multi.collinear(build_bin[,2:ncol(build_bin)], p = 0.05)
+
+# tell us what's got to go!
+for(l in cl) {
+  cl.test <- build_bin[,-which(names(build_bin)==l)]
+  print(paste("Remove variable", l, sep=": "))
+  multi.collinear(cl.test, p=0.05) 
+}
+
+# make the removals
+# build_rforest_cat <- build_rforest_cat[,-which(names(build_rforest_cat) %in% cl )] %>% 
+#   data.frame()
+
+build_bin <- build_bin[,-which(names(build_bin) %in% cl )] %>% 
+  data.frame()
+
+# Chunk 8 makes depenent variable categorical (done). BUT it also checks for frequency of presense
+
+# "We observe that the sample balance of presence locations is 33% thus, meeting the 1/3 rule for sample balance."
+
+build_bin %>% tabyl(damage_binary)
+print('12% - is this a problem?!?!')
+
+# model selection
+# ( rf.model <- rf.modelSel(x=sdata@data[,3:ncol(sdata@data)], y=sdata@data[,"Present"], imp.scale="mir", ntree=b) )
+
+ptm <- proc.time() # clock in
+(rf.model <- rf.modelSel(x=build_bin[,2:ncol(build_bin)],
+                         y=build_bin[,"damage_binary"],
+                         imp.scale="mir", ntree=b))
+(proc.time() - ptm) / 60 # clock out, about 3 minutes
+beepr::beep()
+
+
+sel.vars <- rf.model$selvars
+
+# OR, pick a model?
+#sel.vars <- rf.model$parameters[[4]] # DECISION POINT
+
+# run a model
+ptm <- proc.time() # clock in
+( rf.fit <- randomForest(y=build_bin[,"damage_binary"], x=build_bin[,sel.vars],
+                         ntree=b,
+                         importance=TRUE, norm.votes=TRUE, proximity=TRUE) )
+(proc.time() - ptm) / 60 # clock out, about 3 minutes
+beepr::beep()
+
+
+# run a model with ALL PREDICTORS
+ptm <- proc.time() # clock in
+( rf.fit_all <- randomForest(y=build_bin[,"damage_binary"],
+                             x=build_bin[,2:ncol(build_bin)],
+                         ntree=b,
+                         importance=TRUE, norm.votes=TRUE, proximity=TRUE) )
+(proc.time() - ptm) / 60 # clock out, about 4 minutes
+beepr::beep()
+
+
+
+
+ptm <- proc.time() # clock in
+( imbal <- randomForestSRC::imbalanced(damage_binary~., data=build_bin) )
+(proc.time() - ptm) / 60 # clock out, about 3 minutes
+beepr::beep()
+
+# skipping chunks 13 and 14: predicted raster map.. doesn't really apply here.
+
+# model fit!
+rf.pred <- predict(rf.fit, build_bin[,sel.vars], type="response")
+
+rf.prob <- as.data.frame(predict(rf.fit, build_bin[,sel.vars], type="prob"))
+
+obs.pred <- data.frame(cbind(Observed=as.numeric(as.character(build_bin[,"damage_binary"])),
+                             PRED=as.numeric(as.character(rf.pred)), Prob1=rf.prob[,2],
+                             Prob0=rf.prob[,1]) )
+
+op <- (obs.pred$Observed == obs.pred$PRED)
+
+
+
+( pcc <- (length(op[op == "TRUE"]) / length(op))*100 )
+
+
+
+library(verification)
+
+roc.plot(obs.pred[,"Observed"], obs.pred[,"Prob1"])
+
+
+# model validation
+ptm <- proc.time() # clock in
+( rf.perm <- rf.significance(rf.fit, build_bin[,sel.vars], nperm = 99, ntree = 1001) )
+(proc.time() - ptm) / 60 # clock out, 59 minutes with 99 permutations
+beepr::beep()
+
+saveRDS(rf.perm, file = "output_data/rf.perm.rds")
+
+# cross validation
+ptm <- proc.time() # clock in
+( rf.cv <- rf.crossValidation(rf.fit, build_bin[,sel.vars], p=0.10, n=99, ntree=1001) )
+(proc.time() - ptm) / 60 # clock out, about 143 minutes (2.38 hours) with 999 permutations
+beepr::beep()
+
+# so this model isn't very good
+
+saveRDS(rf.cv, file = "output_data/rf.perm.rds")
+
+# so the number of trees is probably over kill at 1000? 75 sufficient?
+plot(rf.fit, main="Bootstrap Error Convergence")
+
+
+# variable importance
+p <- as.matrix(rf.fit$importance[,3])   
+ord <- rev(order(p[,1], decreasing=TRUE)[1:dim(p)[1]]) 
+
+
+png(file = paste0(getwd(), '/figures/var_imp', gsub('[[:punct:]]', '_', Sys.time()), '.png'))
+dotchart(p[ord,1], main="Scaled Variable Importance", pch=19)  
+dev.off()
+
+
+p <- as.matrix(rf.fit_all$importance[,3])   
+ord <- rev(order(p[,1], decreasing=TRUE)[1:dim(p)[1]]) 
+
+
+png(file = paste0(getwd(), '/figures/var_imp_all', gsub('[[:punct:]]', '_', Sys.time()), '.png'))
+dotchart(p[ord,1], main="Scaled Variable Importance", pch=19)  
+dev.off()
+
+all_vars <- names(build_bin)
+par(mfrow=c(1,1))
+for(i in all_vars[2:52]) {
+  png(file = paste0(getwd(), '/figures/', i, '_',
+                  gsub('[[:punct:]]', '_', Sys.time()), '.png'))
+  rf.partial.prob(rf.fit_all, build_rforest_cat[,all_vars], i, "1", smooth="spline", raw.line=FALSE)
+  dev.off()
+}  
+
+
+
+# par(mfrow=c(2,2))
+# for(i in sel.vars[1:4]) {
+#   rf.partial.prob(rf.fit, build_rforest_cat[,sel.vars], i, "1", smooth="spline", raw.line=FALSE)
+# }  
+
+
+for(i in sel.vars) {
+png(file = paste0(getwd(), '/figures/', i, '_',
+                  gsub('[[:punct:]]', '_', Sys.time()), '.png'))
+rf.partial.prob(rf.fit, build_bin[,sel.vars], i, "1", smooth="spline", raw.line=FALSE)
+dev.off()
+  }  
+beepr::beep()
+```
+

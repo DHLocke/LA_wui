@@ -1,5 +1,5 @@
 ---
-title: "test_summarize_raster"
+title: "01_summarize_distance_rasters"
 author: "Dexter H. Locke, PhD"
 date: "`r format(Sys.time())`"
 output: html_document

@@ -7,6 +7,123 @@ editor_options:
   chunk_output_type: console
 ---
 
+
+## 3 bring in ACS data
+```{r}
+acs_2018 <- load_variables(2018, 'acs5', cache = FALSE); View(acs_2018)
+# set mapping options
+# this makes loading the data faster on the second/subsquent version.
+options(tigris_use_cache = TRUE)
+
+# read in year 2009 - 2013 5-year ACS
+cbg_sf <- get_acs(state = 'CA',                # Connecticut
+                  county = 'Los Angeles County', # larger than we want, hence filter below
+                  geography = 'block group',   # blocks are within block groups, block groups are within tracts. Not all of the data we want are available in blocks
+                  year = 2018,                 # matches line 26
+                  survey = 'acs5',             # matches line 26
+                  moe_level = 95,              # margin of error level, default is 90 I prefer the tighter 95
+                  summary_var = 'B02001_001',  # see help(get_acs) and the tidycensus links above
+                                               # this is total population
+                  variables = c(medincome = 'B19013_001', # median household income, $
+                                
+                                white = 'B02001_002',     # Caucasian, counts
+                                black = 'B02001_003',     # African American, counts
+                                am_ind = 'B02001_004',    # Native American, counts
+                                asian = 'B02001_005',     # Asian, counts
+                                pac_is = 'B02001_006',    # Pacific Islander, counts
+                                other_race ='B02001_007', # Other, counts
+                                
+                                # FIXME add ethnicity
+                                # Pct hispanic (any race)
+                                # percent white not-hispanic
+                                
+                                tot_hu = 'B25003_001',
+                                own_occ_hu = 'B25003_002',
+                                rent_occ_hu = 'B25003_003',
+                                vacant = 'B25004_001',
+                               
+                                edu_base = 'B15002_001',
+                                
+                                edu_hs_m = 'B15002_011',
+                                edu_sc_m = 'B15002_012',
+                                edu_sc1m = 'B15002_013',
+                                edu_aa_m = 'B15002_014',
+                                edu_ba_m = 'B15002_015',
+                                edu_ma_m = 'B15002_016',
+                                edu_po_m = 'B15002_017',
+                                edu_phdm = 'B15002_018',
+                                
+                                edu_hs_f = 'B15002_028',
+                                edu_sc_f = 'B15002_029',
+                                edu_sc1f = 'B15002_030',
+                                edu_aa_f = 'B15002_031',
+                                edu_ba_f = 'B15002_032',
+                                edu_fa_f = 'B15002_033',
+                                edu_po_f = 'B15002_034',
+                                edu_phdf = 'B15002_035'),
+                  output = 'wide',
+                  geometry = TRUE) %>% # this creates the spatial data
+  st_transform(crs = st_crs(build)) %>% 
+  mutate(tot_pop = summary_est,
+         pct_white = (whiteE / summary_est)*100,
+         pct_black = (blackE / summary_est)*100,
+         pct_am_ind= (am_indE/ summary_est)*100,
+         pct_asian = (asianE / summary_est)*100,
+         pct_pac_is= (pac_isE / summary_est)*100,
+         pct_other_r=(other_raceE/summary_est)*100,
+         
+         pct_own_occ=(own_occ_huE/tot_huE*100),
+         pct_vac   = (vacantE / tot_huE*100), # TODO fix infinity
+         
+         pct_edu = ((edu_hs_mE + edu_sc_mE + edu_sc1mE + edu_aa_mE + edu_ba_mE + edu_ma_mE + edu_po_mE + edu_phdmE +
+                    edu_hs_fE + edu_sc_fE + edu_sc1fE + edu_aa_fE + edu_ba_fE + edu_fa_fE + edu_po_fE + edu_phdfE) /
+                      edu_baseE) * 100) %>%
+  select(GEOID, tot_pop, medincomeE, starts_with('pct_'))
+
+# plot(cbg_sf) # looks right
+
+# mapview(cbg_sf) + mapview(build_sf, col.region = 'red')
+
+system.time(
+  build_w_cbg <- build_sf %>%
+  st_join(cbg_sf,           # spatial join
+          left = FALSE,     # if FALSE, only intersection point will, be returned, instead all points returned, 
+          largest = TRUE))  # and attributes of intersection
+                            # largest = TRUE is AMAZING, but makes things much slower.
+mapview(build_w_cbg)
+
+# was the join 'clean' 1 to M?
+dim(build_sf)
+build_w_cbg %>% 
+  st_drop_geometry() %>% 
+  group_by(GEOID) %>% 
+  count() %>% 
+  arrange(desc(n)) -> test; sum(test$n)
+
+build_w_cbg %>% 
+  st_drop_geometry() %>% 
+  group_by(ID_Build) %>% 
+  count() %>% 
+  arrange(desc(n)) -> test2; sum(test2$n)
+
+# good join!
+rm(test, test2)
+
+build_w_cbg %>% 
+  tabyl(GEOID) %>% 
+  arrange(desc(n))
+```
+
+
+
+
+
+
+
+
+
+
+
 ## 2 bring in parcels
 ### 2a polygons
 ```{r eval=FALSE, include=FALSE}
@@ -193,6 +310,37 @@ tab_model(updated_mod_20200924_MM)
          # file = paste0(getwd(),
          #               '/output_data/veg_logistic_reg_',
          #               gsub('[[:punct:]]', '_', Sys.time()), '.html'))
+```
+
+
+### D R-part and cforest
+```{r}
+
+# recursive partitioning
+rpart_1 <- rpart::rpart(damage_binary~.,data = build_bin)#, cp = 0.02)
+summary(rpart_1)
+
+
+png(file = paste0(getwd(), '/figures/rpart_', gsub('[[:punct:]]', '_', Sys.time()), '.png'))
+rpart.plot::rpart.plot(rpart_1)
+dev.off()
+#labels(rpart_1)
+
+# ptm <- proc.time() # clock in
+# party_1 <- party::cforest(damage_binary~., data = build_bin)
+# party_1_imp <- varimp(party_1); View(party_1_imp)
+# (proc.time() - ptm) / 60 # clock out, about 6 minutes
+# beepr::beep()
+# 
+# 
+# cf <- party_1
+# pt <- prettytree(cf@ensemble[[1]], names(cf@data@get("input"))) 
+# nt <- new("BinaryTree") 
+# nt@tree <- pt 
+# nt@data <- cf@data 
+# nt@responses <- cf@responses 
+
+#plot(nt, type="simple")
 ```
 
 

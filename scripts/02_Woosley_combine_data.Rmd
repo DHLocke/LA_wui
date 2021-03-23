@@ -7,34 +7,11 @@ editor_options:
   chunk_output_type: console
 ---
 
-
-TODO combine land cover summaries to buildings (from new analyses)
-TODO bring distance shrub
-
-
-TODO 'final' double checks
-TODO fit models suggested by Alex.
-
-
-
-TODO We want to drop parcels without any building on them for the building analyses.
-
-
-For JOD:
-  WHATS UP WITH BARE SOIL? 
-    Is this a classifcation problem?
-
 year 2008 is important for policy reasons.
   Consider a before and after variable. 
 
+# What about property value?
 
-<!-- Effective Year 1 -->
-<!--   zero and NA should become NA. (random forest can handel this, regression maybe not.) -->
-<!--   need to investigate -->
-<!--   make a most recent year built var? -->
-
-  Roll_ImpValue - might indicate
-  Roll_HomeOwnersExempt - owner occupied?
 
 TODO: 
 Variable selection  
@@ -42,40 +19,8 @@ Variable selection
   *Deviance* explained will be called the most important. 
     Would be a great supplement for a paper on its own.
 
-Donish  
-2. Correlation matrix for continuous predictors
-      cut off around 0.8 - non-observed
-      
-3. If still unweildy, consider grouping vars
-  ex flammable veg
-      
-Mirand:
-  check out building buffers (is it centroid or perimeter.)
-
-
-2) Build dist building has an outlier that makes it hard to see box plot
-
-cool. But, why isn't year built significant? what is happening?? also, aren't the two road variables correlated?
-
 3) why does build_has_tree_overhang box plot look so weird? Sum stats say mean is 0.7 but these values are either 0 or 1?
 
-
-
-Done
-Buildings only from the damaged dataset, are they redundant? Drop the blanks?
-  - TODO Need to cut redundant fileds
-
-Done
-Parcels Join buildings
-  - st_join is fine.
-  - DO IT NOW
-  
-Done
-dependent variable
-  - apply the reclassification (the case_when business)
-
-Done
-show model preliminaries~~
 
 Done
 Get discriptive statistics
@@ -85,17 +30,7 @@ Get discriptive statistics
 look at importance values for an all-variables random forest
   (do not use variable selection)
 
-Done
-logisitc regression with handfull of puposively selected variables
-  A veg around house
-  position on landscae
-    building density
-    aspect
-    roads
-  B what buffer distance seems most related to   
 
-What's up with year built? (Miranda to investigate) - in progress
-  Use effective 
 
 
 Next steps
@@ -236,7 +171,7 @@ glimpse(build)
 
 
 ## 2 bring in building attributes --from Jarlath-- (start simple at first) 
-### 2a building distance to building
+### a building distance to building
 ```{r}
 # BUILDING DISTANCE TO BUILDING
 (data_path <- 'data/WoosleyFire_eCogOuput_06Dec2019/Building_dist_Building') # building dist build
@@ -294,7 +229,8 @@ build %<>%
 ```
 
 
-### 2b building distance veg
+
+### b building distance veg
 ```{r}
 
 (min_dist_shrub <- read_csv('output_data/min_dist_shrub_2021-03-16.csv'))
@@ -308,7 +244,7 @@ build %<>%
 
 
 
-### 2c building tree overhang
+### c building tree overhang
 ```{r}
 (data_path <- 'data/WoosleyFire_eCogOuput_06Dec2019/Building_TreeOverhang') # building tree overhang
 
@@ -364,7 +300,7 @@ build %<>%
 ```
 
 
-### 2d building land cover buffer
+### d building land cover buffer
 ```{r eval=FALSE, include=FALSE}
 (data_path <- 'data/WoosleyFire_eCogOuput_06Dec2019/Building_LandCoverBuff') # building dist build
 
@@ -430,7 +366,7 @@ glimpse(build)
 
 
 
-### 2d ALT building land cover buffer
+### d ALT building land cover buffer
 ```{r}
 build %>% distinct(ID_Build)
 
@@ -460,45 +396,8 @@ build %<>%
 ```
 
 
-### 2e double check land cover values
-```{r}
-# build %>% mapview(., zcol = 'build_p_tree_10')
-
-# build %>% st_drop_geometry() %>% 
-#   write.csv(., paste0(getwd(), '/output_data/test_joiner_',
-#                       gsub('[[:punct:]]', '_', Sys.time()), '.csv'),
-#             row.names = TRUE)
-
-
-build %>% 
-  st_drop_geometry() %>% 
-  tidylog::select(ID_Build, contains('build_p_')) %>% 
-  pivot_longer(-ID_Build) %>% 
-  mutate(#buff_dist = as.numeric(str_remove_all(name, '\\D')),
-         var = str_remove(name, 'build_p_')) %>% 
-  separate(var, into = c('var', 'buff_dist'), sep = '_', convert = TRUE) %>% 
-  ggplot(aes(x = value)) + 
-  # geom_density() + 
-  geom_histogram() +
-  #facet_wrap(~var + buff_dist, ncol = 4) +
-  facet_grid(buff_dist ~ var) +
-  theme_bw() + 
-  # ggsave(file = paste0(getwd(), '/figures/donut_buff_landcover_',
-  #                   gsub('[[:punct:]]', '_', Sys.time()), '.png')) +
-  NULL
-
-
-build %>% ggplot(aes(build_min_dist_tree)) + geom_histogram(binwidth = 2)
-build %>% ggplot(aes(build_min_dist_shrub)) + geom_histogram(binwidth = 2)
-
-
-```
-
-
 ## 3 parcels
 ```{r}
-
-
 # <!-- Effective Year 1 -->
 # <!--   zero and NA should become NA. (random forest can handel this, regression maybe not.) -->
 # <!--   need to investigate -->
@@ -557,6 +456,17 @@ parcel %>%
 # join that back
 parcel %<>% left_join(., parcel_recent, by = "parcel_AIN")
 
+
+system.time(
+build %<>% st_join(parcel, # spatial join
+                   left = FALSE, # if FALSE, only intersection be returned, instead of all
+                   largest = TRUE))
+```
+
+
+
+### a year built headache
+```{r eval=FALSE, include=FALSE}
 # which ones didn't join completely?
 parcel_na_recent <- parcel %>% filter(is.na(parcel_recent)) %>% 
   tidylog::select(parcel_AIN:parcel_Roll_HomeOwnersExemp, parcel_Build_P) # these records don't have year built info
@@ -634,202 +544,23 @@ glimpse(build)
 ```
 
 
-## 4 double checks
+## 4 write out the data
 ```{r}
-# YEAR BUILT
-# Only living quarters are given a year built info
-build %>% 
-  tidylog::select(ID_Build, starts_with("parcel_Effective"), parcel_recent,
-           #, starts_with("parcel_YearBuilt")
-         ) %>% 
-  st_drop_geometry() %>% 
-  mutate_if(is.character, as.numeric) %>% #summary()
-  pivot_longer(cols = -ID_Build, names_to = 'variable') %>% 
-  ggplot(aes(value)) + 
-  geom_density() + 
-  facet_wrap(~variable, scales = 'free_x') + 
-  theme_bw()
 
-
-
-# ggsave(file = paste0(getwd(), '/figures/effective_year_',
-#                     gsub('[[:punct:]]', '_', Sys.time()), '.png'))
-
-build %>% 
-  select(starts_with("parcel_Effective"),
-         # starts_with("parcel_YearBuilt"),
-         parcel_recent) %>% map(., ~sum(is.na(.)))
-
-# how many of these 
-build %>%
-  filter(parcel_Roll_ImpValue == 0 &
-           parcel_Roll_HomeOwnersExemp == 0 &
-           parcel_Build_P == 0) %>% # year built should be zero for these
-  glimpse()
-
-# where are these NA's?
-build %>% filter(is.na(parcel_recent)) %>% mapview()
-build %>% filter(parcel_recent == 0) %>% mapview()
-
-summary(build$parcel_recent)
-
-build %>% #st_drop_geometry() %>%
-  ggplot(aes(parcel_recent)) +
-  geom_histogram()
-
-# ggsave(file = paste0(getwd(), '/figures/effective_yearRecent_',
-#                     gsub('[[:punct:]]', '_', Sys.time()), '.png'))
-
-# no longer needed, NA's zeros recoded in chunk above
-# build %>% st_drop_geometry() %>% 
-#   mutate(parcel_EffectiveYear1 = na_if(parcel_EffectiveYear1, 0)) %>% 
-#   ggplot(aes(parcel_EffectiveYear1)) + geom_histogram()
-# 
-# ggsave(file = paste0(getwd(), '/figures/effective_yearONE_NO_ZERO',
-#                     gsub('[[:punct:]]', '_', Sys.time()), '.png'))
-
-
-build %>% st_drop_geometry() %>% 
-  describe %>%
-  # write.csv(., paste0(getwd(), '/output_data/describe_',
-  #                     gsub('[[:punct:]]', '_', Sys.time()), '.csv'),
-  #           row.names = TRUE)
-
-glimpse(build)
-
-box_plot_dat <- build %>% 
-  st_drop_geometry() %>% 
-  select(damage_cat,
-         starts_with('build_'),
-         starts_with('parcel_') &
-         !parcel_AIN & !parcel_UseType & !parcel_UseDescription & 
-           -contains('Year'), -build_structures_DAMAGE) %>% data.frame %>% glimpse
-
-# for(i in 2:ncol(box_plot_dat)){
-#   print(names(box_plot_dat)[i])
-#   png(file = paste0(getwd(), '/figures/boxplot_', names(box_plot_dat)[i], '_',
-#                     gsub('[[:punct:]]', '_', Sys.time()), '.png'))
-#   boxplot(box_plot_dat[,i] ~ box_plot_dat$damage_cat, main = names(box_plot_dat)[i])
-#   dev.off()
-# }
+build %>% #glimpse()
+  st_drop_geometry() %>%
+  tidylog::select(ID_Build, ID_Parcel, parcel_AIN,
+                  damage_cat : damage_severity, build_structures_DAMAGE,
+                  build_Mean_elev_30m : build_Mean_distall_road,
+                  build_min_dist_shrub : build_perc_overhang,
+                  build_dist_angle = build_NEAR_ANGLE, build_dist_to_build_ft = build_NEAR_DIST, 
+                  build_dist_to_build_ft_jod = build_dist_to_build_ft,
+                  build_p_tree_10: build_p_shrub_300, # FIXME add value here?
+                  parcel_Can_P : parcel_Imperv_P,
+                  parce_year_built = parcel_recent) %>% 
+  write_csv(., paste0(getwd(), '/output_data/building_', Sys.Date(), '.csv'))
 
 ```
-
-
-TODO expand EDA
-
-
-
-
-
-
-## 3 bring in ACS data
-```{r}
-acs_2018 <- load_variables(2018, 'acs5', cache = FALSE); View(acs_2018)
-# set mapping options
-# this makes loading the data faster on the second/subsquent version.
-options(tigris_use_cache = TRUE)
-
-# read in year 2009 - 2013 5-year ACS
-cbg_sf <- get_acs(state = 'CA',                # Connecticut
-                  county = 'Los Angeles County', # larger than we want, hence filter below
-                  geography = 'block group',   # blocks are within block groups, block groups are within tracts. Not all of the data we want are available in blocks
-                  year = 2018,                 # matches line 26
-                  survey = 'acs5',             # matches line 26
-                  moe_level = 95,              # margin of error level, default is 90 I prefer the tighter 95
-                  summary_var = 'B02001_001',  # see help(get_acs) and the tidycensus links above
-                                               # this is total population
-                  variables = c(medincome = 'B19013_001', # median household income, $
-                                
-                                white = 'B02001_002',     # Caucasian, counts
-                                black = 'B02001_003',     # African American, counts
-                                am_ind = 'B02001_004',    # Native American, counts
-                                asian = 'B02001_005',     # Asian, counts
-                                pac_is = 'B02001_006',    # Pacific Islander, counts
-                                other_race ='B02001_007', # Other, counts
-                                
-                                # FIXME add ethnicity
-                                # Pct hispanic (any race)
-                                # percent white not-hispanic
-                                
-                                tot_hu = 'B25003_001',
-                                own_occ_hu = 'B25003_002',
-                                rent_occ_hu = 'B25003_003',
-                                vacant = 'B25004_001',
-                               
-                                edu_base = 'B15002_001',
-                                
-                                edu_hs_m = 'B15002_011',
-                                edu_sc_m = 'B15002_012',
-                                edu_sc1m = 'B15002_013',
-                                edu_aa_m = 'B15002_014',
-                                edu_ba_m = 'B15002_015',
-                                edu_ma_m = 'B15002_016',
-                                edu_po_m = 'B15002_017',
-                                edu_phdm = 'B15002_018',
-                                
-                                edu_hs_f = 'B15002_028',
-                                edu_sc_f = 'B15002_029',
-                                edu_sc1f = 'B15002_030',
-                                edu_aa_f = 'B15002_031',
-                                edu_ba_f = 'B15002_032',
-                                edu_fa_f = 'B15002_033',
-                                edu_po_f = 'B15002_034',
-                                edu_phdf = 'B15002_035'),
-                  output = 'wide',
-                  geometry = TRUE) %>% # this creates the spatial data
-  st_transform(crs = st_crs(build_sf)) %>% 
-  mutate(tot_pop = summary_est,
-         pct_white = (whiteE / summary_est)*100,
-         pct_black = (blackE / summary_est)*100,
-         pct_am_ind= (am_indE/ summary_est)*100,
-         pct_asian = (asianE / summary_est)*100,
-         pct_pac_is= (pac_isE / summary_est)*100,
-         pct_other_r=(other_raceE/summary_est)*100,
-         
-         pct_own_occ=(own_occ_huE/tot_huE*100),
-         pct_vac   = (vacantE / tot_huE*100),
-         
-         pct_edu = ((edu_hs_mE + edu_sc_mE + edu_sc1mE + edu_aa_mE + edu_ba_mE + edu_ma_mE + edu_po_mE + edu_phdmE +
-                    edu_hs_fE + edu_sc_fE + edu_sc1fE + edu_aa_fE + edu_ba_fE + edu_fa_fE + edu_po_fE + edu_phdfE) /
-                      edu_baseE) * 100) %>%
-  select(GEOID, tot_pop, medincomeE, starts_with('pct_'))
-
-# plot(cbg_sf) # looks right
-
-# mapview(cbg_sf) + mapview(build_sf, col.region = 'red')
-
-system.time(
-  build_w_cbg <- build_sf %>%
-  st_join(cbg_sf,           # spatial join
-          left = FALSE,     # if FALSE, only intersection point will, be returned, instead all points returned, 
-          largest = TRUE))  # and attributes of intersection
-                            # largest = TRUE is AMAZING, but makes things much slower.
-mapview(build_w_cbg)
-
-# was the join 'clean' 1 to M?
-dim(build_sf)
-build_w_cbg %>% 
-  st_drop_geometry() %>% 
-  group_by(GEOID) %>% 
-  count() %>% 
-  arrange(desc(n)) -> test; sum(test$n)
-
-build_w_cbg %>% 
-  st_drop_geometry() %>% 
-  group_by(ID_Build) %>% 
-  count() %>% 
-  arrange(desc(n)) -> test2; sum(test2$n)
-
-# good join!
-rm(test, test2)
-
-build_w_cbg %>% 
-  tabyl(GEOID) %>% 
-  arrange(desc(n))
-```
-
-
 
 
 

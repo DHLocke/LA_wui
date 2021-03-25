@@ -552,7 +552,7 @@ build %>% #glimpse()
   tidylog::select(ID_Build, ID_Parcel, parcel_AIN,
                   damage_cat : damage_severity, build_structures_DAMAGE,
                   build_Mean_elev_30m : build_Mean_distall_road,
-                  build_min_dist_shrub : build_perc_overhang,
+                  build_min_dist_tree : build_perc_overhang,
                   build_dist_angle = build_NEAR_ANGLE, build_dist_to_build_ft = build_NEAR_DIST, 
                   build_dist_to_build_ft_jod = build_dist_to_build_ft,
                   build_p_tree_10: build_p_shrub_300, # FIXME add value here?

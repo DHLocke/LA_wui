@@ -15,16 +15,6 @@ knitr::opts_chunk$set(echo = TRUE)
 This assumes "02_Woosley_combine_data.Rmd" was run
 
 
-TODO write out the 'final' dataset and read it back in here.
-
-TODO univariate logistic regression to pick across buffer distances
-
-TODO stepwise regression 
-TODO maximal model (pruned based on logistic)
-
-TODO random forest
-
-
 
 ## 0 set up: load libraries, custom functions, set defaults
 ```{r}
@@ -39,6 +29,8 @@ packs <- c('tidyverse'        # a must have!
            #'tidycensus',     # access to Census data in a tidy way
            #'party',          # random forests
            , 'modEvA'         # contains D-squared function
+           , 'randomForest', 'rfUtilities', 'verification'
+           , 'tictoc'         # times things
            , 'beepr'          # makes noises
            , 'psych'          # describe is very useful for descriptive statistics
            , 'sjPlot')        # useful plotting and regression support
@@ -55,75 +47,72 @@ lapply(packs, library, character.only = TRUE)
 
 ## 1 read in the data
 ```{r}
-build <- read_csv(paste0(getwd(), '/output_data/building_2021-03-23.csv'))
+build <- read_csv(paste0(getwd(), '/output_data/building_2021-03-24.csv')) %>% 
+  filter(build_min_dist_tree < Inf)
 ```
 
 
 
 
 
-## 1 fit models
-
-
-
-
-### B univariate-logistic regression
+## 2 fit models
+### A univariate-logistic regression
 ```{r}
-# build_bin_sel <- build_bin %>% select(damage_binary, 
-#                                       build_treecan10 : build_shrub_300)
-# 
-uni_log_mods <- build %>%
+
+
+tic(); uni_log_mods <- build %>%
   nest() %>%
   mutate(
-    # land form
-    log_build_Mean_elev_30 = map(., ~glm(damage_binary ~ build_Mean_elev_30m, family = 'binomial', data = data.frame(.))),
-    log_build_Mean_elev_100= map(., ~glm(damage_binary ~ build_Mean_elev_100m,family = 'binomial', data = data.frame(.))),
+    # ~landscape position
+    log_build_Mean_elev_30 = map(., ~glm(damage_binary ~ build_Mean_elev_30m, family = binomial, data = data.frame(.))),
+    log_build_Mean_elev_100= map(., ~glm(damage_binary ~ build_Mean_elev_100m,family = binomial, data = data.frame(.))),
     
-    log_build_Mean_slope_30 = map(., ~glm(damage_binary ~ build_Mean_slope_30m_DEM, family = 'binomial', data = data.frame(.))),
-    log_build_Mean_slope_100= map(., ~glm(damage_binary ~ build_Mean_slope_100m_DEM,family = 'binomial', data = data.frame(.))),
+    log_build_Mean_slope_30 = map(., ~glm(damage_binary ~ build_Mean_slope_30m_DEM, family = binomial, data = data.frame(.))),
+    log_build_Mean_slope_100= map(., ~glm(damage_binary ~ build_Mean_slope_100m_DEM,family = binomial, data = data.frame(.))),
     
-    log_build_Mean_aspect_30 = map(., ~glm(damage_binary ~ build_Mean_aspect_30m_DEM, family= 'binomial', data = data.frame(.))),
-    log_build_Mean_aspect_100= map(., ~glm(damage_binary ~ build_Mean_aspect_100m_DEM,family= 'binomial', data = data.frame(.))),
+    log_build_Mean_aspect_30 = map(., ~glm(damage_binary ~ build_Mean_aspect_30m_DEM, family= binomial, data = data.frame(.))),
+    log_build_Mean_aspect_100= map(., ~glm(damage_binary ~ build_Mean_aspect_100m_DEM,family= binomial, data = data.frame(.))),
     
-    log_build_p_tree_10 = map(., ~glm(damage_binary ~ build_p_tree_10, family = 'binomial', data = data.frame(.))),
-    log_build_p_tree_100= map(., ~glm(damage_binary ~ build_p_tree_100,family = 'binomial', data = data.frame(.))),
-    log_build_p_tree_200= map(., ~glm(damage_binary ~ build_p_tree_200,family = 'binomial', data = data.frame(.))),
-    log_build_p_tree_300= map(., ~glm(damage_binary ~ build_p_tree_300,family = 'binomial', data = data.frame(.))),
+    # land cover
+    log_build_p_tree_10 = map(., ~glm(damage_binary ~ build_p_tree_10, family = binomial, data = data.frame(.))),
+    log_build_p_tree_100= map(., ~glm(damage_binary ~ build_p_tree_100,family = binomial, data = data.frame(.))),
+    log_build_p_tree_200= map(., ~glm(damage_binary ~ build_p_tree_200,family = binomial, data = data.frame(.))),
+    log_build_p_tree_300= map(., ~glm(damage_binary ~ build_p_tree_300,family = binomial, data = data.frame(.))),
   
-    log_build_p_grass_10 = map(., ~glm(damage_binary ~ build_p_grass_10, family = 'binomial', data = data.frame(.))),
-    log_build_p_grass_100= map(., ~glm(damage_binary ~ build_p_grass_100,family = 'binomial', data = data.frame(.))),
-    log_build_p_grass_200= map(., ~glm(damage_binary ~ build_p_grass_200,family = 'binomial', data = data.frame(.))),
-    log_build_p_grass_300= map(., ~glm(damage_binary ~ build_p_grass_300,family = 'binomial', data = data.frame(.))),
+    log_build_p_grass_10 = map(., ~glm(damage_binary ~ build_p_grass_10, family = binomial, data = data.frame(.))),
+    log_build_p_grass_100= map(., ~glm(damage_binary ~ build_p_grass_100,family = binomial, data = data.frame(.))),
+    log_build_p_grass_200= map(., ~glm(damage_binary ~ build_p_grass_200,family = binomial, data = data.frame(.))),
+    log_build_p_grass_300= map(., ~glm(damage_binary ~ build_p_grass_300,family = binomial, data = data.frame(.))),
     
-    log_build_p_soil_10 = map(., ~glm(damage_binary ~ build_p_soil_10, family = 'binomial', data = data.frame(.))),
-    log_build_p_soil_100= map(., ~glm(damage_binary ~ build_p_soil_100,family = 'binomial', data = data.frame(.))),
-    log_build_p_soil_200= map(., ~glm(damage_binary ~ build_p_soil_200,family = 'binomial', data = data.frame(.))),
-    log_build_p_soil_300= map(., ~glm(damage_binary ~ build_p_soil_300,family = 'binomial', data = data.frame(.))),
+    log_build_p_soil_10 = map(., ~glm(damage_binary ~ build_p_soil_10, family = binomial, data = data.frame(.))),
+    log_build_p_soil_100= map(., ~glm(damage_binary ~ build_p_soil_100,family = binomial, data = data.frame(.))),
+    log_build_p_soil_200= map(., ~glm(damage_binary ~ build_p_soil_200,family = binomial, data = data.frame(.))),
+    log_build_p_soil_300= map(., ~glm(damage_binary ~ build_p_soil_300,family = binomial, data = data.frame(.))),
     
-    log_build_p_water_10 = map(., ~glm(damage_binary ~ build_p_water_10, family = 'binomial', data = data.frame(.))),
-    log_build_p_water_100= map(., ~glm(damage_binary ~ build_p_water_100,family = 'binomial', data = data.frame(.))),
-    log_build_p_water_200= map(., ~glm(damage_binary ~ build_p_water_200,family = 'binomial', data = data.frame(.))),
-    log_build_p_water_300= map(., ~glm(damage_binary ~ build_p_water_300,family = 'binomial', data = data.frame(.))),
+    log_build_p_water_10 = map(., ~glm(damage_binary ~ build_p_water_10, family = binomial, data = data.frame(.))),
+    log_build_p_water_100= map(., ~glm(damage_binary ~ build_p_water_100,family = binomial, data = data.frame(.))),
+    log_build_p_water_200= map(., ~glm(damage_binary ~ build_p_water_200,family = binomial, data = data.frame(.))),
+    log_build_p_water_300= map(., ~glm(damage_binary ~ build_p_water_300,family = binomial, data = data.frame(.))),
     
-    log_build_p_buliding_10 = map(., ~glm(damage_binary ~ build_p_building_10, family = 'binomial', data = data.frame(.))),
-    log_build_p_buliding_100= map(., ~glm(damage_binary ~ build_p_building_100,family = 'binomial', data = data.frame(.))),
-    log_build_p_buliding_200= map(., ~glm(damage_binary ~ build_p_building_200,family = 'binomial', data = data.frame(.))),
-    log_build_p_buliding_300= map(., ~glm(damage_binary ~ build_p_building_300,family = 'binomial', data = data.frame(.))),
+    log_build_p_buliding_10 = map(., ~glm(damage_binary ~ build_p_building_10, family = binomial, data = data.frame(.))),
+    log_build_p_buliding_100= map(., ~glm(damage_binary ~ build_p_building_100,family = binomial, data = data.frame(.))),
+    log_build_p_buliding_200= map(., ~glm(damage_binary ~ build_p_building_200,family = binomial, data = data.frame(.))),
+    log_build_p_buliding_300= map(., ~glm(damage_binary ~ build_p_building_300,family = binomial, data = data.frame(.))),
     
-    log_build_p_road_10 = map(., ~glm(damage_binary ~ build_p_road_10, family = 'binomial', data = data.frame(.))),
-    log_build_p_road_100= map(., ~glm(damage_binary ~ build_p_road_100,family = 'binomial', data = data.frame(.))),
-    log_build_p_road_200= map(., ~glm(damage_binary ~ build_p_road_200,family = 'binomial', data = data.frame(.))),
-    log_build_p_road_300= map(., ~glm(damage_binary ~ build_p_road_300,family = 'binomial', data = data.frame(.))),
+    log_build_p_road_10 = map(., ~glm(damage_binary ~ build_p_road_10, family = binomial, data = data.frame(.))),
+    log_build_p_road_100= map(., ~glm(damage_binary ~ build_p_road_100,family = binomial, data = data.frame(.))),
+    log_build_p_road_200= map(., ~glm(damage_binary ~ build_p_road_200,family = binomial, data = data.frame(.))),
+    log_build_p_road_300= map(., ~glm(damage_binary ~ build_p_road_300,family = binomial, data = data.frame(.))),
     
-    log_build_p_otherpaved_10 = map(., ~glm(damage_binary ~ build_p_otherpaved_10, family = 'binomial', data = data.frame(.))),
-    log_build_p_otherpaved_100= map(., ~glm(damage_binary ~ build_p_otherpaved_100,family = 'binomial', data = data.frame(.))),
-    log_build_p_otherpaved_200= map(., ~glm(damage_binary ~ build_p_otherpaved_200,family = 'binomial', data = data.frame(.))),
-    log_build_p_otherpaved_300= map(., ~glm(damage_binary ~ build_p_otherpaved_300,family = 'binomial', data = data.frame(.))),
+    log_build_p_otherpaved_10 = map(., ~glm(damage_binary ~ build_p_otherpaved_10, family = binomial, data = data.frame(.))),
+    log_build_p_otherpaved_100= map(., ~glm(damage_binary ~ build_p_otherpaved_100,family = binomial, data = data.frame(.))),
+    log_build_p_otherpaved_200= map(., ~glm(damage_binary ~ build_p_otherpaved_200,family = binomial, data = data.frame(.))),
+    log_build_p_otherpaved_300= map(., ~glm(damage_binary ~ build_p_otherpaved_300,family = binomial, data = data.frame(.))),
     
-    log_build_p_shrub_10 = map(., ~glm(damage_binary ~ build_p_shrub_10, family = 'binomial', data = data.frame(.))),
-    log_build_p_shrub_100= map(., ~glm(damage_binary ~ build_p_shrub_100,family = 'binomial', data = data.frame(.))),
-    log_build_p_shrub_200= map(., ~glm(damage_binary ~ build_p_shrub_200,family = 'binomial', data = data.frame(.))),
-    log_build_p_shrub_300= map(., ~glm(damage_binary ~ build_p_shrub_300,family = 'binomial', data = data.frame(.))),
+    log_build_p_shrub_10 = map(., ~glm(damage_binary ~ build_p_shrub_10, family = binomial, data = data.frame(.))),
+    log_build_p_shrub_100= map(., ~glm(damage_binary ~ build_p_shrub_100,family = binomial, data = data.frame(.))),
+    log_build_p_shrub_200= map(., ~glm(damage_binary ~ build_p_shrub_200,family = binomial, data = data.frame(.))),
+    log_build_p_shrub_300= map(., ~glm(damage_binary ~ build_p_shrub_300,family = binomial, data = data.frame(.)))
 
     ) %>%
   select(-data) %>% 
@@ -135,363 +124,128 @@ uni_log_mods <- build %>%
   mutate(#smry = map(model, summary),
          dsqr = map(model, Dsquared),
          AIC = map(model, AIC),
-         r2 = map(model, performance::r2))
-
-uni_log_mods %>% 
-  select(var, dist, AIC, dsqr, r2) %>% 
-  unnest(dsqr, AIC, r2) %>% unnest(r2)
-
-# 
-# veg_log_mods %>% select(model_name) %>% toString() %>% 
-#   str_replace_all(., '\", \"', ',') %>% 
-#   str_sub(4, -4) -> test
+         r2 = map(model, performance::r2)); toc()
 
 
-# # OLD
-# # 
-# # build_bin %>% 
-# #   mutate(log_mod_build_p_tree_10 = map(., ~glm(damage_binary ~ build_p_tree_10, data = data.frame(.))))
-# 
-# log_build_p_tree_10  <- glm(damage_binary ~ build_p_tree_10, data = build_bin, family = 'binomial')
-# log_build_p_tree_100 <- glm(damage_binary ~ build_p_tree_100,data = build_bin, family = 'binomial')
-# log_build_p_tree_200 <- glm(damage_binary ~ build_p_tree_200,data = build_bin, family = 'binomial')
-# log_build_p_tree_300 <- glm(damage_binary ~ build_p_tree_300,data = build_bin, family = 'binomial')
-# 
-# # performance::compare_performance(
-# #   log_build_treecan10, log_build_treecan100, log_build_treecan200, log_build_treecan300,
-# #   rank = TRUE)
-# 
-# # performance::check_model(log_build_treecan100)
-# #tab_model(log_build_treecan100)
-# # tab_model(log_build_treecan10, log_build_treecan100, log_build_treecan200, log_build_treecan300,
-# #           show.aic = TRUE, show.dev = TRUE)
-# 
-# # https://rdrr.io/rforge/modEvA/man/Dsquared.html
-# modEvA::Dsquared(log_build_p_tree_10)
-# modEvA::Dsquared(log_build_p_tree_100) # suggests 100
-# modEvA::Dsquared(log_build_p_tree_200)
-# modEvA::Dsquared(log_build_p_tree_300) 
-# 
-# # GRASS
-# log_build_grass10  <- glm(damage_binary ~ build_grass10, data = build_bin, family = 'binomial')
-# log_build_grass100 <- glm(damage_binary ~ build_grass_100,data = build_bin, family = 'binomial')
-# log_build_grass200 <- glm(damage_binary ~ build_grass_200,data = build_bin, family = 'binomial')
-# log_build_grass300 <- glm(damage_binary ~ build_grass_300,data = build_bin, family = 'binomial')
-# 
-# performance::compare_performance(
-#   log_build_grass10, log_build_grass100, log_build_grass200, log_build_grass300,
-#   rank = TRUE)
-# 
-# #performance::check_model(log_build_grass300)
-# #tab_model(log_build_grass300)
-# 
-# modEvA::Dsquared(log_build_grass10)
-# modEvA::Dsquared(log_build_grass100)
-# modEvA::Dsquared(log_build_grass200)
-# modEvA::Dsquared(log_build_grass300) # suggests 300
-# 
-# 
-# # SHRUB
-# log_build_shrub10  <- glm(damage_binary ~ build_shrub_10, data = build_bin, family = 'binomial')
-# log_build_shrub100 <- glm(damage_binary ~ build_shrub_100,data = build_bin, family = 'binomial')
-# log_build_shrub200 <- glm(damage_binary ~ build_shrub_200,data = build_bin, family = 'binomial')
-# log_build_shrub300 <- glm(damage_binary ~ build_shrub_300,data = build_bin, family = 'binomial')
-# 
-# # performance::compare_performance(
-# #   log_build_shrub10, log_build_shrub100, log_build_shrub200, log_build_shrub300,
-# #   rank = TRUE)
-# # 
-# # performance::check_model(log_build_shrub300)
-# 
-# modEvA::Dsquared(log_build_shrub10)
-# modEvA::Dsquared(log_build_shrub100)
-# modEvA::Dsquared(log_build_shrub200)
-# modEvA::Dsquared(log_build_shrub300) # suggests 300
-# 
-# # tab_model(log_build_treecan100, log_build_grass300, log_build_shrub300,
-# #          file = paste0(getwd(),
-# #                        '/output_data/veg_logistic_reg_',
-# #                        gsub('[[:punct:]]', '_', Sys.time()), '.html'))
-```
+# extract goodness of fit measures
+(
+  gof <- uni_log_mods %>% 
+    select(var, dist, AIC, dsqr, r2) %>% 
+    unnest(dsqr, AIC, r2) %>% unnest(r2)
+)
 
-tk
-#### OVERHANG
-
-#### other land covers
-```{r}
-# SOIL
-log_build_soil10  <- glm(damage_binary ~ build_soil_10, data = build_bin, family = 'binomial')
-log_build_soil100 <- glm(damage_binary ~ build_soil_100,data = build_bin, family = 'binomial')
-log_build_soil200 <- glm(damage_binary ~ build_soil_200,data = build_bin, family = 'binomial')
-log_build_soil300 <- glm(damage_binary ~ build_soil_300,data = build_bin, family = 'binomial')
-
-# https://rdrr.io/rforge/modEvA/man/Dsquared.html
-modEvA::Dsquared(log_build_soil10)
-modEvA::Dsquared(log_build_soil100)
-modEvA::Dsquared(log_build_soil200)
-modEvA::Dsquared(log_build_soil300) # suggests 300
-
-# WATER
-log_build_water10  <- glm(damage_binary ~ build_water_10, data = build_bin, family = 'binomial')
-log_build_water100 <- glm(damage_binary ~ build_water_100,data = build_bin, family = 'binomial')
-log_build_water200 <- glm(damage_binary ~ build_water_200,data = build_bin, family = 'binomial')
-log_build_water300 <- glm(damage_binary ~ build_water_300,data = build_bin, family = 'binomial')
-
-# https://rdrr.io/rforge/modEvA/man/Dsquared.html
-modEvA::Dsquared(log_build_water10)
-modEvA::Dsquared(log_build_water100)
-modEvA::Dsquared(log_build_water200)
-modEvA::Dsquared(log_build_water300) # suggests 300
-
-
-# BUILD
-log_build_build10  <- glm(damage_binary ~ build_build_10, data = build_bin, family = 'binomial')
-log_build_build100 <- glm(damage_binary ~ build_build_100,data = build_bin, family = 'binomial')
-log_build_build200 <- glm(damage_binary ~ build_build_200,data = build_bin, family = 'binomial')
-log_build_build300 <- glm(damage_binary ~ build_build_300,data = build_bin, family = 'binomial')
-
-# https://rdrr.io/rforge/modEvA/man/Dsquared.html
-modEvA::Dsquared(log_build_build10)
-modEvA::Dsquared(log_build_build100)
-modEvA::Dsquared(log_build_build200)
-modEvA::Dsquared(log_build_build300) # suggests 300
-
-
-
-
-# OTHER IMP
-log_build_oth_imp10  <- glm(damage_binary ~ build_oth_imp_10, data = build_bin, family = 'binomial')
-log_build_oth_imp100 <- glm(damage_binary ~ build_oth_imp_100,data = build_bin, family = 'binomial')
-log_build_oth_imp200 <- glm(damage_binary ~ build_oth_imp_200,data = build_bin, family = 'binomial')
-log_build_oth_imp300 <- glm(damage_binary ~ build_oth_imp_300,data = build_bin, family = 'binomial')
-
-# https://rdrr.io/rforge/modEvA/man/Dsquared.html
-modEvA::Dsquared(log_build_oth_imp10)
-modEvA::Dsquared(log_build_oth_imp100)
-modEvA::Dsquared(log_build_oth_imp200)
-modEvA::Dsquared(log_build_oth_imp300) # suggests 300
-
-
-
-# ROAD
-log_build_road10  <- glm(damage_binary ~ build_road_10, data = build_bin, family = 'binomial')
-log_build_road100 <- glm(damage_binary ~ build_road_100,data = build_bin, family = 'binomial')
-log_build_road200 <- glm(damage_binary ~ build_road_200,data = build_bin, family = 'binomial')
-log_build_road300 <- glm(damage_binary ~ build_road_300,data = build_bin, family = 'binomial')
-
-# https://rdrr.io/rforge/modEvA/man/Dsquared.html
-modEvA::Dsquared(log_build_road10)
-modEvA::Dsquared(log_build_road100)
-modEvA::Dsquared(log_build_road200)
-modEvA::Dsquared(log_build_road300) # suggests 300
+# which distance provides the best fit per variable?
+(
+  best_dist <- gof %>% 
+    group_by(var) %>% 
+    summarise(max_d = dist[which.max(dsqr)],
+              max_r = dist[which.max(r2)],
+              min_AIC=dist[which.min(AIC)]) 
+)
 
 
 ```
 
 
-
-#### 'landscape position'
+### B Whats up with overhang measures?
 ```{r}
+# build %>%
+#   select(build_has_tree_overhang, build_overhang_ht, build_perc_overhang) %>%
+#   tab_corr(., triangle = 'lower')
 
-log_build_Mean_elev_30m  <- glm(damage_binary ~ build_Mean_elev_30m,
-                                data = build_bin, family = 'binomial')
-
-log_build_Mean_elev_100m <- glm(damage_binary ~ build_Mean_elev_100m,
-                                data = build_bin, family = 'binomial')
-
-modEvA::Dsquared(log_build_Mean_elev_30m) # suggests 30m
-modEvA::Dsquared(log_build_Mean_elev_100m)
-
-
-log_build_Mean_slope_30m_DEM <- glm(damage_binary ~ build_Mean_slope_30m_DEM,
-                                   data = build_bin, family = 'binomial')
-
-log_build_Mean_slope_100m_DEM <- glm(damage_binary ~ build_Mean_slope_100m_DEM,
-                              data = build_bin, family = 'binomial')
-
-modEvA::Dsquared(log_build_Mean_slope_30m_DEM) 
-modEvA::Dsquared(log_build_Mean_slope_100m_DEM)# suggests 100m
-
-
-log_build_Mean_aspect_30m_DEM <- glm(damage_binary ~ build_Mean_aspect_30m_DEM,
-                                   data = build_bin, family = 'binomial')
-
-log_build_Mean_aspect_100m_DEM <- glm(damage_binary ~ build_Mean_aspect_100m_DEM,
-                              data = build_bin, family = 'binomial')
-
-modEvA::Dsquared(log_build_Mean_aspect_30m_DEM)
-modEvA::Dsquared(log_build_Mean_aspect_100m_DEM) # suggests 100m
-
-
-log_build_Mean_distroad <- glm(damage_binary ~ build_Mean_distroad,
-                              data = build_bin, family = 'binomial')
-
-log_build_Mean_builddens <- glm(damage_binary ~ build_Mean_builddens,
-                              data = build_bin, family = 'binomial')
-
-log_build_Mean_distall_road <- glm(damage_binary ~ build_Mean_distall_road,
-                              data = build_bin, family = 'binomial')
-
-
-
-# performance::compare_performance(
-# log_build_Meanelev_30m,
-# log_build_Meanelev_100m, 
+# corr.test(build$build_overhang_ht, build$build_perc_overhang)
 # 
-# log_build_Meanslope_30m_DEM, 
-# log_build_Meanslope_100m_DEM, 
+# build %>% 
+#   ggplot(aes(as.factor(build_has_tree_overhang), build_overhang_ht)) +
+#   geom_boxplot() +
+#   theme_bw(16)
 # 
-# 
-# log_build_Meanaspect_30m_DEM,
-# log_build_Meanaspect_100m_DEM, 
-# 
-# log_build_Meandistroad,
-# log_build_Meanbuilddens, 
-# 
-# 
-# log_build_Meandistall_road, rank = TRUE)
-# 
-# 
-# tab_model(log_build_Meanelev_30m,
-#           log_build_Meanelev_100m, 
-# 
-#           log_build_Meanslope_30m_DEM, 
-#           log_build_Meanslope_100m_DEM, 
-#           
-#           
-#           log_build_Meanaspect_30m_DEM,
-#           log_build_Meanaspect_100m_DEM, 
-#           
-#           log_build_Meandistroad,
-#           log_build_Meanbuilddens, 
-#           
-#           log_build_Meandistall_road, show.aic = TRUE)
-#  
-# 
-# 
-# tab_model(log_build_Meanelev_30m,
-#           log_build_Meanelev_100m, 
-# 
-#           log_build_Meanslope_30m_DEM, 
-#           log_build_Meanslope_100m_DEM, 
-#           
-#           
-#           log_build_Meanaspect_30m_DEM,
-#           log_build_Meanaspect_100m_DEM, 
-#           
-#           log_build_Meandistroad,
-#           log_build_Meanbuilddens, 
-#           
-#           log_build_Meandistall_road,
-#          file = paste0(getwd(),
-#                        '/output_data/landscape_logistic_reg_',
-#                        gsub('[[:punct:]]', '_', Sys.time()), '.html'))
+# build %>% 
+#   ggplot(aes(as.factor(build_has_tree_overhang), build_perc_overhang)) +
+#   geom_boxplot() +
+#   theme_bw(16)
 
-# # a very bad model
-# log_r_1 <- glm(damage_binary~., data = build_bin, family = 'binomial')
-# summary(log_r_1)
-# # plot_model(log_r_1, sort.est = TRUE, vline.color = 'black') %>% theme_bw(16)
-# # tab_model(log_r_1, digits = 6)
-# 
-# ptm <- proc.time() # clock in
-# log_r_step <- glm(damage_binary~., data = build_rforest_bin, family = binomial) %>% 
-#   MASS::stepAIC(trace = FALSE)
-# (proc.time() - ptm) / 60 # clock out, about 12 minutes
-# beepr::beep()
-# plot_model(log_r_step, sort.est = TRUE, vline.color = 'black') %>% theme_bw(16)
-# 
-# # logistic regression validation
-# # http://www.sthda.com/english/articles/36-classification-methods-essentials/150-stepwise-logistic-regression-essentials-in-r/
-# # Make predictions
-# # probabilities <- log_r_1 %>% predict(test.data, type = "response")
-# # predicted.classes <- ifelse(probabilities > 0.5, "pos", "neg")
-# # # Model accuracy
-# # mean(predicted.classes==test.data$diabetes)
 
+tic(); overhang_uni_log_mods <- build %>%
+  #nest(data = everything()) %>%
+  nest() %>% 
+  mutate(
+    log_build_has_tree_overhang = map(., ~glm(damage_binary ~ as.factor(build_has_tree_overhang), family = binomial, data = data.frame(.))),
+    log_build_overhang_ht       = map(., ~glm(damage_binary ~ build_overhang_ht,family = binomial, data = data.frame(.))),
+    log_build_perc_overhang     = map(., ~glm(damage_binary ~ build_perc_overhang,family = binomial, data = data.frame(.)))
+    ) %>%
+  select(-data) %>% 
+  rowid_to_column() %>% 
+  pivot_longer(-rowid, names_to = 'model_name', values_to = 'model') %>% 
+  select(-rowid) %>% 
+  mutate(#smry = map(model, summary),
+    lab = c('has_overhang', 'overhang_ht', 'perc_overhang'),
+         dsqr = map(model, Dsquared),
+         AIC = map(model, AIC),
+         r2 = map(model, performance::r2)) %>%
+  unnest(dsqr, AIC, r2) %>%
+  unnest(r2) %>% 
+  select(-model); toc()
+
+overhang_uni_log_mods %>% View() 
+
+# so none are very predictive and they are only partially related (ex build_has_tree_overhang, build_overhang_ht)
 ```
 
 
 
-#### what did we learn from these logisitc regressions?
+
+#### maximal logistic models
 ```{r}
-
-tab_model(log_build_treecan100, log_build_grass300, log_build_shrub300, # veg
-          log_build_soil300, log_build_water300, log_build_build300, log_build_oth_imp300, log_build_road300,
-          log_build_Meanelev_30m, log_build_Meanslope_100m_DEM, log_build_Meanaspect_100m_DEM,
-          log_build_Meandistroad, log_build_Meanbuilddens, log_build_Meandistall_road)
-
-build_bin %>% select(build_treecan100,
-                     build_grass_300,
-                     build_shrub_300,
-                     build_soil_300,
-                     build_water_300,
-                     build_build_300,
-                     build_oth_imp_300,
-                     build_road_300,
-                     build_Meanelev_30m,
-                     build_Meanslope_100m_DEM,
-                     build_Meanaspect_100m_DEM,
-                     build_Meandistroad,
-                     build_Meanbuilddens,
-                     build_Meandistall_road) %>% corr.test() -> corrs
-corrs$r
- 
-build_bin %>% select(build_treecan100,
-                     build_grass_300,
-                     build_shrub_300,
-                     build_soil_300,
-                     build_water_300,
-                     build_build_300,
-                     build_oth_imp_300,
-                     build_road_300,
-                     build_Meanelev_30m,
-                     build_Meanslope_100m_DEM,
-                     build_Meanaspect_100m_DEM,
-                     build_Meandistroad,
-                     build_Meanbuilddens,
-                     build_Meandistall_road) %>%
-  sjt.corr(.,
-         corr.method = 'spearman',
-         triangle = 'lower',
-         p.numeric = TRUE) #   file = paste0(getwd(), '/output_data/tables/cbg_demo_corrs.html'))
-
-# build_bin %>% 
-#   widyr::pairwise_cor(build_treecan100,
-#                      build_grass_300,
-#                      build_shrub_300,
-#                      build_soil_300,
-#                      build_water_300,
-#                      build_build_300,
-#                      build_oth_imp_300,
-#                      build_road_300,
-#                      build_Meanelev_30m,
-#                      build_Meanslope_100m_DEM,
-#                      build_Meanaspect_100m_DEM,
-#                      build_Meandistroad,
-#                      build_Meanbuilddens,
-#                      build_Meandistall_road, upper = FALSE)
-# 
-# 
-
-```
+build %>% map(., ~sum(is.na(.)))
 
 
-
-#### maximal logistic models?
-```{r}
-build_bin_parsimony <- build_bin %>%
-  select(damage_binary,
-         build_treecan100, build_grass_300, build_shrub_300,
-         build_soil_300, build_water_300, build_build_300, build_oth_imp_300, build_road_300,
-         build_Meanelev_30m, build_Meanslope_100m_DEM, build_Meanaspect_100m_DEM,
-         build_Meandistroad,
-         build_Meanbuilddens, build_Meandistall_road) %>% 
+build_bin_maximal <- build %>% #glimpse()
+  # mutate(build_has_tree_overhang = as.factor(build_has_tree_overhang)) %>%
+  tidylog::select(damage_binary,
+         # landscape position
+         build_Mean_elev_30m,
+         build_Mean_slope_100m_DEM,
+         build_Mean_aspect_100m_DEM,
+         build_Mean_distroad, # TODO what are these? Are they correlated, pick between them?
+         build_Mean_builddens,
+         build_Mean_distall_road,
+         
+         # dist to _
+         build_min_dist_tree,
+         build_min_dist_shrub,
+         build_dist_to_build_ft,
+         
+         # overhang
+         #build_has_tree_overhang, # FIXME
+         build_overhang_ht,
+         build_perc_overhang,
+         
+         # building landcover buffers (should match `best_dist`)
+         build_p_tree_100,
+         build_p_grass_300,
+         build_p_soil_200,
+         build_p_water_100,
+         build_p_building_300,
+         build_p_road_300,
+         build_p_otherpaved_300,
+         build_p_shrub_300,
+         
+         # parcel land cover summaries
+         parcel_Can_P : parcel_Imperv_P
+         
+         # note there is no parcel year built!
+         
+         ) %>% 
   drop_na()
-  
-log_r_maximal <- glm(damage_binary~., data = build_bin_parsimony, family = binomial) 
 
-log_r_step <- glm(damage_binary~., data = build_bin_parsimony, family = binomial) %>%
+build_bin_maximal %>% map(., ~sum(is.na(.)))
+
+log_r_maximal <- glm(damage_binary ~ ., data = build_bin_maximal, family = binomial) 
+
+log_r_step <- glm(damage_binary ~ ., data = build_bin_maximal, family = binomial) %>%
   MASS::stepAIC(trace = FALSE)
+
 
 tab_model(log_r_maximal, log_r_step,
           show.aic = TRUE, show.r2 = TRUE)
@@ -499,7 +253,11 @@ tab_model(log_r_maximal, log_r_step,
 modEvA::Dsquared(log_r_maximal)
 modEvA::Dsquared(log_r_step)
 
+
 performance::compare_performance(log_r_maximal, log_r_step)
+
+plot_model(log_r_maximal, vline.color = 'black') + ylim(0.2, 1.2) + theme_bw(12)
+
 ```
 
 
@@ -512,48 +270,49 @@ performance::compare_performance(log_r_maximal, log_r_step)
 # from https://evansmurphy.wixsite.com/evansspatial/random-forest-sdm
 
 # abbridged from J Evan's second chunk (chunk 1 accesses data)
-library(randomForest)
-library(rfUtilities)
+# library(randomForest)
+# library(rfUtilities)
 
 b <- 1001                                     # Number of Bootstrap replicates
 # snip
 # chunks 3 and 4 import raster dadta and extract variables from raster to absence/present point locations
 # snip
 
-build_bin_parsimony
+build_bin_maximal
 
-build_bin_parsimony %>% tabyl(damage_binary)
+build_bin_maximal %>% tabyl(damage_binary)
 
-build_bin_parsimony %<>% mutate(damage_binary = as.factor(damage_binary)) %>% data.frame()# PAY ATTENTION HERE
-build_bin_parsimony %>% glimpse
+# remove build_has_tree_overhang?
+build_bin_maximal %<>% mutate(damage_binary = as.factor(damage_binary)) %>% data.frame()# PAY ATTENTION HERE
+build_bin_maximal %>% glimpse
 
 
-(cl <- multi.collinear(build_bin_parsimony[,2:ncol(build_bin_parsimony)], p = 0.05))
+(cl <- multi.collinear(build_bin_maximal[,2:ncol(build_bin_maximal)], p = 0.05))
 
 # tell us what's got to go!
-# for(l in cl) {
-#   cl.test <- build_bin_parsimony[,-which(names(build_bin_parsimony)==l)]
-#   print(paste("Remove variable", l, sep=": "))
-#   multi.collinear(cl.test, p=0.05) 
-# }
-# 
-# 
-# build_bin_parsimony <- build_bin_parsimony[,-which(names(build_bin_parsimony) %in% cl )] %>% 
-#   data.frame()
+for(l in cl) {
+  cl.test <- build_bin_maximal[,-which(names(build_bin_maximal)==l)]
+  print(paste("Remove variable", l, sep=": "))
+  multi.collinear(cl.test, p=0.05)
+}
+
+
+build_bin_maximal <- build_bin_maximal[,-which(names(build_bin_maximal) %in% cl )] %>%
+  data.frame()
 
 # Chunk 8 makes depenent variable categorical (done). BUT it also checks for frequency of presense
 
 # "We observe that the sample balance of presence locations is 33% thus, meeting the 1/3 rule for sample balance."
 
-build_bin_parsimony %>% tabyl(damage_binary)
+build_bin_maximal %>% tabyl(damage_binary)
 print('12% - is this a problem?!?!')
 
 # model selection
 # ( rf.model <- rf.modelSel(x=sdata@data[,3:ncol(sdata@data)], y=sdata@data[,"Present"], imp.scale="mir", ntree=b) )
 
 ptm <- proc.time() # clock in
-(rf.model <- rf.modelSel(x=build_bin_parsimony[,2:ncol(build_bin_parsimony)],
-                         y=build_bin_parsimony[,"damage_binary"],
+(rf.model <- rf.modelSel(x=build_bin_maximal[,2:ncol(build_bin_maximal)],
+                         y=build_bin_maximal[,"damage_binary"],
                          imp.scale="mir", ntree=b))
 (proc.time() - ptm) / 60 # clock out, about 3 minutes
 beepr::beep()
@@ -566,7 +325,7 @@ sel.vars <- rf.model$selvars
 
 # run a model
 ptm <- proc.time() # clock in
-( rf.fit <- randomForest(y=build_bin_parsimony[,"damage_binary"], x=build_bin_parsimony[,sel.vars],
+( rf.fit <- randomForest(y=build_bin_maximal[,"damage_binary"], x=build_bin_maximal[,sel.vars],
                          ntree=b,
                          importance=TRUE, norm.votes=TRUE, proximity=TRUE) )
 (proc.time() - ptm) / 60 # clock out, about 3 minutes
@@ -575,8 +334,8 @@ beepr::beep()
 
 # run a model with ALL PREDICTORS
 ptm <- proc.time() # clock in
-( rf.fit_all <- randomForest(y=build_bin_parsimony[,"damage_binary"],
-                             x=build_bin_parsimony[,2:ncol(build_bin_parsimony)],
+( rf.fit_all <- randomForest(y=build_bin_maximal[,"damage_binary"],
+                             x=build_bin_maximal[,2:ncol(build_bin_maximal)],
                          ntree=b,
                          importance=TRUE, norm.votes=TRUE, proximity=TRUE) )
 (proc.time() - ptm) / 60 # clock out, about 4 minutes
@@ -584,18 +343,18 @@ beepr::beep()
 
 
 ptm <- proc.time() # clock in
-( imbal <- randomForestSRC::imbalanced(damage_binary~., data=build_bin_parsimony) )
+( imbal <- randomForestSRC::imbalanced(damage_binary~., data=build_bin_maximal) )
 (proc.time() - ptm) / 60 # clock out, about 3 minutes
 beepr::beep()
 
 # skipping chunks 13 and 14: predicted raster map.. doesn't really apply here.
 
 # model fit!
-rf.pred <- predict(rf.fit, build_bin_parsimony[,sel.vars], type="response")
+rf.pred <- predict(rf.fit, build_bin_maximal[,sel.vars], type="response")
 
-rf.prob <- as.data.frame(predict(rf.fit, build_bin_parsimony[,sel.vars], type="prob"))
+rf.prob <- as.data.frame(predict(rf.fit, build_bin_maximal[,sel.vars], type="prob"))
 
-obs.pred <- data.frame(cbind(Observed=as.numeric(as.character(build_bin_parsimony[,"damage_binary"])),
+obs.pred <- data.frame(cbind(Observed=as.numeric(as.character(build_bin_maximal[,"damage_binary"])),
                              PRED=as.numeric(as.character(rf.pred)), Prob1=rf.prob[,2],
                              Prob0=rf.prob[,1]) )
 
@@ -607,28 +366,28 @@ op <- (obs.pred$Observed == obs.pred$PRED)
 
 
 
-library(verification)
+# library(verification)
 
 roc.plot(obs.pred[,"Observed"], obs.pred[,"Prob1"])
 
 
 # model validation
 ptm <- proc.time() # clock in
-( rf.perm <- rf.significance(rf.fit, build_bin_parsimony[,sel.vars], nperm = 99, ntree = 1001) )
+( rf.perm <- rf.significance(rf.fit, build_bin_maximal[,sel.vars], nperm = 99, ntree = 1001) )
 (proc.time() - ptm) / 60 # clock out, 59 minutes with 99 permutations
 beepr::beep()
 
-saveRDS(rf.perm, file = "output_data/rf.perm.rds")
+saveRDS(rf.perm, file = "saved_sessions/rf.perm.rds")
 
 # cross validation
 ptm <- proc.time() # clock in
-( rf.cv <- rf.crossValidation(rf.fit, build_bin_parsimony[,sel.vars], p=0.10, n=99, ntree=1001) )
+( rf.cv <- rf.crossValidation(rf.fit, build_bin_maximal[,sel.vars], p=0.10, n=99, ntree=1001) )
 (proc.time() - ptm) / 60 # clock out, about 143 minutes (2.38 hours) with 999 permutations
 beepr::beep()
 
 # so this model isn't very good
 
-saveRDS(rf.cv, file = "output_data/rf.perm.rds")
+saveRDS(rf.cv, file = "saved_sessions/rf.perm.rds")
 
 # so the number of trees is probably over kill at 1000? 75 sufficient?
 plot(rf.fit, main="Bootstrap Error Convergence")
@@ -639,7 +398,7 @@ p <- as.matrix(rf.fit$importance[,3])
 ord <- rev(order(p[,1], decreasing=TRUE)[1:dim(p)[1]]) 
 
 
-png(file = paste0(getwd(), '/figures/var_imp', gsub('[[:punct:]]', '_', Sys.time()), '.png'))
+png(file = paste0(getwd(), '/figures/var_imp_', gsub('[[:punct:]]', '_', Sys.time()), '.png'))
 dotchart(p[ord,1], main="Scaled Variable Importance", pch=19)  
 dev.off()
 
@@ -648,16 +407,23 @@ p <- as.matrix(rf.fit_all$importance[,3])
 ord <- rev(order(p[,1], decreasing=TRUE)[1:dim(p)[1]]) 
 
 
-png(file = paste0(getwd(), '/figures/var_imp_all', gsub('[[:punct:]]', '_', Sys.time()), '.png'))
+png(file = paste0(getwd(), '/figures/var_imp_all_', gsub('[[:punct:]]', '_', Sys.time()), '.png'))
 dotchart(p[ord,1], main="Scaled Variable Importance", pch=19)  
 dev.off()
 
-(all_vars <- names(build_bin_parsimony))
+(all_vars <- names(build_bin_maximal))
+
+# `%nin%` <- Negate(`%in%`) # custom function
+# 
+# # drop the binary
+# (all_vars <- all_vars[all_vars %nin% 'build_has_tree_overhang'])
+
 par(mfrow=c(1,1))
-for(i in all_vars[2:15]) {
+for(i in all_vars[2:length(all_vars)]) {
+  print(i)
   png(file = paste0(getwd(), '/figures/', i, '_',
                   gsub('[[:punct:]]', '_', Sys.time()), '.png'))
-  rf.partial.prob(rf.fit_all, build_bin_parsimony[,all_vars], i, "1", smooth="spline", raw.line=FALSE)
+  rf.partial.prob(rf.fit_all, build_bin_maximal[,all_vars], i, "1", smooth="spline", raw.line=FALSE)
   dev.off()
 }  
 
@@ -672,7 +438,7 @@ for(i in all_vars[2:15]) {
 for(i in sel.vars) {
 png(file = paste0(getwd(), '/figures/', i, '_',
                   gsub('[[:punct:]]', '_', Sys.time()), '.png'))
-rf.partial.prob(rf.fit, build_bin_parsimony[,sel.vars], i, "1", smooth="spline", raw.line=FALSE)
+rf.partial.prob(rf.fit, build_bin_maximal[,sel.vars], i, "1", smooth="spline", raw.line=FALSE)
 dev.off()
   }  
 beepr::beep()

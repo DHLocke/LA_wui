@@ -81,7 +81,7 @@ set.seed(19870630)
 
 ## 1 read in the data
 ```{r}
-build <- read_csv(paste0(getwd(), '/output_data/building_2021-03-23.csv'))
+build <- read_csv(paste0(getwd(), '/output_data/building_2021-03-24.csv'))
 ```
 
 
@@ -204,12 +204,10 @@ build %>% #st_drop_geometry() %>%
 glimpse(build)
 
 box_plot_dat <- build %>% 
-  st_drop_geometry() %>% 
   select(damage_cat,
          starts_with('build_'),
-         starts_with('parcel_') &
-         !parcel_AIN & !parcel_UseType & !parcel_UseDescription & 
-           -contains('Year'), -build_structures_DAMAGE) %>% data.frame %>% glimpse
+         starts_with('parcel_'),
+         -build_structures_DAMAGE, -parcel_AIN) %>% data.frame %>% glimpse
 
 # for(i in 2:ncol(box_plot_dat)){
 #   print(names(box_plot_dat)[i])
@@ -259,7 +257,7 @@ build_bin %>% filter(parcel_recent == 0) %>% dim()
 
 
 ```{r, citations}
-lapply(packages, citation)
+lapply(packs, citation)
 ```
 
 

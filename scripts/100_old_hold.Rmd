@@ -119,8 +119,342 @@ build_w_cbg %>%
 
 
 
+#### other land covers
+```{r}
+# SOIL
+log_build_soil10  <- glm(damage_binary ~ build_soil_10, data = build_bin, family = 'binomial')
+log_build_soil100 <- glm(damage_binary ~ build_soil_100,data = build_bin, family = 'binomial')
+log_build_soil200 <- glm(damage_binary ~ build_soil_200,data = build_bin, family = 'binomial')
+log_build_soil300 <- glm(damage_binary ~ build_soil_300,data = build_bin, family = 'binomial')
+
+# https://rdrr.io/rforge/modEvA/man/Dsquared.html
+modEvA::Dsquared(log_build_soil10)
+modEvA::Dsquared(log_build_soil100)
+modEvA::Dsquared(log_build_soil200)
+modEvA::Dsquared(log_build_soil300) # suggests 300
+
+# WATER
+log_build_water10  <- glm(damage_binary ~ build_water_10, data = build_bin, family = 'binomial')
+log_build_water100 <- glm(damage_binary ~ build_water_100,data = build_bin, family = 'binomial')
+log_build_water200 <- glm(damage_binary ~ build_water_200,data = build_bin, family = 'binomial')
+log_build_water300 <- glm(damage_binary ~ build_water_300,data = build_bin, family = 'binomial')
+
+# https://rdrr.io/rforge/modEvA/man/Dsquared.html
+modEvA::Dsquared(log_build_water10)
+modEvA::Dsquared(log_build_water100)
+modEvA::Dsquared(log_build_water200)
+modEvA::Dsquared(log_build_water300) # suggests 300
 
 
+# BUILD
+log_build_build10  <- glm(damage_binary ~ build_build_10, data = build_bin, family = 'binomial')
+log_build_build100 <- glm(damage_binary ~ build_build_100,data = build_bin, family = 'binomial')
+log_build_build200 <- glm(damage_binary ~ build_build_200,data = build_bin, family = 'binomial')
+log_build_build300 <- glm(damage_binary ~ build_build_300,data = build_bin, family = 'binomial')
+
+# https://rdrr.io/rforge/modEvA/man/Dsquared.html
+modEvA::Dsquared(log_build_build10)
+modEvA::Dsquared(log_build_build100)
+modEvA::Dsquared(log_build_build200)
+modEvA::Dsquared(log_build_build300) # suggests 300
+
+
+
+
+# OTHER IMP
+log_build_oth_imp10  <- glm(damage_binary ~ build_oth_imp_10, data = build_bin, family = 'binomial')
+log_build_oth_imp100 <- glm(damage_binary ~ build_oth_imp_100,data = build_bin, family = 'binomial')
+log_build_oth_imp200 <- glm(damage_binary ~ build_oth_imp_200,data = build_bin, family = 'binomial')
+log_build_oth_imp300 <- glm(damage_binary ~ build_oth_imp_300,data = build_bin, family = 'binomial')
+
+# https://rdrr.io/rforge/modEvA/man/Dsquared.html
+modEvA::Dsquared(log_build_oth_imp10)
+modEvA::Dsquared(log_build_oth_imp100)
+modEvA::Dsquared(log_build_oth_imp200)
+modEvA::Dsquared(log_build_oth_imp300) # suggests 300
+
+
+
+# ROAD
+log_build_road10  <- glm(damage_binary ~ build_road_10, data = build_bin, family = 'binomial')
+log_build_road100 <- glm(damage_binary ~ build_road_100,data = build_bin, family = 'binomial')
+log_build_road200 <- glm(damage_binary ~ build_road_200,data = build_bin, family = 'binomial')
+log_build_road300 <- glm(damage_binary ~ build_road_300,data = build_bin, family = 'binomial')
+
+# https://rdrr.io/rforge/modEvA/man/Dsquared.html
+modEvA::Dsquared(log_build_road10)
+modEvA::Dsquared(log_build_road100)
+modEvA::Dsquared(log_build_road200)
+modEvA::Dsquared(log_build_road300) # suggests 300
+
+
+```
+
+
+
+
+#### what did we learn from these logisitc regressions?
+```{r}
+
+tab_model(log_build_treecan100, log_build_grass300, log_build_shrub300, # veg
+          log_build_soil300, log_build_water300, log_build_build300, log_build_oth_imp300, log_build_road300,
+          log_build_Meanelev_30m, log_build_Meanslope_100m_DEM, log_build_Meanaspect_100m_DEM,
+          log_build_Meandistroad, log_build_Meanbuilddens, log_build_Meandistall_road)
+
+build_bin %>% select(build_treecan100,
+                     build_grass_300,
+                     build_shrub_300,
+                     build_soil_300,
+                     build_water_300,
+                     build_build_300,
+                     build_oth_imp_300,
+                     build_road_300,
+                     build_Meanelev_30m,
+                     build_Meanslope_100m_DEM,
+                     build_Meanaspect_100m_DEM,
+                     build_Meandistroad,
+                     build_Meanbuilddens,
+                     build_Meandistall_road) %>% corr.test() -> corrs
+corrs$r
+ 
+build_bin %>% select(build_treecan100,
+                     build_grass_300,
+                     build_shrub_300,
+                     build_soil_300,
+                     build_water_300,
+                     build_build_300,
+                     build_oth_imp_300,
+                     build_road_300,
+                     build_Meanelev_30m,
+                     build_Meanslope_100m_DEM,
+                     build_Meanaspect_100m_DEM,
+                     build_Meandistroad,
+                     build_Meanbuilddens,
+                     build_Meandistall_road) %>%
+  sjt.corr(.,
+         corr.method = 'spearman',
+         triangle = 'lower',
+         p.numeric = TRUE) #   file = paste0(getwd(), '/output_data/tables/cbg_demo_corrs.html'))
+
+# build_bin %>% 
+#   widyr::pairwise_cor(build_treecan100,
+#                      build_grass_300,
+#                      build_shrub_300,
+#                      build_soil_300,
+#                      build_water_300,
+#                      build_build_300,
+#                      build_oth_imp_300,
+#                      build_road_300,
+#                      build_Meanelev_30m,
+#                      build_Meanslope_100m_DEM,
+#                      build_Meanaspect_100m_DEM,
+#                      build_Meandistroad,
+#                      build_Meanbuilddens,
+#                      build_Meandistall_road, upper = FALSE)
+# 
+# 
+
+```
+
+
+
+
+#### 'landscape position'
+```{r}
+
+log_build_Mean_elev_30m  <- glm(damage_binary ~ build_Mean_elev_30m,
+                                data = build_bin, family = 'binomial')
+
+log_build_Mean_elev_100m <- glm(damage_binary ~ build_Mean_elev_100m,
+                                data = build_bin, family = 'binomial')
+
+modEvA::Dsquared(log_build_Mean_elev_30m) # suggests 30m
+modEvA::Dsquared(log_build_Mean_elev_100m)
+
+
+log_build_Mean_slope_30m_DEM <- glm(damage_binary ~ build_Mean_slope_30m_DEM,
+                                   data = build_bin, family = 'binomial')
+
+log_build_Mean_slope_100m_DEM <- glm(damage_binary ~ build_Mean_slope_100m_DEM,
+                              data = build_bin, family = 'binomial')
+
+modEvA::Dsquared(log_build_Mean_slope_30m_DEM) 
+modEvA::Dsquared(log_build_Mean_slope_100m_DEM)# suggests 100m
+
+
+log_build_Mean_aspect_30m_DEM <- glm(damage_binary ~ build_Mean_aspect_30m_DEM,
+                                   data = build_bin, family = 'binomial')
+
+log_build_Mean_aspect_100m_DEM <- glm(damage_binary ~ build_Mean_aspect_100m_DEM,
+                              data = build_bin, family = 'binomial')
+
+modEvA::Dsquared(log_build_Mean_aspect_30m_DEM)
+modEvA::Dsquared(log_build_Mean_aspect_100m_DEM) # suggests 100m
+
+
+log_build_Mean_distroad <- glm(damage_binary ~ build_Mean_distroad,
+                              data = build_bin, family = 'binomial')
+
+log_build_Mean_builddens <- glm(damage_binary ~ build_Mean_builddens,
+                              data = build_bin, family = 'binomial')
+
+log_build_Mean_distall_road <- glm(damage_binary ~ build_Mean_distall_road,
+                              data = build_bin, family = 'binomial')
+
+
+
+# performance::compare_performance(
+# log_build_Meanelev_30m,
+# log_build_Meanelev_100m, 
+# 
+# log_build_Meanslope_30m_DEM, 
+# log_build_Meanslope_100m_DEM, 
+# 
+# 
+# log_build_Meanaspect_30m_DEM,
+# log_build_Meanaspect_100m_DEM, 
+# 
+# log_build_Meandistroad,
+# log_build_Meanbuilddens, 
+# 
+# 
+# log_build_Meandistall_road, rank = TRUE)
+# 
+# 
+# tab_model(log_build_Meanelev_30m,
+#           log_build_Meanelev_100m, 
+# 
+#           log_build_Meanslope_30m_DEM, 
+#           log_build_Meanslope_100m_DEM, 
+#           
+#           
+#           log_build_Meanaspect_30m_DEM,
+#           log_build_Meanaspect_100m_DEM, 
+#           
+#           log_build_Meandistroad,
+#           log_build_Meanbuilddens, 
+#           
+#           log_build_Meandistall_road, show.aic = TRUE)
+#  
+# 
+# 
+# tab_model(log_build_Meanelev_30m,
+#           log_build_Meanelev_100m, 
+# 
+#           log_build_Meanslope_30m_DEM, 
+#           log_build_Meanslope_100m_DEM, 
+#           
+#           
+#           log_build_Meanaspect_30m_DEM,
+#           log_build_Meanaspect_100m_DEM, 
+#           
+#           log_build_Meandistroad,
+#           log_build_Meanbuilddens, 
+#           
+#           log_build_Meandistall_road,
+#          file = paste0(getwd(),
+#                        '/output_data/landscape_logistic_reg_',
+#                        gsub('[[:punct:]]', '_', Sys.time()), '.html'))
+
+# # a very bad model
+# log_r_1 <- glm(damage_binary~., data = build_bin, family = 'binomial')
+# summary(log_r_1)
+# # plot_model(log_r_1, sort.est = TRUE, vline.color = 'black') %>% theme_bw(16)
+# # tab_model(log_r_1, digits = 6)
+# 
+# ptm <- proc.time() # clock in
+# log_r_step <- glm(damage_binary~., data = build_rforest_bin, family = binomial) %>% 
+#   MASS::stepAIC(trace = FALSE)
+# (proc.time() - ptm) / 60 # clock out, about 12 minutes
+# beepr::beep()
+# plot_model(log_r_step, sort.est = TRUE, vline.color = 'black') %>% theme_bw(16)
+# 
+# # logistic regression validation
+# # http://www.sthda.com/english/articles/36-classification-methods-essentials/150-stepwise-logistic-regression-essentials-in-r/
+# # Make predictions
+# # probabilities <- log_r_1 %>% predict(test.data, type = "response")
+# # predicted.classes <- ifelse(probabilities > 0.5, "pos", "neg")
+# # # Model accuracy
+# # mean(predicted.classes==test.data$diabetes)
+
+```
+
+
+
+
+```{r}
+# 
+# veg_log_mods %>% select(model_name) %>% toString() %>% 
+#   str_replace_all(., '\", \"', ',') %>% 
+#   str_sub(4, -4) -> test
+
+
+# # OLD
+# # 
+# # build_bin %>% 
+# #   mutate(log_mod_build_p_tree_10 = map(., ~glm(damage_binary ~ build_p_tree_10, data = data.frame(.))))
+# 
+# log_build_p_tree_10  <- glm(damage_binary ~ build_p_tree_10, data = build_bin, family = 'binomial')
+# log_build_p_tree_100 <- glm(damage_binary ~ build_p_tree_100,data = build_bin, family = 'binomial')
+# log_build_p_tree_200 <- glm(damage_binary ~ build_p_tree_200,data = build_bin, family = 'binomial')
+# log_build_p_tree_300 <- glm(damage_binary ~ build_p_tree_300,data = build_bin, family = 'binomial')
+# 
+# # performance::compare_performance(
+# #   log_build_treecan10, log_build_treecan100, log_build_treecan200, log_build_treecan300,
+# #   rank = TRUE)
+# 
+# # performance::check_model(log_build_treecan100)
+# #tab_model(log_build_treecan100)
+# # tab_model(log_build_treecan10, log_build_treecan100, log_build_treecan200, log_build_treecan300,
+# #           show.aic = TRUE, show.dev = TRUE)
+# 
+# # https://rdrr.io/rforge/modEvA/man/Dsquared.html
+# modEvA::Dsquared(log_build_p_tree_10)
+# modEvA::Dsquared(log_build_p_tree_100) # suggests 100
+# modEvA::Dsquared(log_build_p_tree_200)
+# modEvA::Dsquared(log_build_p_tree_300) 
+# 
+# # GRASS
+# log_build_grass10  <- glm(damage_binary ~ build_grass10, data = build_bin, family = 'binomial')
+# log_build_grass100 <- glm(damage_binary ~ build_grass_100,data = build_bin, family = 'binomial')
+# log_build_grass200 <- glm(damage_binary ~ build_grass_200,data = build_bin, family = 'binomial')
+# log_build_grass300 <- glm(damage_binary ~ build_grass_300,data = build_bin, family = 'binomial')
+# 
+# performance::compare_performance(
+#   log_build_grass10, log_build_grass100, log_build_grass200, log_build_grass300,
+#   rank = TRUE)
+# 
+# #performance::check_model(log_build_grass300)
+# #tab_model(log_build_grass300)
+# 
+# modEvA::Dsquared(log_build_grass10)
+# modEvA::Dsquared(log_build_grass100)
+# modEvA::Dsquared(log_build_grass200)
+# modEvA::Dsquared(log_build_grass300) # suggests 300
+# 
+# 
+# # SHRUB
+# log_build_shrub10  <- glm(damage_binary ~ build_shrub_10, data = build_bin, family = 'binomial')
+# log_build_shrub100 <- glm(damage_binary ~ build_shrub_100,data = build_bin, family = 'binomial')
+# log_build_shrub200 <- glm(damage_binary ~ build_shrub_200,data = build_bin, family = 'binomial')
+# log_build_shrub300 <- glm(damage_binary ~ build_shrub_300,data = build_bin, family = 'binomial')
+# 
+# # performance::compare_performance(
+# #   log_build_shrub10, log_build_shrub100, log_build_shrub200, log_build_shrub300,
+# #   rank = TRUE)
+# # 
+# # performance::check_model(log_build_shrub300)
+# 
+# modEvA::Dsquared(log_build_shrub10)
+# modEvA::Dsquared(log_build_shrub100)
+# modEvA::Dsquared(log_build_shrub200)
+# modEvA::Dsquared(log_build_shrub300) # suggests 300
+# 
+# # tab_model(log_build_treecan100, log_build_grass300, log_build_shrub300,
+# #          file = paste0(getwd(),
+# #                        '/output_data/veg_logistic_reg_',
+# #                        gsub('[[:punct:]]', '_', Sys.time()), '.html'))
+```
 
 
 
@@ -133,6 +467,8 @@ parcels_sf <- read_sf('data/WoosleyFire_eCogOuput_06Dec2019/Parcels/1.shp') %>%
 
 parcels_sf
 ```
+
+
 
 ### 2b
 ```{r eval=FALSE, include=FALSE}

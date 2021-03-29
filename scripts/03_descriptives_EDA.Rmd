@@ -89,14 +89,13 @@ build <- read_csv(paste0(getwd(), '/output_data/building_2021-03-24.csv'))
 ## 2 descriptive statistics
 ```{r}
 build %>% describe #%>%
-  # write_csv(., paste0(getwd(), '/output_data/describe_',
-  #                     gsub('[[:punct:]]', '_', Sys.time()), '.csv'))
+  # write_csv(., paste0(getwd(), '/output_data/describe_',               #doesn't have variable names, not a big deal but maybe want to change?
+  #                     gsub('[[:punct:]]', '_', Sys.time()), '.csv'))   #why are these Ns different? 
 
 #some additional descriptive information/summaries
 length(table(build$ID_Parcel)) #Dexter, I think this counts number of unique parcels
 table(build$damage_cat)
-table(build$damage_severity)
-sum(table(build$build_structures_DAMAGE))
+table(build$build_structures_DAMAGE)
 ```
 
 
@@ -108,6 +107,12 @@ build %>% tidylog::select(build_Mean_elev_30m : parce_year_built) #%>%
   # gsub('[[:punct:]]', '_', Sys.time()), '.html'))
 
 # are the specific ones to look at?
+ #elevation measures are highly correlated, not surprising
+ #elevation aspect etc correlated with roads and building density
+ #build_min_dist_tree is missing I think bc of inf/Na?
+ #why is build_min_dist_shrub correlated w elevation - wouldn't have thought that.
+
+
 
 ```
 

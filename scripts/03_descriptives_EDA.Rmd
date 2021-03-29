@@ -91,9 +91,13 @@ build <- read_csv(paste0(getwd(), '/output_data/building_2021-03-24.csv'))
 build %>% describe #%>%
   # write_csv(., paste0(getwd(), '/output_data/describe_',
   #                     gsub('[[:punct:]]', '_', Sys.time()), '.csv'))
-  
-```
 
+#some additional descriptive information/summaries
+length(table(build$ID_Parcel)) #Dexter, I think this counts number of unique parcels
+table(build$damage_cat)
+table(build$damage_severity)
+sum(table(build$build_structures_DAMAGE))
+```
 
 
 ## 3 correlations

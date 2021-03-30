@@ -96,6 +96,7 @@ build %>% describe #%>%
 length(table(build$ID_Parcel)) #Dexter, I think this counts number of unique parcels
 table(build$damage_cat)
 table(build$build_structures_DAMAGE)
+#Dexter, any thoughts on build_min_dist_tree - and INF?
 ```
 
 
@@ -127,7 +128,7 @@ build %>% tidylog::select(build_Mean_elev_30m : parce_year_built) #%>%
 ## 4 missing values
 ```{r}
 build %>% map(., ~sum(is.na(.)))
-
+#Dexter, this is super helpful - so, a bunch of missing values still?
 ```
 
 
@@ -183,7 +184,7 @@ build %>% ggplot(aes(build_min_dist_shrub)) + geom_histogram(binwidth = 2)
 # ggsave(file = paste0(getwd(), '/figures/effective_year_',
 #                     gsub('[[:punct:]]', '_', Sys.time()), '.png'))
 
-build %>% 
+build %>%   #Dexter, this & below don't run for me, FWIW
   select(starts_with("parcel_Effective"),
          # starts_with("parcel_YearBuilt"),
          parcel_recent) %>% map(., ~sum(is.na(.)))

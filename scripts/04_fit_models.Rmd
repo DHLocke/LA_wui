@@ -1,5 +1,5 @@
 ---
-title: "03_fit_models"
+title: "04_fit_models"
 author: "Dexter H. Locke, PhD"
 date: "`r format(Sys.time())`"
 output: html_document

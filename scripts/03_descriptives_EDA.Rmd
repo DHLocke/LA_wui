@@ -90,7 +90,7 @@ build <- read_csv(paste0(getwd(), '/output_data/building_2021-03-24.csv'))
 ```{r}
 build %>% describe #%>%
   # write_csv(., paste0(getwd(), '/output_data/describe_',               #doesn't have variable names, not a big deal but maybe want to change?
-  #                     gsub('[[:punct:]]', '_', Sys.time()), '.csv'))   #why are these Ns different? 
+  #                     gsub('[[:punct:]]', '_', Sys.time()), '.csv'))   #Dexter, why are these Ns different? do we have total parcel size in our data set?
 
 #some additional descriptive information/summaries
 length(table(build$ID_Parcel)) #Dexter, I think this counts number of unique parcels
@@ -107,10 +107,17 @@ build %>% tidylog::select(build_Mean_elev_30m : parce_year_built) #%>%
   # gsub('[[:punct:]]', '_', Sys.time()), '.html'))
 
 # are the specific ones to look at?
+ #Dexter, this is great! Here are some thoughts. I also made some notes in an excel file corrs.xlsx
+ #do we have total parcel size in our data set? I think it might be worth checking out to see how it relates to other landscape measures and building age
  #elevation measures are highly correlated, not surprising
- #elevation aspect etc correlated with roads and building density
+ #elevation of a building is related to land cover (higher elev has less road and building around but more veg- relationships differ w 10 vs 200 buffer)
  #build_min_dist_tree is missing I think bc of inf/Na?
- #why is build_min_dist_shrub correlated w elevation - wouldn't have thought that.
+ #build_min_dist_shrub correlated w elevation - wouldn't have thought that.
+ #what is build_dist_angle?
+ #what is build_dist_to_build_ft_jod? why not same as ours? sniff
+ #tree overhang measures and 10 m are all pretty related
+ #none of these are very strong corrs - but building age is related to landscape characteristics - older buildings are higher elev, farther from road, closer to shrub,have more tree overhang and more tree around building (less grass, less imperv). Older buildings are on parcels that have more tree and pervious cover, but less grass & building cover
+
 
 
 

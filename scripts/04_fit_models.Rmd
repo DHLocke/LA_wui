@@ -58,8 +58,10 @@ build <- read_csv(paste0(getwd(), '/output_data/building_2021-03-24.csv')) %>%
 ## 2 fit models
 ### A univariate-logistic regression
 ```{r}
+#this runs
+log_build_Mean_elev_30 = glm(damage_binary ~ build_Mean_elev_30m, family = binomial, data = build)
 
-
+#Dexter, still can't get this to run. 
 tic(); uni_log_mods <- build %>%
   nest() %>%
   mutate(

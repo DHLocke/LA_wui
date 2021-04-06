@@ -29,10 +29,10 @@ Get discriptive statistics
   
 look at importance values for an all-variables random forest
   (do not use variable selection)
+=
 
-
-
-
+#TODO can we keep use codes in final output? https://www.titleadvantage.com/mdocs/LA%20County%20Use%20Codes%20nm.pdf
+#TODO add total parcel size in our data set-thankyou!
 Next steps
   - Census data
     * multi-level logistic regression
@@ -557,7 +557,7 @@ build %>% #glimpse()
                   build_dist_to_build_ft_jod = build_dist_to_build_ft,
                   build_p_tree_10: build_p_shrub_300, # FIXME add value here?
                   parcel_Can_P : parcel_Imperv_P,
-                  parce_year_built = parcel_recent) %>% 
+                  parcel_year_built = parcel_recent) %>% 
   write_csv(., paste0(getwd(), '/output_data/building_', Sys.Date(), '.csv'))
 
 ```

@@ -12,7 +12,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 This assumes "02_Woosley_combine_data.Rmd" was run
-
+#TODO - some confusion on parcel_year_built vs parcel_recent
 
 
 ## 0 set up: load libraries, custom functions, set defaults
@@ -81,7 +81,7 @@ set.seed(19870630)
 
 ## 1 read in the data
 ```{r}
-build <- read_csv(paste0(getwd(), '/output_data/building_2021-03-24.csv'))
+build <- read_csv(paste0(getwd(), '/output_data/building_2021-04-06.csv'))
 ```
 
 
@@ -89,11 +89,11 @@ build <- read_csv(paste0(getwd(), '/output_data/building_2021-03-24.csv'))
 ## 2 descriptive statistics
 ```{r}
 build %>% describe #%>%
-  # write_csv(., paste0(getwd(), '/output_data/describe_',               #doesn't have variable names, not a big deal but maybe want to change?
-  #                     gsub('[[:punct:]]', '_', Sys.time()), '.csv'))   #Dexter, why are these Ns different? do we have total parcel size in our data set?
+  # write_csv(., paste0(getwd(), '/output_data/describe_',               #TODO doesn't have variable names, not a big deal but maybe want to change?
+  #                     gsub('[[:punct:]]', '_', Sys.time()), '.csv'))   #TODO final decision on sample size 11,134 or fewer?
 
 #some additional descriptive information/summaries
-length(table(build$ID_Parcel)) #Dexter, I think this counts number of unique parcels
+length(unique(build$ID_Parcel)) #number of unique parcels
 table(build$damage_cat)
 table(build$build_structures_DAMAGE)
 #Dexter, any thoughts on build_min_dist_tree - and INF?
@@ -102,10 +102,12 @@ table(build$build_structures_DAMAGE)
 
 ## 3 correlations
 ```{r}
-# all
-build %>% tidylog::select(build_Mean_elev_30m : parce_year_built) #%>% 
-  # tab_corr(., file = paste0(getwd(), '/output_data/correlations_',
-  # gsub('[[:punct:]]', '_', Sys.time()), '.html'))
+# all #TODO this output isn't working
+build %>% tidylog::select(build_Mean_elev_30m : parcel_year_built) %>% 
+   tab_corr(., file = paste0(getwd(), '/output_data/correlations_',
+   gsub('[[:punct:]]', '_', Sys.time()), '.html'))
+
+ #TODO what is build_dist_to_build_ft_jod? why not same as ours? sniff
 
 # are the specific ones to look at?
  #Dexter, this is great! Here are some thoughts. I also made some notes in an excel file corrs.xlsx
@@ -114,8 +116,7 @@ build %>% tidylog::select(build_Mean_elev_30m : parce_year_built) #%>%
  #elevation of a building is related to land cover (higher elev has less road and building around but more veg- relationships differ w 10 vs 200 buffer)
  #build_min_dist_tree is missing I think bc of inf/Na?
  #build_min_dist_shrub correlated w elevation - wouldn't have thought that.
- #what is build_dist_angle?
- #what is build_dist_to_build_ft_jod? why not same as ours? sniff
+ #build_dist_angle-from near tool, angle to nearest building
  #tree overhang measures and 10 m are all pretty related
  #none of these are very strong corrs - but building age is related to landscape characteristics - older buildings are higher elev, farther from road, closer to shrub,have more tree overhang and more tree around building (less grass, less imperv). Older buildings are on parcels that have more tree and pervious cover, but less grass & building cover
 
@@ -128,7 +129,7 @@ build %>% tidylog::select(build_Mean_elev_30m : parce_year_built) #%>%
 ## 4 missing values
 ```{r}
 build %>% map(., ~sum(is.na(.)))
-#Dexter, this is super helpful - so, a bunch of missing values still?
+#Dexter, this is super helpful - so, a bunch of missing values still? TODO -decide on smaller dataset or see if it even matters
 ```
 
 
@@ -162,7 +163,7 @@ build %>% ggplot(aes(build_min_dist_shrub)) + geom_histogram(binwidth = 2)
 
 
 
-## 4 year built
+## 6 year built
 ```{r}
 # YEAR BUILT
 # build %>% map(., ~sum(is.na(.)))
@@ -185,9 +186,9 @@ build %>% ggplot(aes(build_min_dist_shrub)) + geom_histogram(binwidth = 2)
 #                     gsub('[[:punct:]]', '_', Sys.time()), '.png'))
 
 build %>%   #Dexter, this & below don't run for me, FWIW
-  select(starts_with("parcel_Effective"),
+  tidylog::select(starts_with("parcel_Effective"),
          # starts_with("parcel_YearBuilt"),
-         parcel_recent) %>% map(., ~sum(is.na(.)))
+         parcel_year_built) %>% map(., ~sum(is.na(.)))
 
 # how many of these 
 build %>%

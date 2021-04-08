@@ -12,7 +12,6 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 This assumes "02_Woosley_combine_data.Rmd" was run
-#TODO - some confusion on parcel_year_built vs parcel_recent
 
 
 ## 0 set up: load libraries, custom functions, set defaults
@@ -113,11 +112,24 @@ table(build$build_structures_DAMAGE)
 
 ## 3 correlations
 ```{r}
+plot(build$build_Mean_distroad, build$build_Mean_builddens)
+
+build %>%
+  select(build_Mean_distroad,
+         build_Mean_builddens,
+         build_Mean_distall_road,
+         build_overhang_ht,
+         build_Mean_elev_30m
+         ) %>% 
+  tab_corr()
+
+# problem build_min_dist_tree
+
 build %>% map(., ~sum(is.na(.)))
 build %>% 
   select_if(is_double) %>% # remove non-numerically coded variables
   tidylog::select(build_Mean_elev_30m : parcel_area) %>% # remove vars coded as numeric but not
-  tidylog::select(-parcel_Roll_HomeOwnersExemp) %>%   # like damage_binary, IDs stored as numbers
+  tidylog::select(-parcel_Roll_HomeOwnersExemp, -build_has_tree_overhang) %>%   # like damage_binary, IDs stored as numbers
   cor() %>% View()
 
   tab_corr(., triangle = 'bottom'), file = paste0(getwd(), '/output_data/correlations_',

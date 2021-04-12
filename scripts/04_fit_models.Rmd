@@ -47,7 +47,7 @@ lapply(packs, library, character.only = TRUE)
 
 ## 1 read in the data
 ```{r}
-build <- read_csv(paste0(getwd(), '/output_data/building_2021-03-24.csv')) %>% 
+build <- read_csv(paste0(getwd(), '/output_data/building_2021-04-12.csv')) %>% 
   filter(build_min_dist_tree < Inf)
 ```
 

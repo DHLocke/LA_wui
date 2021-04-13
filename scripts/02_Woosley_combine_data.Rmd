@@ -15,7 +15,7 @@ year 2008 is important for policy reasons.
 
 TODO: 
 Variable selection  
-1. Per buffered landscape characteristic, which one has the greatest assocition with the outcome (binary)
+1. Per buffered landscape characteristic, which one has the greatest association with the outcome (binary)
   *Deviance* explained will be called the most important. 
     Would be a great supplement for a paper on its own.
 
@@ -23,7 +23,7 @@ Variable selection
 
 
 Done
-Get discriptive statistics
+Get descriptive statistics
   cross-tabulations with the binary outcome - which ones? (boxplots?)
   sort by variable (like group all soils together.)
   

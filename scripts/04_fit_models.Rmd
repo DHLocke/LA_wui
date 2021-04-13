@@ -58,12 +58,10 @@ build <- read_csv(paste0(getwd(), '/output_data/building_2021-04-12.csv')) %>%
 ## 2 fit models
 ### A univariate-logistic regression
 ```{r}
-#this runs
-log_build_Mean_elev_30 = glm(damage_binary ~ build_Mean_elev_30m, family = binomial, data = build)
 
 #Dexter, still can't get this to run. 
 tic(); uni_log_mods <- build %>%
-  nest() %>%
+  nest(data=everything()) %>%
   mutate(
     # ~landscape position
     log_build_Mean_elev_30 = map(., ~glm(damage_binary ~ build_Mean_elev_30m, family = binomial, data = data.frame(.))),
@@ -117,12 +115,12 @@ tic(); uni_log_mods <- build %>%
     log_build_p_shrub_300= map(., ~glm(damage_binary ~ build_p_shrub_300,family = binomial, data = data.frame(.)))
 
     ) %>%
-  select(-data) %>% 
+  dplyr::select(-data) %>% 
   rowid_to_column() %>% 
   pivot_longer(-rowid, names_to = 'model_name', values_to = 'model') %>% 
-  select(-rowid) %>% 
+  dplyr::select(-rowid) %>% 
   separate(col = model_name, into = c('trash_1', 'trash_2', 'trash_3', 'var', 'dist'), remove = FALSE, convert = TRUE) %>% 
-  select(-starts_with('trash_')) %>% 
+  dplyr::select(-starts_with('trash_')) %>% 
   mutate(#smry = map(model, summary),
          dsqr = map(model, Dsquared),
          AIC = map(model, AIC),
@@ -132,7 +130,7 @@ tic(); uni_log_mods <- build %>%
 # extract goodness of fit measures
 (
   gof <- uni_log_mods %>% 
-    select(var, dist, AIC, dsqr, r2) %>% 
+    dplyr::select(var, dist, AIC, dsqr, r2) %>% 
     unnest(dsqr, AIC, r2) %>% unnest(r2)
 )
 
@@ -144,6 +142,17 @@ tic(); uni_log_mods <- build %>%
               max_r = dist[which.max(r2)],
               min_AIC=dist[which.min(AIC)]) 
 )
+
+#fitting model as suggested by GOF
+log_maximal<- glm(damage_binary ~ build_Mean_aspect_100m_DEM+build_p_building_300+build_Mean_elev_30m+build_p_grass_300+
+                   build_p_otherpaved_300+build_p_road_300+build_p_shrub_300+build_Mean_slope_100m_DEM+build_p_soil_200+
+                    build_p_tree_100+build_p_water_100, family = binomial, data = build)
+
+
+plot_model(log_maximal, type="std")
+
+plot_model(log_maximal) + ylim(.75,1.25)
+
 
 
 ```

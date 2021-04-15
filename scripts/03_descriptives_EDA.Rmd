@@ -80,7 +80,8 @@ set.seed(19870630)
 
 ## 1 read in the data
 ```{r}
-build <- read_csv(paste0(getwd(), '/output_data/building_2021-04-07.csv')) %>% glimpse
+# build <- read_csv(paste0(getwd(), '/output_data/building_2021-04-07.csv')) %>% glimpse
+build <- read_csv(paste0(getwd(), '/output_data/building_2021-04-15.csv')) %>% glimpse
 ```
 
 
@@ -105,8 +106,7 @@ build %>%
 length(unique(build$ID_Parcel)) #number of unique parcels
 table(build$damage_cat)
 table(build$build_structures_DAMAGE)
-#Dexter, any thoughts on build_min_dist_tree - and INF?
-# YES - it sux and I need to fix it, ha!. I put a note in 02_Woosle...
+
 ```
 
 
@@ -114,25 +114,14 @@ table(build$build_structures_DAMAGE)
 ```{r}
 plot(build$build_Mean_distroad, build$build_Mean_builddens)
 
-build %>%
-  select(build_Mean_distroad,
-         build_Mean_builddens,
-         build_Mean_distall_road,
-         build_overhang_ht,
-         build_Mean_elev_30m
-         ) %>% 
-  tab_corr()
-
-# problem build_min_dist_tree
-
+# where are the nulls
 build %>% map(., ~sum(is.na(.)))
-build %>% 
-  select_if(is_double) %>% # remove non-numerically coded variables
-  tidylog::select(build_Mean_elev_30m : parcel_area) %>% # remove vars coded as numeric but not
-  tidylog::select(-parcel_Roll_HomeOwnersExemp, -build_has_tree_overhang) %>%   # like damage_binary, IDs stored as numbers
-  cor() %>% View()
 
-  tab_corr(., triangle = 'bottom'), file = paste0(getwd(), '/output_data/correlations_',
+build %>%
+  select(build_Mean_elev_30m : build_p_shrub_300,
+         parcel_Roll_ImpValue : parcel_area
+         ) %>%
+  tab_corr(., triangle = 'bottom', file = paste0(getwd(), '/output_data/correlations_',
    gsub('[[:punct:]]', '_', Sys.time()), '.html'))
 
 #TODO what is build_dist_to_build_ft_jod? why not same as ours? sniff
@@ -163,7 +152,7 @@ build %>% map(., ~sum(is.na(.)))
 
 
 # 5 hists of land cover in buffers
-```{r eval=FALSE, include=FALSE}
+```{r}
 
 build %>% 
   #st_drop_geometry() %>% 
@@ -197,7 +186,7 @@ build %>% ggplot(aes(build_min_dist_shrub)) + geom_histogram(binwidth = 2)
 # build %>% map(., ~sum(is.na(.)))
 # # Only living quarters are given a year built info
 # build %>% 
-#   tidylog::select(ID_Build, starts_with("parcel_Effective"), parcel_recent,
+#   tidylog::select(ID_Build, starts_with("parcel_Effective"), parcel_year_built,
 #            #, starts_with("parcel_YearBuilt")
 #          ) %>% 
 #   st_drop_geometry() %>% 
@@ -226,13 +215,13 @@ build %>%
   glimpse()
 
 # where are these NA's?
-build %>% filter(is.na(parcel_recent)) %>% mapview()
-build %>% filter(parcel_recent == 0) %>% mapview()
+build %>% filter(is.na(parcel_year_built)) #%>% mapview()
+build %>% filter(parcel_year_built == 0) #%>% mapview()
 
-summary(build$parcel_recent)
+summary(build$parcel_year_built)
 
 build %>% #st_drop_geometry() %>%
-  ggplot(aes(parcel_recent)) +
+  ggplot(aes(parcel_year_built)) +
   geom_histogram()
 
 # ggsave(file = paste0(getwd(), '/figures/effective_yearRecent_',
@@ -287,15 +276,15 @@ build_bin <- build %>%
          build_NEAR_DIST, build_NEAR_ANGLE,
          build_dist_to_build_ft : build_p_shrub_300,
          parcel_UseType: parcel_Imperv_P,
-         parcel_recent) %>% 
-  filter(parcel_recent > 0) %>% 
+         parcel_year_built) %>% 
+  filter(parcel_year_built > 0) %>% 
   drop_na() %>% 
   data.frame #%>% glimpse
 
 # check for NA
 map(build_bin, ~sum(is.na(.))) # check for NA's
 
-build_bin %>% filter(parcel_recent == 0) %>% dim()
+build_bin %>% filter(parcel_year_built == 0) %>% dim()
 
 ```
 

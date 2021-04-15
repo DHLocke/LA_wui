@@ -236,8 +236,11 @@ build %<>%
 ### b building distance veg
 ```{r}
 # TODO examine why min_dist_tree has Inf values
-(min_dist_shrub <- read_csv('output_data/min_dist_shrub_2021-03-16.csv'))
-(min_dist_tree  <- read_csv('output_data/min_dist_tree_2021-03-16.csv'))
+# (min_dist_shrub <- read_csv('output_data/min_dist_shrub_2021-03-16.csv'))
+# (min_dist_tree  <- read_csv('output_data/min_dist_tree_2021-03-16.csv'))
+
+(min_dist_shrub <- read_csv('output_data/min_dist_shrub_2021-04-14.csv'))
+(min_dist_tree  <- read_csv('output_data/min_dist_tree_2021-04-14.csv'))
 
 build %<>% 
   left_join(., min_dist_tree, by = c('ID_Build' = 'polygon_id')) %>% 
@@ -551,6 +554,7 @@ glimpse(build)
 
 ## 4 write out the data
 ```{r}
+
 
 build %>% #glimpse()
   st_drop_geometry() %>%

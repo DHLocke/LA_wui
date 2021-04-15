@@ -1,0 +1,16 @@
+<VRTDataset rasterXSize="112452" rasterYSize="79062">
+  <SRS dataAxisToSRSAxisMapping="1,2">PROJCS["NAD_1983_StatePlane_California_V_FIPS_0405_Feet",GEOGCS["NAD83",DATUM["North_American_Datum_1983",SPHEROID["GRS 1980",6378137,298.257222101004,AUTHORITY["EPSG","7019"]],AUTHORITY["EPSG","6269"]],PRIMEM["Greenwich",0],UNIT["degree",0.0174532925199433,AUTHORITY["EPSG","9122"]],AUTHORITY["EPSG","4269"]],PROJECTION["Lambert_Conformal_Conic_2SP"],PARAMETER["latitude_of_origin",33.5],PARAMETER["central_meridian",-118],PARAMETER["standard_parallel_1",35.4666666666667],PARAMETER["standard_parallel_2",34.0333333333333],PARAMETER["false_easting",6561666.667],PARAMETER["false_northing",1640416.667],UNIT["US survey foot",0.304800609601219,AUTHORITY["EPSG","9003"]],AXIS["Easting",EAST],AXIS["Northing",NORTH],AUTHORITY["EPSG","2229"]]</SRS>
+  <GeoTransform>  6.2755200118590398e+06,  7.5000000000000000e-01,  0.0000000000000000e+00,  1.8845724921496399e+06,  0.0000000000000000e+00, -7.5000000000000000e-01</GeoTransform>
+  <VRTRasterBand dataType="Float32" band="1">
+    <NoDataValue>-3.4028234663852886e+38</NoDataValue>
+    <ColorInterp>Gray</ColorInterp>
+    <ComplexSource>
+      <SourceFilename relativeToVRT="0">../data/WUI-selected/shrubDist.tif</SourceFilename>
+      <SourceBand>1</SourceBand>
+      <SourceProperties RasterXSize="112452" RasterYSize="79062" DataType="Float32" BlockXSize="128" BlockYSize="128" />
+      <SrcRect xOff="0" yOff="0" xSize="112452" ySize="79062" />
+      <DstRect xOff="0" yOff="0" xSize="112452" ySize="79062" />
+      <NODATA>-3.4028234663852886e+38</NODATA>
+    </ComplexSource>
+  </VRTRasterBand>
+</VRTDataset>

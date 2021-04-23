@@ -59,9 +59,10 @@ build <- read_csv(paste0(getwd(), '/output_data/building_2021-04-12.csv')) %>%
 ### A univariate-logistic regression
 ```{r}
 
-#Dexter, still can't get this to run. 
+
 tic(); uni_log_mods <- build %>%
-  nest(data=everything()) %>%
+  # nest(data=everything()) %>%
+  nest()%>%
   mutate(
     # ~landscape position
     log_build_Mean_elev_30 = map(., ~glm(damage_binary ~ build_Mean_elev_30m, family = binomial, data = data.frame(.))),
@@ -112,8 +113,11 @@ tic(); uni_log_mods <- build %>%
     log_build_p_shrub_10 = map(., ~glm(damage_binary ~ build_p_shrub_10, family = binomial, data = data.frame(.))),
     log_build_p_shrub_100= map(., ~glm(damage_binary ~ build_p_shrub_100,family = binomial, data = data.frame(.))),
     log_build_p_shrub_200= map(., ~glm(damage_binary ~ build_p_shrub_200,family = binomial, data = data.frame(.))),
-    log_build_p_shrub_300= map(., ~glm(damage_binary ~ build_p_shrub_300,family = binomial, data = data.frame(.)))
+    log_build_p_shrub_300= map(., ~glm(damage_binary ~ build_p_shrub_300,family = binomial, data = data.frame(.))),
 
+    log_build_p_dist_orig_0= map(., ~glm(damage_binary ~ build_dist_to_build_ft,family = binomial, data = data.frame(.))),
+    log_build_build_jod= map(., ~glm(damage_binary ~ build_dist_to_build_ft_jod,family = binomial, data = data.frame(.)))
+    
     ) %>%
   dplyr::select(-data) %>% 
   rowid_to_column() %>% 

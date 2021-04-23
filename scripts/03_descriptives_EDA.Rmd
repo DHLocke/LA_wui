@@ -125,13 +125,13 @@ build %>%
    gsub('[[:punct:]]', '_', Sys.time()), '.html'))
 
 #TODO what is build_dist_to_build_ft_jod? why not same as ours? sniff
+#TODO build_min_dist_tree is the same as build_min_dist_shrub
+#TODO do we have total parcel size in our data set? I think it might be worth checking out to see how it relates to other landscape measures and building age
 
 # are the specific ones to look at?
- #Dexter, this is great! Here are some thoughts. I also made some notes in an excel file corrs.xlsx
- #do we have total parcel size in our data set? I think it might be worth checking out to see how it relates to other landscape measures and building age
+ #Dexter, this is great! Here are some thoughts. I also made some notes in an excel file xlsx
  #elevation measures are highly correlated, not surprising
  #elevation of a building is related to land cover (higher elev has less road and building around but more veg- relationships differ w 10 vs 200 buffer)
- #build_min_dist_tree is missing I think bc of inf/Na?
  #build_min_dist_shrub correlated w elevation - wouldn't have thought that.
  #build_dist_angle-from near tool, angle to nearest building
  #tree overhang measures and 10 m are all pretty related
@@ -265,7 +265,7 @@ TODO descriptive statistics
 
 ### A a little prep
 ```{r}
-# TODO handel the NA's better than dropping 11%
+# TODO handle the NA's better than dropping 11%
 # a) manual fill, b) impute - see if it matters in the model
 # see if year built is even a good predictor
 

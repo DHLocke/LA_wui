@@ -10,7 +10,7 @@ editor_options:
 year 2008 is important for policy reasons.
   Consider a before and after variable. 
 
-# What about property value?
+
 
 
 TODO: 

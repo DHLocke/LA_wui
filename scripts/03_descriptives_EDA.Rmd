@@ -126,7 +126,8 @@ build %>%
 
 #TODO what is build_dist_to_build_ft_jod? why not same as ours? sniff
 #TODO build_min_dist_tree is the same as build_min_dist_shrub
-#TODO do we have total parcel size in our data set? I think it might be worth checking out to see how it relates to other landscape measures and building age
+#TODO add in building footprint area
+#TODO Miranda look at parcel area --in our data set checking out to see how it relates to other landscape measures and building age
 
 # are the specific ones to look at?
  #Dexter, this is great! Here are some thoughts. I also made some notes in an excel file xlsx

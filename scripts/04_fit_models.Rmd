@@ -520,7 +520,7 @@ https://www.blopig.com/blog/2017/04/a-very-basic-introduction-to-random-forests-
 
 
 
-### A a little prep
+### OLD A a little prep
 ```{r}
 # TODO handle the NA's better than dropping 11%
 # a) manual fill, b) impute - see if it matters in the model

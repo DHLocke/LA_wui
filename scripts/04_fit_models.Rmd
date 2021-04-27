@@ -32,6 +32,8 @@ packs <- c('tidyverse'        # a must have!
            , 'randomForest', 'rfUtilities', 'verification'
            , 'tictoc'         # times things
            , 'beepr'          # makes noises
+           , 'broom'          # tidy up regression models
+           , 'performance'    # nice regression diagnostics
            , 'psych'          # describe is very useful for descriptive statistics
            , 'sjPlot')        # useful plotting and regression support
 
@@ -41,25 +43,22 @@ if (length(setdiff(packs, rownames(installed.packages()))) > 0) {
 }
 
 lapply(packs, library, character.only = TRUE)
+
+set.seed(19870630)
 ```
 
 
 
 ## 1 read in the data
 ```{r}
-build <- read_csv(paste0(getwd(), '/output_data/building_2021-04-12.csv')) %>% 
-  filter(build_min_dist_tree < Inf)
+build <- read_csv(paste0(getwd(), '/output_data/building_2021-04-26.csv')) %>% glimpse
 ```
 
 
 
-
-
 ## 2 fit models
-### A univariate-logistic regression
+### A univariate-logistic regression to select from potentially redundant predictors
 ```{r}
-
-
 tic(); uni_log_mods <- build %>%
   # nest(data=everything()) %>%
   nest()%>%
@@ -115,9 +114,8 @@ tic(); uni_log_mods <- build %>%
     log_build_p_shrub_200= map(., ~glm(damage_binary ~ build_p_shrub_200,family = binomial, data = data.frame(.))),
     log_build_p_shrub_300= map(., ~glm(damage_binary ~ build_p_shrub_300,family = binomial, data = data.frame(.))),
 
-    log_build_p_dist_orig_0= map(., ~glm(damage_binary ~ build_dist_to_build_ft,family = binomial, data = data.frame(.))),
-    log_build_build_jod= map(., ~glm(damage_binary ~ build_dist_to_build_ft_jod,family = binomial, data = data.frame(.)))
-    
+    log_build_dist_buliddistdhl_0= map(., ~glm(damage_binary ~ build_dist_to_build_ft,family = binomial, data = data.frame(.))),
+    log_build_dist_builddistjod_0= map(., ~glm(damage_binary ~ build_dist_to_build_ft_jod,family = binomial, data = data.frame(.)))
     ) %>%
   dplyr::select(-data) %>% 
   rowid_to_column() %>% 
@@ -128,154 +126,167 @@ tic(); uni_log_mods <- build %>%
   mutate(#smry = map(model, summary),
          dsqr = map(model, Dsquared),
          AIC = map(model, AIC),
-         r2 = map(model, performance::r2)); toc()
+         r2 = map(model, performance::r2),
+         rmse = map(model, performance::rmse)); toc()
 
 
 # extract goodness of fit measures
 (
   gof <- uni_log_mods %>% 
-    dplyr::select(var, dist, AIC, dsqr, r2) %>% 
-    unnest(dsqr, AIC, r2) %>% unnest(r2)
+    dplyr::select(-model_name, -model) %>% 
+    #dplyr::select(var, dist, AIC, dsqr, r2) %>% 
+    #unnest(dsqr, AIC, r2) %>% unnest(r2)
+    unnest(everything()) %>% 
+    unnest(everything())
 )
 
+
 # which distance provides the best fit per variable?
+# FIXME get building dist 2 build to be less bad
 (
   best_dist <- gof %>% 
     group_by(var) %>% 
     summarise(max_d = dist[which.max(dsqr)],
               max_r = dist[which.max(r2)],
-              min_AIC=dist[which.min(AIC)]) 
+              min_AIC=dist[which.min(AIC)],
+              min_rmse=dist[which.min(rmse)]) 
 )
 
-#fitting model as suggested by GOF
-log_maximal<- glm(damage_binary ~ build_Mean_aspect_100m_DEM+build_p_building_300+build_Mean_elev_30m+build_p_grass_300+
-                   build_p_otherpaved_300+build_p_road_300+build_p_shrub_300+build_Mean_slope_100m_DEM+build_p_soil_200+
-                    build_p_tree_100+build_p_water_100, family = binomial, data = build)
-
-
-plot_model(log_maximal, type="std")
-
-plot_model(log_maximal) + ylim(.75,1.25)
-
-
-
-```
-
-
-### B Whats up with overhang measures?
-```{r}
-# build %>%
-#   select(build_has_tree_overhang, build_overhang_ht, build_perc_overhang) %>%
-#   tab_corr(., triangle = 'lower')
-
-# corr.test(build$build_overhang_ht, build$build_perc_overhang)
-# 
-# build %>% 
-#   ggplot(aes(as.factor(build_has_tree_overhang), build_overhang_ht)) +
-#   geom_boxplot() +
-#   theme_bw(16)
-# 
-# build %>% 
-#   ggplot(aes(as.factor(build_has_tree_overhang), build_perc_overhang)) +
-#   geom_boxplot() +
-#   theme_bw(16)
-
-
-tic(); overhang_uni_log_mods <- build %>%
-  #nest(data = everything()) %>%
-  nest() %>% 
-  mutate(
-    log_build_has_tree_overhang = map(., ~glm(damage_binary ~ as.factor(build_has_tree_overhang), family = binomial, data = data.frame(.))),
-    log_build_overhang_ht       = map(., ~glm(damage_binary ~ build_overhang_ht,family = binomial, data = data.frame(.))),
-    log_build_perc_overhang     = map(., ~glm(damage_binary ~ build_perc_overhang,family = binomial, data = data.frame(.)))
-    ) %>%
-  select(-data) %>% 
-  rowid_to_column() %>% 
-  pivot_longer(-rowid, names_to = 'model_name', values_to = 'model') %>% 
-  select(-rowid) %>% 
-  mutate(#smry = map(model, summary),
-    lab = c('has_overhang', 'overhang_ht', 'perc_overhang'),
-         dsqr = map(model, Dsquared),
-         AIC = map(model, AIC),
-         r2 = map(model, performance::r2)) %>%
-  unnest(dsqr, AIC, r2) %>%
-  unnest(r2) %>% 
-  select(-model); toc()
-
-overhang_uni_log_mods %>% View() 
-
-# so none are very predictive and they are only partially related (ex build_has_tree_overhang, build_overhang_ht)
 ```
 
 
 
-
-#### maximal logistic models
+### B data prep
 ```{r}
-build %>% map(., ~sum(is.na(.)))
 
-
-build_bin_maximal <- build %>% #glimpse()
-  # mutate(build_has_tree_overhang = as.factor(build_has_tree_overhang)) %>%
-  tidylog::select(damage_binary,
-         # landscape position
-         build_Mean_elev_30m,
-         build_Mean_slope_100m_DEM,
-         build_Mean_aspect_100m_DEM,
-         build_Mean_distroad, # TODO what are these? Are they correlated, pick between them?
-         build_Mean_builddens,
-         build_Mean_distall_road,
-         
-         # dist to _
-         build_min_dist_tree,
-         build_min_dist_shrub,
-         build_dist_to_build_ft,
-         
-         # overhang
-         #build_has_tree_overhang, # FIXME
-         build_overhang_ht,
-         build_perc_overhang,
-         
-         # building landcover buffers (should match `best_dist`)
-         build_p_tree_100,
-         build_p_grass_300,
-         build_p_soil_200,
-         build_p_water_100,
-         build_p_building_300,
-         build_p_road_300,
-         build_p_otherpaved_300,
-         build_p_shrub_300,
-         
-         # parcel land cover summaries
-         parcel_Can_P : parcel_Imperv_P
-         
-         # note there is no parcel year built!
-         
-         ) %>% 
+# maximimal set of predictors after winnowing down among potentially redundant vars
+log_build_reg_data <- build %>%
+  tidylog::select(damage_binary
+                  , build_Mean_elev_30m
+                  ,  build_Mean_aspect_100m_DEM
+                  ,  build_Mean_slope_100m_DEM
+                  ,  build_Mean_aspect_100m_DEM 
+                  ,  build_Mean_distroad
+                  ,  build_Mean_builddens 
+                  ,  build_Mean_distall_road 
+                  ,  build_min_dist_tree
+                  ,  build_min_dist_shrub 
+                  
+                  , build_has_tree_overhang
+                  , build_overhang_ht
+                  , build_perc_overhang
+                  
+                  , build_dist_angle
+                  , build_dist_to_build_ft_jod
+                  
+                  , build_p_tree_100 
+                  , build_p_grass_300 
+                  , build_p_soil_200 
+                  , build_p_water_100 
+                  , build_p_building_300 
+                  , build_p_road_300
+                  , build_p_otherpaved_300
+                  , build_p_shrub_300
+                    
+                  , build_area
+                  
+                  , parcel_UseType
+                    # parcel_UseDescription, # colinear with above?
+                    # parcel_Roll_ImpValue, # colinear with below?
+                  , parcel_Roll_HomeOwnersExemp
+                  , parcel_Can_P
+                  , parcel_Grass_P
+                  , parcel_Soil_P 
+                  , parcel_Water_P
+                  , parcel_Build_P
+                  , parcel_Road_P
+                  , parcel_Paved_P
+                  , parcel_Shrub_P
+                  , parcel_Perv_P
+                  , parcel_Imperv_P
+                  , parcel_year_built
+                  , parcel_area) %>% 
+  mutate_if(is.character, as.factor) %>% # random forest doesn't like characters
   drop_na()
 
-build_bin_maximal %>% map(., ~sum(is.na(.)))
-
-log_r_maximal <- glm(damage_binary ~ ., data = build_bin_maximal, family = binomial) 
-
-log_r_step <- glm(damage_binary ~ ., data = build_bin_maximal, family = binomial) %>%
-  MASS::stepAIC(trace = FALSE)
-
-
-tab_model(log_r_maximal, log_r_step,
-          show.aic = TRUE, show.r2 = TRUE)
-
-modEvA::Dsquared(log_r_maximal)
-modEvA::Dsquared(log_r_step)
-
-
-performance::compare_performance(log_r_maximal, log_r_step)
-
-plot_model(log_r_maximal, vline.color = 'black') + ylim(0.2, 1.2) + theme_bw(12)
 
 ```
 
 
+
+### C fit: null, maximal, stepwise logistic regression
+```{r}
+  
+# Null model
+log_null<- glm(damage_binary ~ 1, family = binomial, data = log_build_reg_data)
+
+# maximal model 
+log_maximal<- glm(damage_binary ~ ., family = binomial, data = log_build_reg_data)
+
+# step-wise
+tic();log_step <- log_maximal %>% MASS::stepAIC(trace = FALSE); toc() # ~1.5 mins
+
+# store chosen terms from stepwise regression
+(log_step %>% 
+    tidy() %>% 
+    filter(term != '(Intercept)') %>% 
+    pull(term) -> vars_in_log_step)
+
+```
+
+
+
+### D examine fits
+```{r}
+performance::compare_performance(log_null, log_maximal, log_step, rank = TRUE) # chooses stepwise
+
+modEvA::Dsquared(log_maximal)
+modEvA::Dsquared(log_step)
+
+# find out limts of odds ratios, to inform graph settings
+round(sort(exp(coef(log_step))), 2) %T>% print() %>% range() # 0 to ~1.6
+
+# tab_model(log_maximal, show.std = FALSE)
+plot_model(log_step, type = "std", vline.color = 'black', sort.est = TRUE) + 
+  ylim(0, 1.65) + theme_bw()
+
+# ggsave(file = paste0(getwd(), '/figures/stepwise_logistic_reg_coefs_',
+#                      gsub('[[:punct:]]', '_', Sys.time()), '.png'))
+
+tab_model(log_step
+          # , file = paste0(getwd(), '/output_data/stepwise_logistic_reg_coefs_',
+          #               gsub('[[:punct:]]', '_', Sys.time()), '.html')
+          ); warnings()
+
+
+# is that regression model any good?
+performance::check_model(log_step) # saving isn't so easy
+
+```
+
+
+http://www.sthda.com/english/articles/36-classification-methods-essentials/151-logistic-regression-essentials-in-r/
+
+### E assess missingness and stepwise model
+```{r}
+
+# of the variables that made it through the stepwise procedure, which had missing vals?
+(
+  build %>%
+    map(., ~sum(is.na(.))) %>%
+    map_dfc(., ~.x) %>% 
+    t() %>%
+    data.frame() %>%
+    rownames_to_column(var = 'var') %>% 
+    rename(num_missing = '.') %>% 
+    arrange(desc(num_missing)) %>%
+    filter(var %in% vars_in_log_step) %>% 
+    filter(num_missing > 0) -> missing_data_vars
+)
+
+# These are the ones to think about
+
+```
 
 
 
@@ -293,43 +304,47 @@ b <- 1001                                     # Number of Bootstrap replicates
 # chunks 3 and 4 import raster dadta and extract variables from raster to absence/present point locations
 # snip
 
-build_bin_maximal
+log_build_reg_data
 
-build_bin_maximal %>% tabyl(damage_binary)
+log_build_reg_data %>% tabyl(damage_binary)
 
 # remove build_has_tree_overhang?
-build_bin_maximal %<>% mutate(damage_binary = as.factor(damage_binary)) %>% data.frame()# PAY ATTENTION HERE
-build_bin_maximal %>% glimpse
+log_build_reg_data %<>% mutate(damage_binary = as.factor(damage_binary)) %>% data.frame()# PAY ATTENTION HERE
+log_build_reg_data %>% glimpse
 
+rf_collinearity_test <- log_build_reg_data %>% 
+  tidylog::select(where(is.double))
 
-(cl <- multi.collinear(build_bin_maximal[,2:ncol(build_bin_maximal)], p = 0.05))
+(cl <- multi.collinear(rf_collinearity_test[,2:ncol(rf_collinearity_test)], p = 0.05))
 
 # tell us what's got to go!
 for(l in cl) {
-  cl.test <- build_bin_maximal[,-which(names(build_bin_maximal)==l)]
+  cl.test <- rf_collinearity_test[,-which(names(rf_collinearity_test)==l)]
   print(paste("Remove variable", l, sep=": "))
   multi.collinear(cl.test, p=0.05)
 }
 
 
-build_bin_maximal <- build_bin_maximal[,-which(names(build_bin_maximal) %in% cl )] %>%
-  data.frame()
+log_build_reg_data_cl <- log_build_reg_data[,-which(names(log_build_reg_data) %in% cl )] 
+# %>% # should not be needed any more
+#   data.frame() %>%
+#   mutate_if(is.character, as.factor)
 
 # Chunk 8 makes depenent variable categorical (done). BUT it also checks for frequency of presense
 
 # "We observe that the sample balance of presence locations is 33% thus, meeting the 1/3 rule for sample balance."
 
-build_bin_maximal %>% tabyl(damage_binary)
+log_build_reg_data_cl %>% tabyl(damage_binary)
 print('12% - is this a problem?!?!')
 
 # model selection
 # ( rf.model <- rf.modelSel(x=sdata@data[,3:ncol(sdata@data)], y=sdata@data[,"Present"], imp.scale="mir", ntree=b) )
 
-ptm <- proc.time() # clock in
-(rf.model <- rf.modelSel(x=build_bin_maximal[,2:ncol(build_bin_maximal)],
-                         y=build_bin_maximal[,"damage_binary"],
+tic() # clock in
+(rf.model <- rf.modelSel(x=log_build_reg_data_cl[,2:ncol(log_build_reg_data_cl)],
+                         y=log_build_reg_data_cl[,"damage_binary"],
                          imp.scale="mir", ntree=b))
-(proc.time() - ptm) / 60 # clock out, about 3 minutes
+toc() # clock out, about 3 minutes
 beepr::beep()
 
 
@@ -339,37 +354,38 @@ sel.vars <- rf.model$selvars
 #sel.vars <- rf.model$parameters[[4]] # DECISION POINT
 
 # run a model
-ptm <- proc.time() # clock in
-( rf.fit <- randomForest(y=build_bin_maximal[,"damage_binary"], x=build_bin_maximal[,sel.vars],
-                         ntree=b,
-                         importance=TRUE, norm.votes=TRUE, proximity=TRUE) )
-(proc.time() - ptm) / 60 # clock out, about 3 minutes
+tic() # clock in
+(rf.fit <- randomForest(y=log_build_reg_data_cl[,"damage_binary"],
+                        x=log_build_reg_data_cl[,sel.vars],
+                        ntree=b,
+                        importance=TRUE, norm.votes=TRUE, proximity=TRUE) )
+toc() # clock out, about 3 minutes
 beepr::beep()
 
 
 # run a model with ALL PREDICTORS
-ptm <- proc.time() # clock in
-( rf.fit_all <- randomForest(y=build_bin_maximal[,"damage_binary"],
-                             x=build_bin_maximal[,2:ncol(build_bin_maximal)],
+tic() # clock in
+( rf.fit_all <- randomForest(y=log_build_reg_data_cl[,"damage_binary"],
+                             x=log_build_reg_data_cl[,2:ncol(log_build_reg_data_cl)],
                          ntree=b,
                          importance=TRUE, norm.votes=TRUE, proximity=TRUE) )
-(proc.time() - ptm) / 60 # clock out, about 4 minutes
+toc() # clock out, about 4 minutes
 beepr::beep()
 
 
-ptm <- proc.time() # clock in
-( imbal <- randomForestSRC::imbalanced(damage_binary~., data=build_bin_maximal) )
-(proc.time() - ptm) / 60 # clock out, about 3 minutes
+tic() # clock in
+( imbal <- randomForestSRC::imbalanced(damage_binary~., data=log_build_reg_data_cl) )
+toc() # clock out, about 3 minutes
 beepr::beep()
 
 # skipping chunks 13 and 14: predicted raster map.. doesn't really apply here.
 
 # model fit!
-rf.pred <- predict(rf.fit, build_bin_maximal[,sel.vars], type="response")
+rf.pred <- predict(rf.fit, log_build_reg_data_cl[,sel.vars], type="response")
 
-rf.prob <- as.data.frame(predict(rf.fit, build_bin_maximal[,sel.vars], type="prob"))
+rf.prob <- as.data.frame(predict(rf.fit, log_build_reg_data_cl[,sel.vars], type="prob"))
 
-obs.pred <- data.frame(cbind(Observed=as.numeric(as.character(build_bin_maximal[,"damage_binary"])),
+obs.pred <- data.frame(cbind(Observed=as.numeric(as.character(log_build_reg_data_cl[,"damage_binary"])),
                              PRED=as.numeric(as.character(rf.pred)), Prob1=rf.prob[,2],
                              Prob0=rf.prob[,1]) )
 
@@ -387,22 +403,25 @@ roc.plot(obs.pred[,"Observed"], obs.pred[,"Prob1"])
 
 
 # model validation
-ptm <- proc.time() # clock in
-( rf.perm <- rf.significance(rf.fit, build_bin_maximal[,sel.vars], nperm = 99, ntree = 1001) )
-(proc.time() - ptm) / 60 # clock out, 59 minutes with 99 permutations
+tic() # clock in
+( rf.perm <- rf.significance(rf.fit, log_build_reg_data_cl[,sel.vars], nperm = 99, ntree = 1001) )
+toc() # clock out, 59 minutes with 99 permutations
 beepr::beep()
 
-saveRDS(rf.perm, file = "saved_sessions/rf.perm.rds")
+# saveRDS(rf.perm, file = paste0("saved_sessions/rf.perm",
+#                                gsub('[[:punct:]]', '-', Sys.time()), '.rds'))
 
 # cross validation
-ptm <- proc.time() # clock in
-( rf.cv <- rf.crossValidation(rf.fit, build_bin_maximal[,sel.vars], p=0.10, n=99, ntree=1001) )
-(proc.time() - ptm) / 60 # clock out, about 143 minutes (2.38 hours) with 999 permutations
+tic() # clock in
+( rf.cv <- rf.crossValidation(rf.fit, log_build_reg_data_cl[,sel.vars], p=0.10, n=99, ntree=1001) )
+toc() # clock out, about 143 minutes (2.38 hours) with 999 permutations
 beepr::beep()
 
 # so this model isn't very good
 
-saveRDS(rf.cv, file = "saved_sessions/rf.perm.rds")
+saveRDS(rf.perm, file = paste0("saved_sessions/rf.perm",
+                               gsub('[[:punct:]]', '-', Sys.time()), '.rds'))
+
 
 # so the number of trees is probably over kill at 1000? 75 sufficient?
 plot(rf.fit, main="Bootstrap Error Convergence")
@@ -426,21 +445,26 @@ png(file = paste0(getwd(), '/figures/var_imp_all_', gsub('[[:punct:]]', '_', Sys
 dotchart(p[ord,1], main="Scaled Variable Importance", pch=19)  
 dev.off()
 
-(all_vars <- names(build_bin_maximal))
+(all_vars <- names(log_build_reg_data_cl))
+
+#TODO: PDP don't like categorical predictors.. 
+# all_vars <-  all_vars[c(1:9, 11:35)]
+
 
 # `%nin%` <- Negate(`%in%`) # custom function
 # 
 # # drop the binary
 # (all_vars <- all_vars[all_vars %nin% 'build_has_tree_overhang'])
 
+tic()
 par(mfrow=c(1,1))
 for(i in all_vars[2:length(all_vars)]) {
   print(i)
-  png(file = paste0(getwd(), '/figures/', i, '_',
+  png(file = paste0(getwd(), '/figures/', i, '_pdp',
                   gsub('[[:punct:]]', '_', Sys.time()), '.png'))
-  rf.partial.prob(rf.fit_all, build_bin_maximal[,all_vars], i, "1", smooth="spline", raw.line=FALSE)
+  rf.partial.prob(rf.fit_all, log_build_reg_data_cl[,all_vars], i, "1", smooth="spline", raw.line=FALSE)
   dev.off()
-}  
+}; toc()  
 
 
 
@@ -449,14 +473,15 @@ for(i in all_vars[2:length(all_vars)]) {
 #   rf.partial.prob(rf.fit, build_rforest_cat[,sel.vars], i, "1", smooth="spline", raw.line=FALSE)
 # }  
 
-
+tic()
 for(i in sel.vars) {
-png(file = paste0(getwd(), '/figures/', i, '_',
+png(file = paste0(getwd(), '/figures/', i, '_pdp_',
                   gsub('[[:punct:]]', '_', Sys.time()), '.png'))
-rf.partial.prob(rf.fit, build_bin_maximal[,sel.vars], i, "1", smooth="spline", raw.line=FALSE)
+rf.partial.prob(rf.fit,
+                log_build_reg_data_cl[,sel.vars], i, "1", smooth="spline", raw.line=FALSE)
 dev.off()
-  }  
-beepr::beep()
+  }; toc() 
+beep()
 ```
 
 
@@ -490,6 +515,35 @@ http://www.sthda.com/english/articles/36-classification-methods-essentials/150-s
 https://compstat-lmu.github.io/iml_methods_limitations/pdp.html
 
 https://www.blopig.com/blog/2017/04/a-very-basic-introduction-to-random-forests-using-r/
+
+
+
+
+
+### A a little prep
+```{r}
+# TODO handle the NA's better than dropping 11%
+# a) manual fill, b) impute - see if it matters in the model
+# see if year built is even a good predictor
+
+# minor prep for binary 
+build_bin <- build %>% 
+  st_drop_geometry() %>% 
+  select(damage_binary, build_Mean_elev_30m : build_Mean_distall_road,
+         build_NEAR_DIST, build_NEAR_ANGLE,
+         build_dist_to_build_ft : build_p_shrub_300,
+         parcel_UseType: parcel_Imperv_P,
+         parcel_year_built) %>% 
+  filter(parcel_year_built > 0) %>% 
+  drop_na() %>% 
+  data.frame #%>% glimpse
+
+# check for NA
+map(build_bin, ~sum(is.na(.))) # check for NA's
+
+build_bin %>% filter(parcel_year_built == 0) %>% dim()
+
+```
 
 
 

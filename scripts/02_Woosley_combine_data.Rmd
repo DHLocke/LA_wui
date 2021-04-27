@@ -12,7 +12,6 @@ year 2008 is important for policy reasons.
 
 
 
-
 TODO: 
 Variable selection  
 1. Per buffered landscape characteristic, which one has the greatest association with the outcome (binary)
@@ -22,6 +21,8 @@ Variable selection
 3) why does build_has_tree_overhang box plot look so weird? Sum stats say mean is 0.7 but these values are either 0 or 1?
 
 
+
+suggest delete from here
 Done
 Get descriptive statistics
   cross-tabulations with the binary outcome - which ones? (boxplots?)
@@ -35,6 +36,8 @@ look at importance values for an all-variables random forest
 # https://www.titleadvantage.com/mdocs/LA%20County%20Use%20Codes%20nm.pdf
 # See parcel_UseType, parcel_UseDescription, parcel_Roll_ImpValue, and
 # parcel_Roll_HomeOwnersExemp 
+to here
+
 
 Next steps
   - Census data
@@ -145,7 +148,8 @@ build <- read_sf(dsn = paste0(getwd(), '/data/Outgoing_BuildingSumms_DHL20200423
                      structures_DAMAGE == 'Affected (1-9%)' ~ 2,
                      structures_DAMAGE == 'Minor (10-25%)' ~ 3,
                      structures_DAMAGE == 'Major (26-50%)' ~ 4,
-                     structures_DAMAGE == 'Destroyed (>50%)' ~ 5)) %>% 
+                     structures_DAMAGE == 'Destroyed (>50%)' ~ 5),
+         area = as.double(st_area(.))) %>% 
   distinct(ID_Build, Shape, .keep_all = TRUE) %>% 
   rename_at(vars(-starts_with('ID'), -starts_with('damage_')), ~paste0('build_',.)) %>% glimpse()
 
@@ -200,7 +204,7 @@ build_dist_to_build <-
   mutate(dist_to_build_ft = pxl_to_ft_conversion*as.numeric(distance_to_buildings_pxl),
          dist_to_build_ft = ifelse(is.na(dist_to_build_ft), 0, dist_to_build_ft),
          ID_Build = as.numeric(id_build_buildings)) %>%
-  select(ID_Build,
+  tidylog::select(ID_Build,
          dist_to_build_ft) %>%
   filter(!is.na(ID_Build)) %>% 
   distinct() %>% 
@@ -228,19 +232,18 @@ sum(dup_build_ids$n) # no duplicates, nice
 
 # LEFT
 build %<>% 
-  left_join(build_dist_to_build, by = c('ID_Build' = 'ID_Build')) # 48 bad matches.. 
+  left_join(build_dist_to_build, by = c('ID_Build' = 'ID_Build')) # 47 bad matches.. 
 ```
 
 
 
 ### b building distance veg
 ```{r}
-# TODO examine why min_dist_tree has Inf values
-# (min_dist_shrub <- read_csv('output_data/min_dist_shrub_2021-03-16.csv'))
-# (min_dist_tree  <- read_csv('output_data/min_dist_tree_2021-03-16.csv'))
 
-(min_dist_shrub <- read_csv('output_data/min_dist_shrub_2021-04-14.csv'))
-(min_dist_tree  <- read_csv('output_data/min_dist_tree_2021-04-14.csv'))
+(min_dist_shrub <- read_csv('output_data/min_dist_shrub_2021-04-23.csv'))
+(min_dist_tree  <- read_csv('output_data/min_dist_tree_2021-04-23.csv') %>% 
+    mutate(min_dist_tree = ifelse(min_dist_tree == Inf, 0.75, min_dist_tree)))
+
 
 build %<>% 
   left_join(., min_dist_tree, by = c('ID_Build' = 'polygon_id')) %>% 
@@ -565,6 +568,7 @@ build %>% #glimpse()
                   build_dist_angle = build_NEAR_ANGLE, build_dist_to_build_ft = build_NEAR_DIST, 
                   build_dist_to_build_ft_jod = build_dist_to_build_ft,
                   build_p_tree_10: build_p_shrub_300, # FIXME add value here?
+                  build_area,
                   parcel_UseType : parcel_Imperv_P,
                   parcel_year_built = parcel_recent,
                   parcel_area) %>% 

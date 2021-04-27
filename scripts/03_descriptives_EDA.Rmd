@@ -26,6 +26,8 @@ packs <- c('tidyverse'        # a must have!
            , 'mapview'        # quick webmaps for zoom/pan viz
            #'tidycensus',     # access to Census data in a tidy way 
            #'party',          # random forests
+           , 'dataMaid'       # nice reports
+           , 'patchwork'      # combine ggplot graphics
            , 'tictoc'         # times things
            , 'beepr'          # makes noises
            , 'psych'          # describe is very useful for descriptive statistics
@@ -81,24 +83,32 @@ set.seed(19870630)
 ## 1 read in the data
 ```{r}
 # build <- read_csv(paste0(getwd(), '/output_data/building_2021-04-07.csv')) %>% glimpse
-build <- read_csv(paste0(getwd(), '/output_data/building_2021-04-15.csv')) %>% glimpse
-```
+# build <- read_csv(paste0(getwd(), '/output_data/building_2021-04-15.csv')) %>% glimpse
+# build <- read_csv(paste0(getwd(), '/output_data/building_2021-04-23.csv')) %>% glimpse
 
+build <- read_csv(paste0(getwd(), '/output_data/building_2021-04-26.csv')) %>% glimpse
+```
 
 
 ## 2 descriptive statistics
 ```{r}
+
+# generates report of univariate distributions with added info
+system.time(makeDataReport(build, file = paste0(getwd(), '/output_data/dataMaid_',
+                                    gsub('[[:punct:]]', '_', Sys.time()), '.Rmd')))
+
+
+# univariate descriptions
 build %>% 
-  select_if(is_double) %>% 
-  select(damage_binary : parcel_area) %>% 
+  #tidylog::select_if(is_double) %>% 
   describe %>% 
   data.frame() %>% 
   rownames_to_column(var = 'variable_name') %>% 
-  rename(variable_number = vars) #%>% 
+  rename(variable_number = vars) # %>% 
   # write_csv(., paste0(getwd(), '/output_data/describe_',
   #                     gsub('[[:punct:]]', '_', Sys.time()), '.csv'))
 
-# TODO final decision on sample size 11,134 or fewer?
+# TODO final decision on sample size 11,134 or fewer? Drop missing values fit models and see if those vars matter.
 # Lets look at models with and without the variables with missing to see if they are
 # important/predictive
 
@@ -112,21 +122,16 @@ table(build$build_structures_DAMAGE)
 
 ## 3 correlations
 ```{r}
-plot(build$build_Mean_distroad, build$build_Mean_builddens)
-
-# where are the nulls
-build %>% map(., ~sum(is.na(.)))
 
 build %>%
-  select(build_Mean_elev_30m : build_p_shrub_300,
-         parcel_Roll_ImpValue : parcel_area
-         ) %>%
-  tab_corr(., triangle = 'bottom', file = paste0(getwd(), '/output_data/correlations_',
-   gsub('[[:punct:]]', '_', Sys.time()), '.html'))
+  tidylog::select_if(is_double) %>% # just numerically-encoded variables
+  tab_corr(.
+           , triangle = 'lower'
+           # , file = paste0(getwd(), '/output_data/correlations_',
+           #                 gsub('[[:punct:]]', '_', Sys.time()), '.html')
+           )
 
-#TODO what is build_dist_to_build_ft_jod? why not same as ours? sniff
-#TODO build_min_dist_tree is the same as build_min_dist_shrub
-#TODO add in building footprint area
+
 #TODO Miranda look at parcel area --in our data set checking out to see how it relates to other landscape measures and building age
 
 # are the specific ones to look at?
@@ -139,15 +144,18 @@ build %>%
  #none of these are very strong corrs - but building age is related to landscape characteristics - older buildings are higher elev, farther from road, closer to shrub,have more tree overhang and more tree around building (less grass, less imperv). Older buildings are on parcels that have more tree and pervious cover, but less grass & building cover
 
 
-
-
 ```
 
 
 ## 4 missing values
 ```{r}
-build %>% map(., ~sum(is.na(.)))
-#Dexter, this is super helpful - so, a bunch of missing values still? TODO -decide on smaller dataset or see if it even matters
+build %>% map(., ~sum(is.na(.))) # TODO drop missings fit, models and see if variables with missing values 'matter' in the prediction of burn
+
+build %>%
+  map(., ~sum(is.na(.))) %>%
+  map_dfc(., ~.x) %>% 
+  t() %>% 
+  View()
 ```
 
 
@@ -168,8 +176,8 @@ build %>%
   #facet_wrap(~var + buff_dist, ncol = 4) +
   facet_grid(buff_dist ~ var) +
   theme_bw() + 
-  ggsave(file = paste0(getwd(), '/figures/donut_buff_landcover_',
-                    gsub('[[:punct:]]', '_', Sys.time()), '.png')) +
+  # ggsave(file = paste0(getwd(), '/figures/donut_buff_landcover_',
+  #                   gsub('[[:punct:]]', '_', Sys.time()), '.png')) +
   NULL
 
 
@@ -179,30 +187,8 @@ build %>% ggplot(aes(build_min_dist_shrub)) + geom_histogram(binwidth = 2)
 ```
 
 
-
-
 ## 6 year built
 ```{r}
-# YEAR BUILT
-# build %>% map(., ~sum(is.na(.)))
-# # Only living quarters are given a year built info
-# build %>% 
-#   tidylog::select(ID_Build, starts_with("parcel_Effective"), parcel_year_built,
-#            #, starts_with("parcel_YearBuilt")
-#          ) %>% 
-#   st_drop_geometry() %>% 
-#   mutate_if(is.character, as.numeric) %>% #summary()
-#   pivot_longer(cols = -ID_Build, names_to = 'variable') %>% 
-#   ggplot(aes(value)) + 
-#   geom_density() + 
-#   facet_wrap(~variable, scales = 'free_x') + 
-#   theme_bw()
-
-
-
-# ggsave(file = paste0(getwd(), '/figures/effective_year_',
-#                     gsub('[[:punct:]]', '_', Sys.time()), '.png'))
-
 build %>%   #Dexter, this & below don't run for me, FWIW
   tidylog::select(starts_with("parcel_Effective"),
          # starts_with("parcel_YearBuilt"),
@@ -221,73 +207,43 @@ build %>% filter(parcel_year_built == 0) #%>% mapview()
 
 summary(build$parcel_year_built)
 
-build %>% #st_drop_geometry() %>%
+build %>%
   ggplot(aes(parcel_year_built)) +
-  geom_histogram()
+  geom_histogram() -> build_year_built_hist
+
+build %>%
+  filter(parcel_year_built > 0) %>% 
+  ggplot(aes(parcel_year_built)) +
+  geom_histogram() + 
+  ggtitle('zeros removed') -> build_year_built_hist_no_zero
+
+build_year_built_hist + build_year_built_hist_no_zero
 
 # ggsave(file = paste0(getwd(), '/figures/effective_yearRecent_',
 #                     gsub('[[:punct:]]', '_', Sys.time()), '.png'))
-
-# no longer needed, NA's zeros recoded in chunk above
-# build %>% st_drop_geometry() %>% 
-#   mutate(parcel_EffectiveYear1 = na_if(parcel_EffectiveYear1, 0)) %>% 
-#   ggplot(aes(parcel_EffectiveYear1)) + geom_histogram()
-# 
-# ggsave(file = paste0(getwd(), '/figures/effective_yearONE_NO_ZERO',
-#                     gsub('[[:punct:]]', '_', Sys.time()), '.png'))
+```
 
 
-glimpse(build)
+## 7 boxplots of numeric predictors
+```{r}
 
-box_plot_dat <- build %>% 
-  select(damage_cat,
-         starts_with('build_'),
-         starts_with('parcel_'),
-         -build_structures_DAMAGE, -parcel_AIN) %>% data.frame %>% glimpse
+box_plot_dat <- build %>%
+  dplyr::select(damage_binary | where(is.double)) %>% 
+  select(!ID_Build:parcel_AIN) %>% 
+  data.frame()
 
 # for(i in 2:ncol(box_plot_dat)){
 #   print(names(box_plot_dat)[i])
 #   png(file = paste0(getwd(), '/figures/boxplot_', names(box_plot_dat)[i], '_',
 #                     gsub('[[:punct:]]', '_', Sys.time()), '.png'))
-#   boxplot(box_plot_dat[,i] ~ box_plot_dat$damage_cat, main = names(box_plot_dat)[i])
+#   boxplot(box_plot_dat[,i] ~ box_plot_dat$damage_binary, main = names(box_plot_dat)[i])
 #   dev.off()
 # }
 
 ```
 
 
-TODO expand EDA
-TODO descriptive statistics
-
-
-
-
-
-
-### A a little prep
-```{r}
-# TODO handle the NA's better than dropping 11%
-# a) manual fill, b) impute - see if it matters in the model
-# see if year built is even a good predictor
-
-# minor prep for binary 
-build_bin <- build %>% 
-  st_drop_geometry() %>% 
-  select(damage_binary, build_Mean_elev_30m : build_Mean_distall_road,
-         build_NEAR_DIST, build_NEAR_ANGLE,
-         build_dist_to_build_ft : build_p_shrub_300,
-         parcel_UseType: parcel_Imperv_P,
-         parcel_year_built) %>% 
-  filter(parcel_year_built > 0) %>% 
-  drop_na() %>% 
-  data.frame #%>% glimpse
-
-# check for NA
-map(build_bin, ~sum(is.na(.))) # check for NA's
-
-build_bin %>% filter(parcel_year_built == 0) %>% dim()
-
-```
+TODO expand EDA? Others?
 
 
 

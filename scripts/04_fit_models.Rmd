@@ -285,6 +285,15 @@ http://www.sthda.com/english/articles/36-classification-methods-essentials/151-l
 )
 
 # These are the ones to think about
+#                  var num_missing
+#1       parcel_year_built        1008 #this is important in RF; impute about median.
+#2     build_Mean_distroad          88 #this is important in RF; impute the median.
+#3       build_overhang_ht          47 #not important in maximal RF model
+#4     build_perc_overhang          47 #not important in maximal RF model
+#5 build_Mean_distall_road          12 #not important in maximal RF model 
+
+
+> 
 
 ```
 

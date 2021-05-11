@@ -291,11 +291,18 @@ http://www.sthda.com/english/articles/36-classification-methods-essentials/151-l
 #3       build_overhang_ht          47 #not important in maximal RF model
 #4     build_perc_overhang          47 #not important in maximal RF model
 #5 build_Mean_distall_road          12 #not important in maximal RF model 
-
-
-> 
-
 ```
+
+
+
+### F impute missing values AND drop the variables previously determined to be low-importance
+```{r}
+build %>% 
+  mutate_all(~ifelse(is.na(.), median(., na.rm = TRUE), .)) %>% 
+  tidylog::select(-build_overhang_ht, -build_perc_overhang, -build_Mean_distall_road)
+  
+```
+
 
 
 
@@ -371,15 +378,15 @@ tic() # clock in
 toc() # clock out, about 3 minutes
 beepr::beep()
 
-
-# run a model with ALL PREDICTORS
-tic() # clock in
-( rf.fit_all <- randomForest(y=log_build_reg_data_cl[,"damage_binary"],
-                             x=log_build_reg_data_cl[,2:ncol(log_build_reg_data_cl)],
-                         ntree=b,
-                         importance=TRUE, norm.votes=TRUE, proximity=TRUE) )
-toc() # clock out, about 4 minutes
-beepr::beep()
+  
+  # run a model with ALL PREDICTORS
+  tic() # clock in
+  ( rf.fit_all <- randomForest(y=log_build_reg_data_cl[,"damage_binary"],
+                               x=log_build_reg_data_cl[,2:ncol(log_build_reg_data_cl)],
+                           ntree=b,
+                           importance=TRUE, norm.votes=TRUE, proximity=TRUE) )
+  toc() # clock out, about 4 minutes
+  beepr::beep()
 
 
 tic() # clock in

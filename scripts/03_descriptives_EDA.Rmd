@@ -251,11 +251,12 @@ box_plot_dat <- build %>%
 # homeowner occupied & residential 
 table(build$parcel_Roll_HomeOwnersExemp);table(build$parcel_UseType) #Roll_HomeOwnersExemp==0 are renters, 5600 & 7000 are owners; #parcel_UseType=Residential
 
+table(build$parcel_UseType=='Residential')
 
-#test<-build %>%
-#  tidylog::select()  %>%
-#  boxplot(parcel_Roll_HomeOwnersExemp~box_plot_dat$damage_binary)
-#table(build$parcel_UseType) 
+test<-build %>%
+  tidylog::select(parcel_UseType=='Residential')  %>%
+  boxplot(parcel_Roll_HomeOwnersExemp~box_plot_dat$damage_binary) #ideally 5600 and 7000 combined, not a big deal for exploratory graphics
+
 
 
 

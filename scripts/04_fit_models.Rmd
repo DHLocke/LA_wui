@@ -152,13 +152,23 @@ tic(); uni_log_mods <- build %>%
               min_rmse=dist[which.min(rmse)]) 
 )
 
+
+(
+  best_var <- gof %>% 
+    group_by(dist) %>% 
+    summarise(max_d = var[which.max(dsqr)],
+              max_r = var[which.max(r2)],
+              min_AIC= var[which.min(AIC)],
+              min_rmse= var[which.min(rmse)]) 
+)
+
+
 ```
 
 
 
 ### B data prep
 ```{r}
-
 # maximimal set of predictors after winnowing down among potentially redundant vars
 log_build_reg_data <- build %>%
   tidylog::select(damage_binary
@@ -179,7 +189,7 @@ log_build_reg_data <- build %>%
                   , build_dist_angle
                   , build_dist_to_build_ft_jod
                   
-                  , build_p_tree_100 
+                  , build_p_tree_100
                   , build_p_grass_300 
                   , build_p_soil_200 
                   , build_p_water_100 
@@ -209,8 +219,9 @@ log_build_reg_data <- build %>%
   mutate_if(is.character, as.factor) %>% # random forest doesn't like characters
   drop_na()
 
-
 ```
+
+
 
 
 
@@ -218,11 +229,11 @@ log_build_reg_data <- build %>%
 ```{r}
   
 # Null model
-log_null<- glm(damage_binary ~ 1, family = binomial, data = log_build_reg_data)
+log_null <- glm(damage_binary ~ 1, family = binomial, data = log_build_reg_data)
 
 # maximal model 
-log_maximal<- glm(damage_binary ~ ., family = binomial, data = log_build_reg_data)
-
+log_maximal <- glm(damage_binary ~ ., family = binomial, data = log_build_reg_data)
+log_maximal %>% check_collinearity()
 # step-wise
 tic();log_step <- log_maximal %>% MASS::stepAIC(trace = FALSE); toc() # ~1.5 mins
 
@@ -301,6 +312,83 @@ build %>%
   mutate_all(~ifelse(is.na(.), median(., na.rm = TRUE), .)) %>% 
   tidylog::select(-build_overhang_ht, -build_perc_overhang, -build_Mean_distall_road)
   
+```
+
+
+
+
+### G fit models with consistent distance (300)
+```{r}
+
+# maximimal set of predictors after winnowing down among potentially redundant vars
+log_build_reg_data_consitent_dists <- build %>%
+  tidylog::select(damage_binary
+                  , build_Mean_elev_30m
+                  ,  build_Mean_aspect_30m_DEM
+                  ,  build_Mean_slope_30m_DEM
+                  ,  build_Mean_aspect_30m_DEM 
+                  ,  build_Mean_distroad
+                  ,  build_Mean_builddens 
+                  ,  build_Mean_distall_road 
+                  ,  build_min_dist_tree
+                  ,  build_min_dist_shrub 
+                  
+                  , build_has_tree_overhang
+                  , build_overhang_ht
+                  , build_perc_overhang
+                  
+                  , build_dist_angle
+                  , build_dist_to_build_ft_jod
+                  
+                  , build_p_tree_300 
+                  , build_p_grass_300 
+                  , build_p_soil_300 
+                  , build_p_water_300 
+                  , build_p_building_300 
+                  , build_p_road_300
+                  , build_p_otherpaved_300
+                  , build_p_shrub_300
+                    
+                  , build_area
+                  
+                  , parcel_UseType
+                    # parcel_UseDescription, # colinear with above?
+                    # parcel_Roll_ImpValue, # colinear with below?
+                  , parcel_Roll_HomeOwnersExemp
+                  , parcel_Can_P
+                  , parcel_Grass_P
+                  , parcel_Soil_P 
+                  , parcel_Water_P
+                  , parcel_Build_P
+                  , parcel_Road_P
+                  , parcel_Paved_P
+                  , parcel_Shrub_P
+                  , parcel_Perv_P
+                  , parcel_Imperv_P
+                  , parcel_year_built
+                  , parcel_area) %>% 
+  mutate_if(is.character, as.factor) %>% # random forest doesn't like characters
+  drop_na()
+
+
+# _cd for consistent distance
+log_maximal_cd <- glm(damage_binary ~ ., family = binomial, data = log_build_reg_data_consitent_dists)
+log_maximal_cd %>% check_collinearity()
+
+# step-wise
+tic();log_step_cd <- log_maximal_cd %>% MASS::stepAIC(trace = FALSE); toc() # ~1.5 mins
+log_step_cd %>% check_collinearity()
+
+# store chosen terms from stepwise regression
+(log_step_cd %>% 
+    tidy() %>% 
+    filter(term != '(Intercept)') %>% 
+    pull(term) -> vars_in_log_step)
+
+log_step_cd %>% tab_model
+log_step_cd %>% plot_model(., sort.est = TRUE, vline.color = 'black') + 
+  ylim(0, 1.65) + theme_bw()
+
 ```
 
 

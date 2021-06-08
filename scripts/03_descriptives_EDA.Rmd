@@ -231,7 +231,23 @@ build_year_built_hist + build_year_built_hist_no_zero
 ```
 
 
-## 7 boxplots of numeric predictors
+## 7 land use
+```{r}
+
+(build %>% tabyl(parcel_UseDescription) %>% as_tibble() -> lu_counts)
+
+
+lu_counts %>%
+  ggplot(aes(n, reorder(parcel_UseDescription, -n))) + 
+  geom_col() + 
+  theme_bw() + 
+  NULL
+  
+
+```
+
+
+## 8 boxplots of numeric predictors
 ```{r}
 
 box_plot_dat <- build %>%

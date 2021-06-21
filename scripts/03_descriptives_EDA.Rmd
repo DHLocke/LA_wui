@@ -247,15 +247,13 @@ box_plot_dat <- build %>%
 #   dev.off()
 # }
 
-# renters vs. owners - Dexter TODO can we make a boxplot showing survival by renters and owners
-# homeowner occupied & residential 
-table(build$parcel_Roll_HomeOwnersExemp);table(build$parcel_UseType) #Roll_HomeOwnersExemp==0 are renters, 5600 & 7000 are owners; #parcel_UseType=Residential
+# renters vs. owners -doesn't seem to make a difference in outcome #Roll_HomeOwnersExemp==0 are renters, 5600 & 7000 are owners; 
+# filter first by parcel_UseType=Residential
 
-table(build$parcel_UseType=='Residential')
-
-test<-build %>%
-  tidylog::select(parcel_UseType=='Residential')  %>%
-  boxplot(parcel_Roll_HomeOwnersExemp~box_plot_dat$damage_binary) #ideally 5600 and 7000 combined, not a big deal for exploratory graphics
+build %>%
+  tidylog::filter(parcel_UseType=='Residential')  %>%
+    tabyl(damage_binary,parcel_Roll_HomeOwnersExemp)%>%
+      adorn_percentages() 
 
 
 

@@ -7,6 +7,11 @@ editor_options:
   chunk_output_type: console
 ---
 
+# TODO fit model with 'best' land cover instead of distance
+
+# TODO focus only on residential
+
+
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -60,6 +65,7 @@ build <- read_csv(paste0(getwd(), '/output_data/building_2021-04-26.csv')) %>% g
 ### A univariate-logistic regression to select from potentially redundant predictors
 ```{r}
 tic(); uni_log_mods <- build %>%
+  filter(parcel_UseType == 'Residential') %>% 
   # nest(data=everything()) %>%
   nest()%>%
   mutate(
@@ -163,13 +169,37 @@ tic(); uni_log_mods <- build %>%
 )
 
 
+# cut out non-land cover variables
+(
+  best_var_lc <- gof %>%
+    filter(var != 'elev' & var != 'slope' & var != 'aspect') %>% 
+    group_by(dist) %>% 
+    summarise(max_d = var[which.max(dsqr)],
+              max_r = var[which.max(r2)],
+              min_AIC= var[which.min(AIC)],
+              min_rmse= var[which.min(rmse)]) 
+)
+
+
+
+# # Is this needed or confusing?
+# (
+#   best_var_by_dist <- gof %>% 
+#     group_by(var, dist) %>% 
+#     summarise(max_d = var[which.max(dsqr)],
+#               max_r = var[which.max(r2)],
+#               min_AIC= var[which.min(AIC)],
+#               min_rmse= var[which.min(rmse)]) 
+# )
+
+
 ```
 
 
 
 ### B data prep
 ```{r}
-# maximimal set of predictors after winnowing down among potentially redundant vars
+# maximal set of predictors after winnowing down among potentially redundant vars
 log_build_reg_data <- build %>%
   tidylog::select(damage_binary
                   , build_Mean_elev_30m
@@ -218,6 +248,64 @@ log_build_reg_data <- build %>%
                   , parcel_area) %>% 
   mutate_if(is.character, as.factor) %>% # random forest doesn't like characters
   drop_na()
+
+
+
+
+log_build_reg_data_lc <- build %>%
+  tidylog::select(damage_binary
+                  , build_Mean_elev_30m
+                  ,  build_Mean_aspect_100m_DEM
+                  ,  build_Mean_slope_100m_DEM
+                  ,  build_Mean_aspect_100m_DEM 
+                  ,  build_Mean_distroad
+                  ,  build_Mean_builddens 
+                  ,  build_Mean_distall_road 
+                  ,  build_min_dist_tree
+                  ,  build_min_dist_shrub 
+                  
+                  , build_has_tree_overhang
+                  , build_overhang_ht
+                  , build_perc_overhang
+                  
+                  , build_dist_angle
+                  , build_dist_to_build_ft_jod
+                  
+                  # , build_p_tree_100
+                  , build_p_grass_300 
+                  # , build_p_soil_200 
+                  # , build_p_water_100 
+                  , build_p_building_300 
+                  # , build_p_road_300
+                  # , build_p_otherpaved_300
+                  # , build_p_shrub_300
+                    
+                  , build_area
+                  
+                  , parcel_UseType
+                    # parcel_UseDescription, # colinear with above?
+                    # parcel_Roll_ImpValue, # colinear with below?
+                  , parcel_Roll_HomeOwnersExemp
+                  , parcel_Can_P
+                  , parcel_Grass_P
+                  , parcel_Soil_P 
+                  , parcel_Water_P
+                  , parcel_Build_P
+                  , parcel_Road_P
+                  , parcel_Paved_P
+                  , parcel_Shrub_P
+                  , parcel_Perv_P
+                  , parcel_Imperv_P
+                  , parcel_year_built
+                  , parcel_area) %>% 
+  mutate_if(is.character, as.factor) %>% # random forest doesn't like characters
+  drop_na()
+
+
+log_maximal_lc <- glm(damage_binary ~ ., family = binomial, data = log_build_reg_data_lc)
+
+# FIXME
+tic();log_step_lc <- log_build_reg_data_lc %>% MASS::stepAIC(trace = FALSE); toc() # ~1.5 mins
 
 ```
 
@@ -555,7 +643,7 @@ dev.off()
 # all_vars <-  all_vars[c(1:9, 11:35)]
 
 
-# `%nin%` <- Negate(`%in%`) # custom function
+`%nin%` <- Negate(`%in%`) # custom function
 # 
 # # drop the binary
 # (all_vars <- all_vars[all_vars %nin% 'build_has_tree_overhang'])

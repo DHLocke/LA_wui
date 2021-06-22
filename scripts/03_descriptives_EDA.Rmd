@@ -141,7 +141,8 @@ build %>%
 #TODO - can we select any pairs where correlation coefficient greater than .9 or .7, whatever makes sense?
 #The below is me exploring from https://drsimonj.svbtle.com/exploring-correlations-in-r-with-corrr
 #Not complete however - looks like the highest measures are when parcel and landcover by building are compared
-library(corrr)
+#build_has_tree_overhang  ; build_overhang_ht  ;build_perc_overhang - which of these?
+ 
 build %>%
   tidylog::select_if(is_double) %>% 
     corrr::correlate()->rs

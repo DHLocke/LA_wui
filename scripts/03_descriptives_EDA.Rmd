@@ -144,9 +144,9 @@ build %>%
 library(corrr)
 build %>%
   tidylog::select_if(is_double) %>% 
-    correlate()->rs
-any_over_90 <- function(x) any(x > .9, na.rm = TRUE)
-rs %>% select_if(any_over_90)->rs.1
+    corrr::correlate()->rs
+any_over_70 <- function(x) any(x > .7, na.rm = TRUE)
+rs %>% select_if(any_over_70)->rs.1
 View(rs.1)
 #Older thoughts on correlations
  #elevation measures are highly correlated, not surprising

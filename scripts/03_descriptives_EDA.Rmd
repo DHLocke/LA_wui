@@ -149,47 +149,11 @@ build %>%
   pivot_longer(-rowname) %>% 
   arrange(desc(value)) -> cors_tibble
 
-#TODO - can we select any pairs where correlation coefficient greater than .9 or .7, whatever makes sense?
+#select any pairs where correlation coefficient greater .7
+#all the pairs with corr greater than .7 are either duplicate measures of vegetation at differences or parcel chars
 cors_tibble %>% 
   filter(value > .7 & value < 1) %>% 
   View()
-
-
-
-
-#tried widyr, can't get this to run
-build %>%
-  #tidylog::select_if(is_double) %>% 
-  widyr::pairwise_cor(build_p_shrub_10,build_p_shrub_100,build_p_shrub_200, sort = TRUE)
-
-
-#reprex
-library(widyr)
-library(dplyr)
-library(gapminder)
-
-gapminder %>%
-  pairwise_cor(country, year, lifeExp)
-
-gapminder %>%
-  pairwise_cor(country, year, lifeExp, sort = TRUE)
-
-
-#the below is from a project from 2012(!)
-
-build %>%
-  tidylog::select_if(is_double) %>% 
-    na.omit()->build2
-#creates correlations; t/f for those >.8
-cor.large = (abs(build2) > 0.8)[lower.tri(build2)]
-#creating index of pairwise comparisons 
-ind = combn(1:ncol(build2),2)
-#puts names with index combinations 
-v   = names(build2)	
-#puts names with index combinations	   
-v.pairs = paste(v[ind[1,]],v[ind[2,]],sep="-") 
-# lists all high corrs (abs value >0.8); note this is a measure of strength not signif.
-v.pairs[cor.large] #TODO - Dexter - does this actually work?
 
 
 #Older thoughts on correlations

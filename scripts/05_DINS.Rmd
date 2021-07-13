@@ -1,0 +1,133 @@
+---
+title: "05_DINS"
+author: "Dexter H. Locke, PhD"
+date: "`r format(Sys.time())`"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+## 0 set up: load libraries, custom functions, set defaults
+```{r}
+# load libraries
+# packages we'll be using
+packs <- c('tidyverse'        # a must have!
+           , 'tidylog'        # makes things very verbose for 2x checking 
+           , 'magrittr'       # all of the pipes
+           , 'janitor'        # cleans things up
+           , 'sf'             # simple features
+           , 'mapview'        # quick webmaps for zoom/pan viz
+           #'tidycensus',     # access to Census data in a tidy way 
+           #'party',          # random forests
+           , 'tictoc'         # times things
+           , 'beepr'          # makes noises
+           , 'psych'          # describe is very useful for descriptive statistics
+           , 'sjPlot')        # useful plotting and regression support
+
+# check for all of the libraries
+if (length(setdiff(packs, rownames(installed.packages()))) > 0) {
+  install.packages(setdiff(packs, rownames(installed.packages())))  
+}
+
+lapply(packs, library, character.only = TRUE)
+
+
+# changing from tidyr v0.8.3 -> v1.0.0 broke things for nest and unnest!
+# https://tidyr.tidyverse.org/articles/in-packages.html#tidyr-v0-8-3---v1-0-0
+library(tidyr)
+nest <- nest_legacy                     # Why Hadley, WHY!
+unnest <- unnest_legacy
+
+
+# set custom function for getting spatial data
+see_sf <- function(){
+# what's in memory that are sf - spatial features?
+keep(eapply(.GlobalEnv, class),      # gets the objects in the global environment
+     ~ any(str_detect(., "sf"))) %>% # selects elements with sf in them
+names(.) %>% as.character(.)       # my simple features
+}
+
+see_sf() -> sf_in_memory
+
+## what are the spatial references of those SF classes?
+mget(sf_in_memory) %>%
+purrr::map(~st_crs(.x)$epsg) %>% unlist() #%>% View()
+
+# NOT IN
+`%nin%` <- Negate(`%in%`) # custom function
+
+# where are we?
+list.files()
+list.files('data')
+
+# parameter to keep in general, for later..
+pxl_to_ft_conversion <- 0.75
+# pxl_to_ft_conversion <- 0.2286004572
+
+set.seed(19870630)
+
+## Make a 'figures' subdirectory if one doesn't exist
+# ifelse(!dir.exists(file.path('figures')), dir.create(file.path('figures')), FALSE)
+```
+
+
+## 1 bring in new GIS data from Miranda, this will be the base from now on (August, 2020)
+```{r}
+# GIS DATA from MIRANDA
+st_layers(paste0(getwd(), '/data/Outgoing_BuildingSumms_DHL20200423.gdb'))
+
+
+dins <- read_sf(dsn = paste0(getwd(), '/data/Outgoing_BuildingSumms_DHL20200423.gdb'),
+                      layer = 'Buildings_ParcelID_DINS',
+                      quiet = FALSE) 
+
+glimpse(dins)
+```
+
+
+## 2 reclass DINS
+```{r}
+
+# roof, exterior, window pane, window frame
+
+
+# For exterior construction material, most structures were classified as either “wood,” “stucco,” “metal,” or masonry.” If the material was described as “aluminum” or “steel,” we labeled it “metal,” and “brick,” we combined with “masonry.” 
+
+# If a combination of materials were listed we relabeled with the material named first (e.g., “wood/rock” was labeled “wood.”). The most common roofing materials were “composite,” “shingle,” and “tile,” but approximately five percent of the structures had either “metal” or “wood shake” roofs, and we kept those classes separate for the analysis. 
+
+# Window frame material was either “metal,” “wood,” or “vinyl,” and window pane was either “single” or “dual.”
+
+
+dins %>% 
+  st_drop_geometry() %>% 
+  filter(!is.na(Buildings_ParcelID_DINS_intersects_INCIDENTST)) %>% View()
+  # tabyl(Buildings_ParcelID_DINS_intersects_ROOFCONSTR) %>% # roof material
+  tabyl(Buildings_ParcelID_DINS_intersects_EXTERIORSI)
+
+
+```
+
+
+
+
+
+```{r, citations}
+lapply(packages, citation)
+```
+
+
+Last knit on `r format(Sys.time())`
+
+
+```{r}
+system.time(save.image(file = paste0('saved_sessions/wui_r_DINS_',
+                                     gsub('[[:punct:]]', '-', Sys.time()), '.RData')))
+```
+

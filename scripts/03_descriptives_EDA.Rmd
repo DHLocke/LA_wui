@@ -149,13 +149,13 @@ build %>%
   pivot_longer(-rowname) %>% 
   arrange(desc(value)) -> cors_tibble
 
+#TODO - can we select any pairs where correlation coefficient greater than .9 or .7, whatever makes sense?
 cors_tibble %>% 
   filter(value > .7 & value < 1) %>% 
   View()
 
 
 
-#TODO - can we select any pairs where correlation coefficient greater than .9 or .7, whatever makes sense?
 
 #tried widyr, can't get this to run
 build %>%

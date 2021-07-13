@@ -138,19 +138,36 @@ build %>%
            #                 gsub('[[:punct:]]', '_', Sys.time()), '.html')
            )
 
+
+
+
+
+
 #TODO - can we select any pairs where correlation coefficient greater than .9 or .7, whatever makes sense?
-#The below is me exploring from https://drsimonj.svbtle.com/exploring-correlations-in-r-with-corrr
-#Not complete however - looks like the highest measures are when parcel and landcover by building are compared
-#build_has_tree_overhang  ; build_overhang_ht  ;build_perc_overhang - which of these?
- 
+
+#tried widyr, can't get this to run
 build %>%
   tidylog::select_if(is_double) %>% 
-    corrr::correlate()->rs
-any_over_70 <- function(x) any(x > .7, na.rm = TRUE)
-rs %>% select_if(any_over_70)->rs.1
-View(rs.1)
+  widyr::pairwise_cor(build_p_shrub_10,build_p_shrub_100,build_p_shrub_200,build_area, sort = TRUE)
 
-#widyr - does correlation where one column is variable one and then let's you pull out the pairs.
+
+
+#the below is from a project from 2012(!)
+
+build %>%
+  tidylog::select_if(is_double) %>% 
+    na.omit()->build2
+#creates correlations; t/f for those >.8
+cor.large = (abs(build2) > 0.8)[lower.tri(build2)]
+#creating index of pairwise comparisons 
+ind = combn(1:ncol(build2),2)
+#puts names with index combinations 
+v   = names(build2)	
+#puts names with index combinations	   
+v.pairs = paste(v[ind[1,]],v[ind[2,]],sep="-") 
+# lists all high corrs (abs value >0.8); note this is a measure of strength not signif.
+v.pairs[cor.large] #TODO - Dexter - does this actually work?
+
 
 #Older thoughts on correlations
  #elevation measures are highly correlated, not surprising

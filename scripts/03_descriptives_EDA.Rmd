@@ -139,7 +139,19 @@ build %>%
            )
 
 
+# find large correlations
+build %>% 
+  tidylog::select_if(is_double) %>% 
+  cor() %>% 
+  data.frame() %>% 
+  rownames_to_column() %>% 
+  as_tibble() %>%
+  pivot_longer(-rowname) %>% 
+  arrange(desc(value)) -> cors_tibble
 
+cors_tibble %>% 
+  filter(value > .7 & value < 1) %>% 
+  View()
 
 
 
@@ -147,9 +159,20 @@ build %>%
 
 #tried widyr, can't get this to run
 build %>%
-  tidylog::select_if(is_double) %>% 
-  widyr::pairwise_cor(build_p_shrub_10,build_p_shrub_100,build_p_shrub_200,build_area, sort = TRUE)
+  #tidylog::select_if(is_double) %>% 
+  widyr::pairwise_cor(build_p_shrub_10,build_p_shrub_100,build_p_shrub_200, sort = TRUE)
 
+
+#reprex
+library(widyr)
+library(dplyr)
+library(gapminder)
+
+gapminder %>%
+  pairwise_cor(country, year, lifeExp)
+
+gapminder %>%
+  pairwise_cor(country, year, lifeExp, sort = TRUE)
 
 
 #the below is from a project from 2012(!)

@@ -96,46 +96,65 @@ glimpse(dins)
 ```{r}
 
 # Past Syphard et al papers had roof, exterior, window pane, window frame
-# here here here -- look at other papers, figure out which of these most interested in.
+# More recent ones include wider range of information in DINS
 
-
-# For exterior construction material, most structures were classified as either “wood,” “stucco,” “metal,” or masonry.” If the material was described as “aluminum” or “steel,” we labeled it “metal,” and “brick,” we combined with “masonry.” 
-
-# If a combination of materials were listed we relabeled with the material named first (e.g., “wood/rock” was labeled “wood.”). The most common roofing materials were “composite,” “shingle,” and “tile,” but approximately five percent of the structures had either “metal” or “wood shake” roofs, and we kept those classes separate for the analysis. 
-
-# Window frame material was either “metal,” “wood,” or “vinyl,” and window pane was either “single” or “dual.”
 dins %>% 
   st_drop_geometry() %>% names()
 
 dins %>% 
   st_drop_geometry() %>% 
   filter(!is.na(Buildings_ParcelID_DINS_intersects_INCIDENTST)) %>% View()
- 
-dins %>% 
-  st_drop_geometry() %>% 
-  filter(!is.na(Buildings_ParcelID_DINS_intersects_INCIDENTST)) %>%
-  tabyl(Buildings_ParcelID_DINS_intersects_WINDOWPANE) #windowpane
+
+#TO DO variables to include? - Dexter, these all seem to have ok data, but need some reclassing/your thoughts on models.
+#1. exterior siding materials 
+#2. fence materials
+#3. deck/porch materials
+#4. roof materials
+#5. patio/cover materials
+#6. propane tank distance
+#7. window panes
 
 dins %>% 
   st_drop_geometry() %>% 
   filter(!is.na(Buildings_ParcelID_DINS_intersects_INCIDENTST)) %>%
-  tabyl(Buildings_ParcelID_DINS_intersects_EXTERIORSI) #exterior siding, data on over 1K
+  tabyl(Buildings_ParcelID_DINS_intersects_EXTERIORSI) #exterior siding, have data for 75% of sample; categories ok
 
-  tabyl(Buildings_ParcelID_DINS_intersects_WINDOWPANE) #window pane, data on 600
+dins %>%
+st_drop_geometry() %>% 
+  filter(!is.na(Buildings_ParcelID_DINS_intersects_INCIDENTST)) %>% 
+   tabyl(Buildings_ParcelID_DINS_intersects_FENCEATTAC) #fence materials, have data for 70% of sample, although 50% had no fence; reclass no fence to N/A?
 
 dins %>% 
+ st_drop_geometry() %>% 
+  filter(!is.na(Buildings_ParcelID_DINS_intersects_INCIDENTST)) %>%
+ tabyl(Buildings_ParcelID_DINS_intersects_DECKPORCHO) #deck and porch materials, have data for 65% of sample; should change 'no deck/porch' to N/A? 
+
+dins %>% 
+  st_drop_geometry() %>% 
+  filter(!is.na(Buildings_ParcelID_DINS_intersects_INCIDENTST)) %>%
+  tabyl(Buildings_ParcelID_DINS_intersects_ROOFCONSTR) #roof, have data for 65% sample, should drop 'other' bc only 8 observations
+
+ dins %>% 
   st_drop_geometry() %>% 
   filter(!is.na(Buildings_ParcelID_DINS_intersects_INCIDENTST)) %>% 
-   tabyl(Buildings_ParcelID_DINS_intersects_FENCEATTAC) # is there attached fence, data for ~1100 but 800 have no porch could be reclassed
+  tabyl(Buildings_ParcelID_DINS_intersects_PATIOCOVER) # materials on covered patio or carport, have data for 65% of sample although 44% have no carport or patio cover; reclass 'no' to N/A
 
-  #tabyl(Buildings_ParcelID_DINS_intersects_ROOFCONSTR) #roof material  
-  tabyl(Buildings_ParcelID_DINS_intersects_DEFENSIVEA) #defensive actions, essential unknown for nearly all
-  tabyl(Buildings_ParcelID_DINS_intersects_PROPANETAN) #propane tank, has distance on ~880
-  tabyl(Buildings_ParcelID_DINS_intersects_EAVES) #eaves, has data for ~500
-  tabyl(Buildings_ParcelID_DINS_intersects_VENTSCREEN) #eaves, has data for ~400
-  tabyl(Buildings_ParcelID_DINS_intersects_DECKPORCHO) # deck porch material, data on 1000; 538 of those have no deck or porch; could be reclassed        to does it have a deck or porch
-  tabyl(Buildings_ParcelID_DINS_intersects_PATIOCOVER) # is there a covered patio or carport, have data on materials for 302; 690 don't have; 570         unknown
+dins %>% 
+ st_drop_geometry() %>% 
+  filter(!is.na(Buildings_ParcelID_DINS_intersects_INCIDENTST)) %>%
+  tabyl(Buildings_ParcelID_DINS_intersects_PROPANETAN) #propane tank, has data for 56% of sample; reclass categories so blank is unknown and others are in order, N/A = no   tank
 
+dins %>% 
+  st_drop_geometry() %>% 
+  filter(!is.na(Buildings_ParcelID_DINS_intersects_INCIDENTST)) %>%
+  tabyl(Buildings_ParcelID_DINS_intersects_WINDOWPANE) #windowpane, have data for 40% of sample, categories ok
+
+  
+# also in DINS, but don't bother with? bc sample sizes are so low:
+  #tabyl(Buildings_ParcelID_DINS_intersects_DEFENSIVEA) #defensive actions, I think data for ~40% but don't know if blank is a no or an unknown
+  #tabyl(Buildings_ParcelID_DINS_intersects_EAVES) #eaves, has data for ~33% only. 
+  #tabyl(Buildings_ParcelID_DINS_intersects_VENTSCREEN) #eaves, has data for ~33% only.  
+  #tabyl(Buildings_ParcelID_DINS_intersects_VENTSCREEN) #only data on 29% of sample, and 11% of sample had no vents.
                  
 
 ```

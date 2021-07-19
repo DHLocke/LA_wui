@@ -153,7 +153,8 @@ build %>%
 #all the pairs with corr greater than .7 are either duplicate measures of vegetation at differences or parcel chars
 cors_tibble %>% 
   filter(value > .7 & value < 1) %>% 
-  View()
+    View()
+ 
 
 
 #Older thoughts on correlations

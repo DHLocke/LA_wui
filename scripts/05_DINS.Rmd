@@ -86,9 +86,10 @@ st_layers(paste0(getwd(), '/data/Outgoing_BuildingSumms_DHL20200423.gdb'))
 
 dins <- read_sf(dsn = paste0(getwd(), '/data/Outgoing_BuildingSumms_DHL20200423.gdb'),
                       layer = 'Buildings_ParcelID_DINS',
-                      quiet = FALSE) 
+                      quiet = FALSE)
 
-glimpse(dins)
+# dins <- read_csv(paste0(getwd(), '/output_data/building_2021-04-26.csv')) %>% glimpse
+
 ```
 
 
@@ -165,7 +166,37 @@ dins %>%
 ```
 
 
+# 3 boxplots of DINS vars with outcome
+```{r}
+#TO DO variables to include? - Dexter, these all seem to have ok data, but need some reclassing/your thoughts on models.
+#1. exterior siding materials 
+#2. fence materials
+#3. deck/porch materials
+#4. roof materials
+#5. patio/cover materials
+#6. propane tank distance
+#7. window panes
 
+
+dins
+
+
+voi <- c('Buildings_ParcelID_DINS_intersects_EXTERIORSI',
+        'Buildings_ParcelID_DINS_intersects_FENCEATTAC', 
+        'Buildings_ParcelID_DINS_intersects_DECKPORCHO',
+        'Buildings_ParcelID_DINS_intersects_ROOFCONSTR',
+        'Buildings_ParcelID_DINS_intersects_PATIOCOVER', 
+        'Buildings_ParcelID_DINS_intersects_PROPANETAN',
+        'Buildings_ParcelID_DINS_intersects_WINDOWPANE')
+          
+for(i in voi){
+  #print(i)
+  #dins %>% filter(!is.na(Buildings_ParcelID_DINS_intersects_INCIDENTST)) %>% 
+  dins %>% ggplot(aes(damage_binary, i)) + geom_boxplot()
+}
+
+
+```
 
 
 ```{r, citations}

@@ -521,10 +521,11 @@ AIC(m1,m2,m3) #compare m1,m2,m3
   # TO DO which road measure?  
 names(build)
 m4<-glm(damage_binary ~ parcel_year_built+build_Mean_slope_30m_DEM+build_Mean_aspect_30m_DEM+build_Mean_elev_30m+build_perc_overhang+
-          parcel_Grass_P+parcel_Can_P+parcel_Soil_P+build_Mean_distroad+build_Mean_builddens, family = binomial, data = build)
+          build_p_grass_300+build_p_tree_300+build_p_soil_300+build_Mean_distroad+build_Mean_builddens, family = binomial, data = build)
 
-AIC(m2,m4) #TO DO what's going on w number of observations here?
+AIC(m2,m4) #TO DO what's going on w number of observations here? where are missing values?
 m4 %>% tab_model
+tab_model(m2,m4)
 m4 %>% plot_model(., sort.est = TRUE, vline.color = 'black') + 
   ylim(0, 1.65) + theme_bw() 
 

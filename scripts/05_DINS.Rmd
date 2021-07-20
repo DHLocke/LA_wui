@@ -138,6 +138,12 @@ dins %>%
   st_drop_geometry() %>% 
   filter(!is.na(Buildings_ParcelID_DINS_intersects_INCIDENTST)) %>% 
   tabyl(Buildings_ParcelID_DINS_intersects_PATIOCOVER) # materials on covered patio or carport, have data for 65% of sample although 44% have no carport or patio cover; reclass 'no' to N/A
+ 
+ 
+ dins %>% 
+  st_drop_geometry() %>% 
+  filter(!is.na(Buildings_ParcelID_DINS_intersects_INCIDENTST)) %>%
+  tabyl(Buildings_ParcelID_DINS_intersects_EXTERIORSI,Buildings_ParcelID_DINS_intersects_PATIOCOVER) %>% adorn_totals()
 
 dins %>% 
  st_drop_geometry() %>% 
@@ -152,8 +158,7 @@ dins %>%
   
 # also in DINS, but don't bother with? bc sample sizes are so low:
   #tabyl(Buildings_ParcelID_DINS_intersects_DEFENSIVEA) #defensive actions, I think data for ~40% but don't know if blank is a no or an unknown
-  #tabyl(Buildings_ParcelID_DINS_intersects_EAVES) #eaves, has data for ~33% only. 
-  #tabyl(Buildings_ParcelID_DINS_intersects_VENTSCREEN) #eaves, has data for ~33% only.  
+  #tabyl(Buildings_ParcelID_DINS_intersects_EAVES) #eaves, has data for ~33% only.  
   #tabyl(Buildings_ParcelID_DINS_intersects_VENTSCREEN) #only data on 29% of sample, and 11% of sample had no vents.
                  
 

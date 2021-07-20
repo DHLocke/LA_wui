@@ -482,85 +482,51 @@ log_step_cd %>% plot_model(., sort.est = TRUE, vline.color = 'black') +
 ### H purposeful models
 ```{r}
 
-# purposeful models of predictors ; no covariates
+# purposeful models of predictors ; we have a working set of 'non-correlated' variables, create 'intentional' sets of models - 
+# Parcel/building level - what individual can control or potentially change (trees overhead, veg on parcel, veg in 10 ft)
+# Model ideas 1  - structure age, slope, aspect, elevation; vegetation on roof; vegetation within 10 ft
 
-#all the below needs to be fixed. HERE HERE HERE
+m1<-glm(damage_binary ~ parcel_year_built+build_Mean_slope_30m_DEM+build_Mean_aspect_30m_DEM+build_Mean_elev_30m+build_perc_overhang+
+          build_p_grass_10+build_p_tree_10+build_p_soil_10, family = binomial, data = build)
 
-We have a working set of 'non-correlated' variables, create 'intentional' sets of models - Script 3
-Parcel/building level - what individual can control or potentially change (trees overhead, veg on parcel, veg in 10 ft)
-Model ideas 1  - structure age, slope, aspect, elevation; vegetation on roof; vegetation within 10 ft
-Model ideas 2 - structure age, slope, aspect, elevation; vegetation on roof; vegetation within 300 ft (if that distance seems best?)
-Model ideas 3 (just change out veg for parcel) - structure age, slope, aspect, elevation; vegetation on roof; vegetation on parcel
-Landscape level - what determines fire spread/describes world around you (roads, building density, slope aspect etc)
-Take the parcel/building level model 1, 2, or 3, and add the variables for roads, building density; ?Structuredensity*Structure age interaction?
-  
-log_build_reg_data_consitent_dists <- build %>%
-  tidylog::select(damage_binary
-                  , build_Mean_elev_30m
-                  ,  build_Mean_aspect_30m_DEM
-                  ,  build_Mean_slope_30m_DEM
-                  ,  build_Mean_aspect_30m_DEM 
-                  ,  build_Mean_distroad
-                  ,  build_Mean_builddens 
-                  ,  build_Mean_distall_road 
-                  ,  build_min_dist_tree
-                  ,  build_min_dist_shrub 
-                  
-                  , build_has_tree_overhang
-                  , build_overhang_ht
-                  , build_perc_overhang
-                  
-                  , build_dist_angle
-                  , build_dist_to_build_ft_jod
-                  
-                  , build_p_tree_300 
-                  , build_p_grass_300 
-                  , build_p_soil_300 
-                  , build_p_water_300 
-                  , build_p_building_300 
-                  , build_p_road_300
-                  , build_p_otherpaved_300
-                  , build_p_shrub_300
-                    
-                  , build_area
-                  
-                  , parcel_UseType
-                    # parcel_UseDescription, # colinear with above?
-                    # parcel_Roll_ImpValue, # colinear with below?
-                  , parcel_Roll_HomeOwnersExemp
-                  , parcel_Can_P
-                  , parcel_Grass_P
-                  , parcel_Soil_P 
-                  , parcel_Water_P
-                  , parcel_Build_P
-                  , parcel_Road_P
-                  , parcel_Paved_P
-                  , parcel_Shrub_P
-                  , parcel_Perv_P
-                  , parcel_Imperv_P
-                  , parcel_year_built
-                  , parcel_area) %>% 
-  mutate_if(is.character, as.factor) %>% # random forest doesn't like characters
-  drop_na()
-
-
-# _cd for consistent distance
-log_maximal_cd <- glm(damage_binary ~ ., family = binomial, data = log_build_reg_data_consitent_dists)
-log_maximal_cd %>% check_collinearity()
-
-# step-wise
-tic();log_step_cd <- log_maximal_cd %>% MASS::stepAIC(trace = FALSE); toc() # ~1.5 mins
-log_step_cd %>% check_collinearity()
-
-# store chosen terms from stepwise regression
-(log_step_cd %>% 
-    tidy() %>% 
-    filter(term != '(Intercept)') %>% 
-    pull(term) -> vars_in_log_step)
-
-log_step_cd %>% tab_model
-log_step_cd %>% plot_model(., sort.est = TRUE, vline.color = 'black') + 
+summary(m1)
+m1 %>% tab_model
+m1 %>% plot_model(., sort.est = TRUE, vline.color = 'black') + 
   ylim(0, 1.65) + theme_bw()
+
+# Model ideas 2 - structure age, slope, aspect, elevation; vegetation on roof; vegetation within 300 ft (if that distance seems best?)
+m2<-glm(damage_binary ~ parcel_year_built+build_Mean_slope_30m_DEM+build_Mean_aspect_30m_DEM+build_Mean_elev_30m+build_perc_overhang+
+          build_p_grass_300+build_p_tree_300+build_p_soil_300, family = binomial, data = build)
+
+summary(m2)
+m2 %>% tab_model
+m2 %>% plot_model(., sort.est = TRUE, vline.color = 'black') + 
+  ylim(0, 1.65) + theme_bw()
+
+
+# Model ideas 3 (just change out veg for parcel) - structure age, slope, aspect, elevation; vegetation on roof; vegetation on parcel
+m3<-glm(damage_binary ~ parcel_year_built+build_Mean_slope_30m_DEM+build_Mean_aspect_30m_DEM+build_Mean_elev_30m+build_perc_overhang+
+          parcel_Grass_P+parcel_Can_P+parcel_Soil_P, family = binomial, data = build)
+
+summary(m3)
+m3 %>% tab_model
+m3 %>% plot_model(., sort.est = TRUE, vline.color = 'black') + 
+  ylim(0, 1.65) + theme_bw()
+
+AIC(m1,m2,m3) #compare m1,m2,m3 
+
+# Landscape level - what determines fire spread/describes world around you (roads, building density, slope aspect etc)
+# Take the parcel/building level model 1, 2, or 3, and add the variables for roads, building density; 
+  # TO DO should have ?Structuredensity*Structure age interaction?
+  # TO DO which road measure?  
+names(build)
+m4<-glm(damage_binary ~ parcel_year_built+build_Mean_slope_30m_DEM+build_Mean_aspect_30m_DEM+build_Mean_elev_30m+build_perc_overhang+
+          parcel_Grass_P+parcel_Can_P+parcel_Soil_P+build_Mean_distroad+build_Mean_builddens, family = binomial, data = build)
+
+AIC(m2,m4) #TO DO what's going on w number of observations here?
+m4 %>% tab_model
+m4 %>% plot_model(., sort.est = TRUE, vline.color = 'black') + 
+  ylim(0, 1.65) + theme_bw() 
 
 ```
 

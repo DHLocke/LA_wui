@@ -152,11 +152,11 @@ build <- read_sf(dsn = paste0(getwd(), '/data/Outgoing_BuildingSumms_DHL20200423
                      structures_DAMAGE == 'Major (26-50%)' ~ 4,
                      structures_DAMAGE == 'Destroyed (>50%)' ~ 5),
          area = as.double(st_area(.))) %>% 
-  distinct(ID_Build, Shape, .keep_all = TRUE) %>% 
+  distinct(ID_Build, Shape, .keep_all = TRUE) %>% #9/20/21 - how many is this dropping, this is only when ID_Build and Shape are the same?
   rename_at(vars(-starts_with('ID'), -starts_with('damage_')), ~paste0('build_',.)) %>% glimpse()
 
 # define & refine the dependent variable versions: numeric (0/1), categorical (survived/destroyed),
-# and severeity?
+# and severity?
 build %>% st_drop_geometry() %>% tabyl(build_structures_DAMAGE) #%>% 
 #  write.csv(., paste0(getwd(), '/output_data/damage_cats.csv'), row.names = FALSE)
 
@@ -175,6 +175,7 @@ build %>% st_drop_geometry() %>% tabyl(damage_severity, damage_binary) #%>%
   #write.csv(., paste0(getwd(), '/output_data/damage_binary_severity.csv'), row.names = FALSE)
 
 glimpse(build)
+
 ```
 
 

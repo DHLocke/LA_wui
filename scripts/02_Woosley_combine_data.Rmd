@@ -118,6 +118,7 @@ set.seed(19870630)
 
 
 ## 1 bring in new GIS data from Miranda, this will be the base from now on (August, 2020)
+### a. GIS data
 ```{r}
 # GIS DATA from MIRANDA
 st_layers(paste0(getwd(), '/data/Outgoing_BuildingSumms_DHL20200423.gdb'))
@@ -177,6 +178,47 @@ build %>% st_drop_geometry() %>% tabyl(damage_severity, damage_binary) #%>%
 glimpse(build)
 
 ```
+
+### b building distance to destroyed and exposed by fire
+```{r} 
+
+min_dist_dest<- read_csv('data/Near_dest210915.csv') %>%arrange(IN_FID, Near_dst_rank) #distance to destroyed building; if this is 0, it is distance to self, value 2
+min_dist_exp<- read_csv('data/Near_exp210915.csv')%>%arrange(IN_FID, Near_exp_rank) #distance to exposed building; if this is 0, it is distance to self,  value 2
+
+#selecting correct distance for min dist to destroyed
+min_dest<- min_dist_dest %>% dplyr::select(IN_FID:Near_dst_rank )%>%
+  group_by(Near_dst_rank) %>%
+  mutate(rn = row_number()) %>% # recreated unique identifier column
+  tidyr::pivot_wider(names_from = "Near_dst_rank", names_prefix = "dest_",values_from = "Near_dest") %>%
+  mutate(Near_dest =
+           case_when(dest_1==0 ~dest_2,
+                     dest_1>0~dest_1))%>% 
+  dplyr::select(IN_FID,Near_dest)
+
+#here here here - issues with pivot_wider giving you a list not doubles - need to fix that? go back to spread?
+
+#selecting correct distance for min dist to exposed
+ min_exp <- min_dist_exp %>% dplyr::select(IN_FID:Near_exp_rank )%>%
+#   group_by(Near_exp_rank) %>%
+  # mutate(rn = row_number()) %>% # recreated unique identifier column
+     spread(names_from = "Near_exp_rank", names_prefix = "exp_",values_from = "Near_exp_dist") %>%
+   
+  tidyr::pivot_wider(names_from = "Near_exp_rank", names_prefix = "exp_",values_from = "Near_exp_dist") %>%
+  mutate(Near_exp =
+           case_when(exp_1==0.000000 ~exp_2,
+                     exp_1>0.000000~exp_1)) %>% drop_na("Near_exp")%>%
+  dplyr::select(IN_FID,Near_exp) 
+
+
+View(min_exp)
+0.000000
+
+build %<>% 
+  left_join(., min_dest, by = c('ID_Build' = 'IN_FID')) %>% 
+  left_join(., min_exp, by = c('ID_Build' = 'IN_FID'))
+
+```
+
 
 
 

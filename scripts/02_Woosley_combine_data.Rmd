@@ -188,23 +188,28 @@ min_dist_exp<- read_csv('data/Near_exp210922.csv')  #distance to exposed buildin
 #processing to get to min distance to destroyed
 min_dest<- min_dist_dest %>% dplyr::select(c(IN_FID,Dist=NEAR_DIST,Rank=NEAR_RANK)) %>%
     tidyr::pivot_wider(names_from = "Rank", names_prefix = "dest_",values_from = "Dist") %>%
-        mutate(Near_dest =
+        mutate(near_dest =
            case_when(dest_1==0 ~dest_2,
                      dest_1>0~dest_1)) %>% 
-                         dplyr::select(IN_FID,Near_dest)
+                         dplyr::select(IN_FID,near_dest)
 
 #processing to get to min distance to exposed
 min_exp<- min_dist_exp %>% dplyr::select(c(IN_FID,Dist=NEAR_DIST,Rank=NEAR_RANK)) %>%
     tidyr::pivot_wider(names_from = "Rank", names_prefix = "exp_",values_from = "Dist") %>%
-        mutate(Near_exp =
+        mutate(near_exp =
            case_when(exp_1==0 ~exp_2,
                      exp_1>0~exp_1)) %>% 
-                         dplyr::select(IN_FID,Near_exp)
+                         dplyr::select(IN_FID,near_exp)
 
-min_dest %<>% 
-  left_join(., min_exp, by = 'IN_FID') 
+cor(min_dest$near_dest, min_exp$near_exp, method=c("pearson")) #highly correlated
 
-%>%  
+
+build %<>% 
+  left_join(., min_dest, by = c('ID_Build' = 'IN_FID')) %>% 
+  left_join(., min_exp, by = c('ID_Build' = 'IN_FID'))
+
+
+
 ```
 
 
@@ -273,9 +278,9 @@ build %<>%
 ### b building distance veg
 ```{r}
 
-(min_dist_shrub <- read_csv('output_data/min_dist_shrub_2021-04-23.csv'))
-(min_dist_tree  <- read_csv('output_data/min_dist_tree_2021-04-23.csv') %>% 
-    mutate(min_dist_tree = ifelse(min_dist_tree == Inf, 0.75, min_dist_tree)))
+min_dist_shrub <- read_csv('output_data/min_dist_shrub_2021-04-23.csv')
+min_dist_tree  <- read_csv('output_data/min_dist_tree_2021-04-26.csv') %>% 
+    mutate(min_dist_tree = ifelse(min_dist_tree == Inf, 0.75, min_dist_tree))
 
 
 build %<>% 
@@ -591,20 +596,22 @@ glimpse(build)
 ## 4 write out the data
 ```{r}
 
+#output building data with the nearest distance to exposed and destroyed - just output all the variables, no selection
+#sept 9, 2021
 
 build %>% #glimpse()
   st_drop_geometry() %>%
-  tidylog::select(ID_Build, ID_Parcel, parcel_AIN,
-                  damage_cat : damage_severity, build_structures_DAMAGE,
-                  build_Mean_elev_30m : build_Mean_distall_road,
-                  build_min_dist_tree : build_perc_overhang,
-                  build_dist_angle = build_NEAR_ANGLE, build_dist_to_build_ft = build_NEAR_DIST, 
-                  build_dist_to_build_ft_jod = build_dist_to_build_ft,
-                  build_p_tree_10: build_p_shrub_300, # FIXME add value here?
-                  build_area,
-                  parcel_UseType : parcel_Imperv_P,
-                  parcel_year_built = parcel_recent,
-                  parcel_area) %>% 
+  # tidylog::select(ID_Build, ID_Parcel, parcel_AIN,
+  #                 damage_cat : damage_severity, build_structures_DAMAGE,
+  #                 build_Mean_elev_30m : build_Mean_distall_road,
+  #                 build_min_dist_tree : build_perc_overhang,
+  #                 build_dist_angle = build_NEAR_ANGLE, build_dist_to_build_ft = build_NEAR_DIST, 
+  #                 build_dist_to_build_ft_jod = build_dist_to_build_ft,
+  #                 build_p_tree_10: build_p_shrub_300, # FIXME add value here?
+  #                 build_area,
+  #                 parcel_UseType : parcel_Imperv_P,
+  #                 parcel_year_built = parcel_recent,
+  #                 parcel_area) %>% 
   write_csv(., paste0(getwd(), '/output_data/building_', Sys.Date(), '.csv'))
 
 ```

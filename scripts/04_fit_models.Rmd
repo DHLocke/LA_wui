@@ -58,7 +58,7 @@ set.seed(19870630)
 ```{r}
 # build <- read_csv(paste0(getwd(), '/output_data/building_2021-04-26.csv')) %>% glimpse
 
-build <- read_csv(paste0(getwd(), '/output_data/building_2021-09-22.csv')) %>% glimpse
+build <- read_csv(paste0(getwd(), '/output_data/building_2021-09-27.csv')) %>% glimpse
 
 ```
 
@@ -82,7 +82,7 @@ tic(); uni_log_mods <- build %>%
     log_build_Mean_aspect_30 = map(., ~glm(damage_binary ~ build_Mean_aspect_30m_DEM, family= binomial, data = data.frame(.))),
     log_build_Mean_aspect_100= map(., ~glm(damage_binary ~ build_Mean_aspect_100m_DEM,family= binomial, data = data.frame(.))),
     
-    # land cover
+     # land cover
     log_build_p_tree_10 = map(., ~glm(damage_binary ~ build_p_tree_10, family = binomial, data = data.frame(.))),
     log_build_p_tree_100= map(., ~glm(damage_binary ~ build_p_tree_100,family = binomial, data = data.frame(.))),
     log_build_p_tree_200= map(., ~glm(damage_binary ~ build_p_tree_200,family = binomial, data = data.frame(.))),
@@ -143,10 +143,10 @@ tic(); uni_log_mods <- build %>%
 (
   gof <- uni_log_mods %>% 
     dplyr::select(-model_name, -model) %>% 
-    #dplyr::select(var, dist, AIC, dsqr, r2) %>% 
-    #unnest(dsqr, AIC, r2) %>% unnest(r2)
+    # dplyr::select(var, dist, AIC, dsqr, r2) %>%
+    # unnest(dsqr, AIC, r2) %>% unnest(r2)
     unnest(everything()) %>% 
-    unnest(everything())
+    unnest(everything()) #TODO doesn't run for me
 )
 
 
@@ -195,6 +195,12 @@ tic(); uni_log_mods <- build %>%
 #               min_rmse= var[which.min(rmse)]) 
 # )
 
+ # distance to destroyed
+# near_dest - better predictor than near_exposure. 
+    log_near_dest=glm(damage_binary ~ near_dest, family = binomial, data = build)
+    log_near_exp=glm(damage_binary ~ near_exp, family = binomial, data = build)
+    anova(log_near_dest,log_near_exp)
+
 
 ```
 
@@ -232,7 +238,7 @@ log_build_reg_data <- build %>%
                   , build_p_shrub_300
                     
                   , build_area
-                  
+                  , near_dest
                   , parcel_UseType
                     # parcel_UseDescription, # colinear with above?
                     # parcel_Roll_ImpValue, # colinear with below?
@@ -266,7 +272,7 @@ log_build_reg_data_lc <- build %>%
                   ,  build_Mean_distall_road 
                   ,  build_min_dist_tree
                   ,  build_min_dist_shrub 
-                  
+                  , near_dest
                   , build_has_tree_overhang
                   , build_overhang_ht
                   , build_perc_overhang
@@ -333,6 +339,8 @@ tic();log_step <- log_maximal %>% MASS::stepAIC(trace = FALSE); toc() # ~1.5 min
     tidy() %>% 
     filter(term != '(Intercept)') %>% 
     pull(term) -> vars_in_log_step)
+
+summary(log_step)
 
 ```
 
@@ -423,7 +431,7 @@ log_build_reg_data_consitent_dists <- build %>%
                   ,  build_Mean_distall_road 
                   ,  build_min_dist_tree
                   ,  build_min_dist_shrub 
-                  
+                  , near_dest
                   , build_has_tree_overhang
                   , build_overhang_ht
                   , build_perc_overhang
@@ -433,7 +441,7 @@ log_build_reg_data_consitent_dists <- build %>%
                   
                   , build_p_tree_300 
                   , build_p_grass_300 
-                  , build_p_soil_300 
+                #  , build_p_soil_300 
                   , build_p_water_300 
                   , build_p_building_300 
                   , build_p_road_300
@@ -446,16 +454,16 @@ log_build_reg_data_consitent_dists <- build %>%
                     # parcel_UseDescription, # colinear with above?
                     # parcel_Roll_ImpValue, # colinear with below?
                   , parcel_Roll_HomeOwnersExemp
-                  , parcel_Can_P
-                  , parcel_Grass_P
-                  , parcel_Soil_P 
-                  , parcel_Water_P
-                  , parcel_Build_P
-                  , parcel_Road_P
-                  , parcel_Paved_P
-                  , parcel_Shrub_P
-                  , parcel_Perv_P
-                  , parcel_Imperv_P
+                 # , parcel_Can_P
+                #  , parcel_Grass_P
+                #  , parcel_Soil_P 
+                #  , parcel_Water_P
+                #  , parcel_Build_P
+                #  , parcel_Road_P
+                #  , parcel_Paved_P
+                #  , parcel_Shrub_P
+                #  , parcel_Perv_P
+                #  , parcel_Imperv_P
                   , parcel_year_built
                   , parcel_area) %>% 
   mutate_if(is.character, as.factor) %>% # random forest doesn't like characters
@@ -489,8 +497,7 @@ log_step_cd %>% plot_model(., sort.est = TRUE, vline.color = 'black') +
 # Parcel/building level - what individual can control or potentially change (trees overhead, veg on parcel, veg in 10 ft)
 # Model ideas 1  - structure age, slope, aspect, elevation; vegetation on roof; vegetation within 10 ft
 
-m1<-glm(damage_binary ~ parcel_year_built+build_Mean_slope_30m_DEM+build_Mean_aspect_30m_DEM+build_Mean_elev_30m+build_perc_overhang+
-          build_p_grass_10+build_p_tree_10+build_p_soil_10, family = binomial, data = build)
+m1<-glm(damage_binary ~ near_dest+parcel_year_built+build_Mean_slope_30m_DEM+build_Mean_aspect_30m_DEM+build_Mean_elev_30m+build_perc_overhang+build_p_grass_10+build_p_tree_10+build_p_soil_10, family = binomial, data = build)
 
 summary(m1)
 m1 %>% tab_model
@@ -498,8 +505,7 @@ m1 %>% plot_model(., sort.est = TRUE, vline.color = 'black') +
   ylim(0, 1.65) + theme_bw()
 
 # Model ideas 2 - structure age, slope, aspect, elevation; vegetation on roof; vegetation within 300 ft (if that distance seems best?)
-m2<-glm(damage_binary ~ parcel_year_built+build_Mean_slope_30m_DEM+build_Mean_aspect_30m_DEM+build_Mean_elev_30m+build_perc_overhang+
-          build_p_grass_300+build_p_tree_300+build_p_soil_300, family = binomial, data = build)
+m2<-glm(damage_binary ~ near_dest+parcel_year_built+build_Mean_slope_30m_DEM+build_Mean_aspect_30m_DEM+build_Mean_elev_30m+build_perc_overhang+build_p_grass_300+build_p_tree_300+build_p_soil_300, family = binomial, data = build)
 
 summary(m2)
 m2 %>% tab_model
@@ -508,8 +514,7 @@ m2 %>% plot_model(., sort.est = TRUE, vline.color = 'black') +
 
 
 # Model ideas 3 (just change out veg for parcel) - structure age, slope, aspect, elevation; vegetation on roof; vegetation on parcel
-m3<-glm(damage_binary ~ parcel_year_built+build_Mean_slope_30m_DEM+build_Mean_aspect_30m_DEM+build_Mean_elev_30m+build_perc_overhang+
-          parcel_Grass_P+parcel_Can_P+parcel_Soil_P, family = binomial, data = build)
+m3<-glm(damage_binary ~ near_dest+parcel_year_built+build_Mean_slope_30m_DEM+build_Mean_aspect_30m_DEM+build_Mean_elev_30m+build_perc_overhang+parcel_Grass_P+parcel_Can_P+parcel_Soil_P, family = binomial, data = build)
 
 summary(m3)
 m3 %>% tab_model
@@ -534,7 +539,7 @@ m4 %>% plot_model(., sort.est = TRUE, vline.color = 'black') +
 
 ```
 
-### C fit Jeffrey Evan's worked example: randomForest
+### I fit Jeffrey Evan's worked example: randomForest
 ```{r}
 # modeled after and adapted from this page
 # from https://evansmurphy.wixsite.com/evansspatial/random-forest-sdm

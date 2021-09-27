@@ -269,17 +269,17 @@ lu_counts %>%
 
 box_plot_dat <- build %>%
   dplyr::select(damage_binary | where(is.double)) %>% 
-  dplyr::select(c(damage_binary,build_Mean_elev_30m:build_shrub_300,parcel_Roll_ImpValue.y:parcel_Imperv_P,!parcel_AIN)) %>%  #this might need to be revised if build variables change
+  dplyr::select(c(damage_binary:near_exp)) %>%  #this might need to be revised if build variables change
   data.frame()
  
 # 
- # for(i in 2:ncol(box_plot_dat)){
- #   print(names(box_plot_dat)[i])
- #   png(file = paste0(getwd(), '/figures/boxplot_', names(box_plot_dat)[i], '_',
- #                     gsub('[[:punct:]]', '_', Sys.time()), '.png'))
- #   boxplot(box_plot_dat[,i] ~ box_plot_dat$damage_binary, main = names(box_plot_dat)[i])
- #   dev.off()
- # }
+# for(i in 2:ncol(box_plot_dat)){
+#   print(names(box_plot_dat)[i])
+#   png(file = paste0(getwd(), '/figures/boxplot_', names(box_plot_dat)[i], '_',
+#                     gsub('[[:punct:]]', '_', Sys.time()), '.png'))
+#   boxplot(box_plot_dat[,i] ~ box_plot_dat$damage_binary, main = names(box_plot_dat)[i])
+#   dev.off()
+# }
 
 # renters vs. owners -doesn't seem to make a difference in outcome #Roll_HomeOwnersExemp==0 are renters, 5600 & 7000 are owners; 
 # filter first by parcel_UseType=Residential

@@ -87,7 +87,7 @@ set.seed(19870630)
 # build <- read_csv(paste0(getwd(), '/output_data/building_2021-04-23.csv')) %>% glimpse
 # build <- read_csv(paste0(getwd(), '/output_data/building_2021-04-26.csv')) %>% glimpse
 
-build <- read_csv(paste0(getwd(), '/output_data/building_2021-09-22.csv')) %>% glimpse
+build <- read_csv(paste0(getwd(), '/output_data/building_2021-09-27.csv')) %>% glimpse
 ```
 
 

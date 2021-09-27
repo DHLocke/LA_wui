@@ -179,38 +179,7 @@ glimpse(build)
 
 ```
 
-### b building distance to destroyed and exposed by fire
-```{r} 
 
-min_dist_dest<- read_csv('data/Near_dest210922.csv')  #distance to destroyed building; if this is 0, it is distance to self, value 2
-min_dist_exp<- read_csv('data/Near_exp210922.csv')  #distance to exposed building; if this is 0, it is distance to self,  value 2
- 
-#processing to get to min distance to destroyed
-min_dest<- min_dist_dest %>% dplyr::select(c(IN_FID,Dist=NEAR_DIST,Rank=NEAR_RANK)) %>%
-    tidyr::pivot_wider(names_from = "Rank", names_prefix = "dest_",values_from = "Dist") %>%
-        mutate(near_dest =
-           case_when(dest_1==0 ~dest_2,
-                     dest_1>0~dest_1)) %>% 
-                         dplyr::select(IN_FID,near_dest)
-
-#processing to get to min distance to exposed
-min_exp<- min_dist_exp %>% dplyr::select(c(IN_FID,Dist=NEAR_DIST,Rank=NEAR_RANK)) %>%
-    tidyr::pivot_wider(names_from = "Rank", names_prefix = "exp_",values_from = "Dist") %>%
-        mutate(near_exp =
-           case_when(exp_1==0 ~exp_2,
-                     exp_1>0~exp_1)) %>% 
-                         dplyr::select(IN_FID,near_exp)
-
-cor(min_dest$near_dest, min_exp$near_exp, method=c("pearson")) #highly correlated
-
-
-build %<>% 
-  left_join(., min_dest, by = c('ID_Build' = 'IN_FID')) %>% 
-  left_join(., min_exp, by = c('ID_Build' = 'IN_FID'))
-
-
-
-```
 
 
 
@@ -596,8 +565,7 @@ glimpse(build)
 ## 4 write out the data
 ```{r}
 
-#output building data with the nearest distance to exposed and destroyed - just output all the variables, no selection
-#sept 9, 2021
+#output building data with the nearest distance to exposed and destroyed - just output all the variables, no selection 
 
 build %>% #glimpse()
   st_drop_geometry() %>%
@@ -616,7 +584,47 @@ build %>% #glimpse()
 
 ```
 
+### a adding in building distance to destroyed and exposed by fire
+```{r} 
 
+# rather than re-run all of the above building dataset, importing april csv and adding just distance to building
+# destroyed and building exposed
+build <- read_csv(paste0(getwd(), '/output_data/building_2021-04-26.csv')) %>% glimpse
+
+min_dist_dest<- read_csv('data/Near_dest210922.csv')  #distance to destroyed building; if this is 0, it is distance to self, value 2
+min_dist_exp<- read_csv('data/Near_exp210922.csv')  #distance to exposed building; if this is 0, it is distance to self,  value 2
+ 
+#processing to get to min distance to destroyed
+min_dest<- min_dist_dest %>% dplyr::select(c(IN_FID,Dist=NEAR_DIST,Rank=NEAR_RANK)) %>%
+    tidyr::pivot_wider(names_from = "Rank", names_prefix = "dest_",values_from = "Dist") %>%
+        mutate(near_dest =
+           case_when(dest_1==0 ~dest_2,
+                     dest_1>0~dest_1)) %>% 
+                         dplyr::select(IN_FID,near_dest)
+
+#processing to get to min distance to exposed
+min_exp<- min_dist_exp %>% dplyr::select(c(IN_FID,Dist=NEAR_DIST,Rank=NEAR_RANK)) %>%
+    tidyr::pivot_wider(names_from = "Rank", names_prefix = "exp_",values_from = "Dist") %>%
+        mutate(near_exp =
+           case_when(exp_1==0 ~exp_2,
+                     exp_1>0~exp_1)) %>% 
+                         dplyr::select(IN_FID,near_exp)
+
+cor(min_dest$near_dest, min_exp$near_exp, method=c("pearson")) #highly correlated
+
+
+build %<>% 
+  left_join(., min_dest, by = c('ID_Build' = 'IN_FID')) %>% 
+  left_join(., min_exp, by = c('ID_Build' = 'IN_FID'))
+
+
+#exporting new build data set
+build %>% 
+  write_csv(., paste0(getwd(), '/output_data/building_', Sys.Date(), '.csv'))
+
+
+
+```
 
 
 

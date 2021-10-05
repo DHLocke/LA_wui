@@ -57,8 +57,9 @@ set.seed(19870630)
 ## 1 read in the data
 ```{r}
 # build <- read_csv(paste0(getwd(), '/output_data/building_2021-04-26.csv')) %>% glimpse
+# build <- read_csv(paste0(getwd(), '/output_data/building_2021-09-27.csv')) %>% glimpse
 
-build <- read_csv(paste0(getwd(), '/output_data/building_2021-09-27.csv')) %>% glimpse
+build <- read_csv(paste0(getwd(), '/output_data/building_2021-10-05.csv')) %>% glimpse
 
 ```
 
@@ -121,10 +122,10 @@ tic(); uni_log_mods <- build %>%
     log_build_p_shrub_10 = map(., ~glm(damage_binary ~ build_p_shrub_10, family = binomial, data = data.frame(.))),
     log_build_p_shrub_100= map(., ~glm(damage_binary ~ build_p_shrub_100,family = binomial, data = data.frame(.))),
     log_build_p_shrub_200= map(., ~glm(damage_binary ~ build_p_shrub_200,family = binomial, data = data.frame(.))),
-    log_build_p_shrub_300= map(., ~glm(damage_binary ~ build_p_shrub_300,family = binomial, data = data.frame(.))),
-
-    log_build_dist_buliddistdhl_0= map(., ~glm(damage_binary ~ build_dist_to_build_ft,family = binomial, data = data.frame(.))),
-    log_build_dist_builddistjod_0= map(., ~glm(damage_binary ~ build_dist_to_build_ft_jod,family = binomial, data = data.frame(.)))
+    log_build_p_shrub_300= map(., ~glm(damage_binary ~ build_p_shrub_300,family = binomial, data = data.frame(.))) #,
+ # TODO what is going on here?
+    # log_build_dist_buliddistdhl_0= map(., ~glm(damage_binary ~ build_dist_to_build_ft,family = binomial, data = data.frame(.))),
+    # log_build_dist_builddistjod_0= map(., ~glm(damage_binary ~ build_dist_to_build_ft_jod,family = binomial, data = data.frame(.)))
     ) %>%
   dplyr::select(-data) %>% 
   rowid_to_column() %>% 
@@ -197,10 +198,13 @@ tic(); uni_log_mods <- build %>%
 
  # distance to destroyed
 # near_dest - better predictor than near_exposure. 
-    log_near_dest=glm(damage_binary ~ near_dest, family = binomial, data = build)
-    log_near_exp=glm(damage_binary ~ near_exp, family = binomial, data = build)
+    log_near_dest <- glm(damage_binary ~ build_near_dest, family = binomial, data = build)
+    log_near_exp <- glm(damage_binary ~ build_near_exp, family = binomial, data = build)
+    
     anova(log_near_dest,log_near_exp)
 
+# destroyed is better, *JUST* like Miranda said it was
+compare_performance(log_near_dest, log_near_exp, rank = TRUE)
 
 ```
 

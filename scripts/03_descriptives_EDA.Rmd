@@ -87,7 +87,10 @@ set.seed(19870630)
 # build <- read_csv(paste0(getwd(), '/output_data/building_2021-04-23.csv')) %>% glimpse
 # build <- read_csv(paste0(getwd(), '/output_data/building_2021-04-26.csv')) %>% glimpse
 
-build <- read_csv(paste0(getwd(), '/output_data/building_2021-09-27.csv')) %>% glimpse
+# build <- read_csv(paste0(getwd(), '/output_data/building_2021-09-27.csv')) %>% glimpse
+
+build <- read_csv(paste0(getwd(), '/output_data/building_2021-10-05.csv')) %>% glimpse
+
 ```
 
 
@@ -131,6 +134,7 @@ table(build$parcel_UseType,build$parcel_Roll_HomeOwnersExemp) #Among residential
 ## 3 correlations
 ```{r}
 
+# TODO check out error message.
 build %>%
   tidylog::select_if(is_double) %>% # just numerically-encoded variables
   tab_corr(.
@@ -269,7 +273,7 @@ lu_counts %>%
 
 box_plot_dat <- build %>%
   dplyr::select(damage_binary | where(is.double)) %>% 
-  dplyr::select(c(damage_binary:near_exp)) %>%  #this might need to be revised if build variables change
+  dplyr::select(c(damage_binary:build_near_exp)) %>%  #this might need to be revised if build variables change
   data.frame()
  
 # 
@@ -290,7 +294,8 @@ build %>%
       adorn_percentages() 
 
 
-
+# summary(lm(damage_binary ~ build_near_dest, build))
+# summary(lm(damage_binary ~ build_near_exp, build))
 
 
 ```

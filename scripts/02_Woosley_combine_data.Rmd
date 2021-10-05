@@ -19,6 +19,7 @@ Variable selection
     Would be a great supplement for a paper on its own.
 
 3) why does build_has_tree_overhang box plot look so weird? Sum stats say mean is 0.7 but these values are either 0 or 1?
+DHL this means 70% have a value of 1. A boxplot for a binary variable is not appropriate if the other variable is also binary
 
 
 
@@ -474,8 +475,8 @@ parcel %>%
 parcel %<>% left_join(., parcel_recent, by = "parcel_AIN")
 
 
-system.time(
-build %<>% st_join(parcel, # spatial join
+system.time(                     # about 30 seconds for DHL
+build %<>% st_join(parcel,       # spatial join
                    left = FALSE, # if FALSE, only intersection be returned, instead of all
                    largest = TRUE))
 ```

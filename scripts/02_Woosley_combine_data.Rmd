@@ -612,19 +612,21 @@ glimpse(build)
 
 #output building data with the nearest distance to exposed and destroyed - just output all the variables, no selection 
 
-build %>% #glimpse()
+build %>% # glimpse()
   st_drop_geometry() %>%
-  # tidylog::select(ID_Build, ID_Parcel, parcel_AIN,
-  #                 damage_cat : damage_severity, build_structures_DAMAGE,
-  #                 build_Mean_elev_30m : build_Mean_distall_road,
-  #                 build_min_dist_tree : build_perc_overhang,
-  #                 build_dist_angle = build_NEAR_ANGLE, build_dist_to_build_ft = build_NEAR_DIST, 
-  #                 build_dist_to_build_ft_jod = build_dist_to_build_ft,
-  #                 build_p_tree_10: build_p_shrub_300, # FIXME add value here?
-  #                 build_area,
-  #                 parcel_UseType : parcel_Imperv_P,
-  #                 parcel_year_built = parcel_recent,
-  #                 parcel_area) %>% 
+  tidylog::select(ID_Build, ID_Parcel, parcel_AIN,
+                  damage_cat : damage_severity, build_structures_DAMAGE,
+                  build_Mean_elev_30m : build_Mean_distall_road,
+                  build_min_dist_tree : build_perc_overhang,
+                  build_dist_angle = build_NEAR_ANGLE,
+                  build_dist_to_burned_build_ft = build_NEAR_DIST,
+                  build_near_exp,
+                  build_dist_to_build_ft_jod = build_dist_to_build_ft,
+                  build_p_tree_10: build_p_shrub_300, # FIXME add value here?
+                  build_area,
+                  parcel_UseType : parcel_Imperv_P,
+                  parcel_year_built = parcel_recent,
+                  parcel_area) %>%
   write_csv(., paste0(getwd(), '/output_data/building_', Sys.Date(), '.csv'))
 
 ```

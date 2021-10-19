@@ -59,11 +59,10 @@ set.seed(19870630)
 # build <- read_csv(paste0(getwd(), '/output_data/building_2021-04-26.csv')) %>% glimpse
 # build <- read_csv(paste0(getwd(), '/output_data/building_2021-09-27.csv')) %>% glimpse
 
-build <- read_csv(paste0(getwd(), '/output_data/building_2021-10-05.csv')) %>% glimpse
+# build <- read_csv(paste0(getwd(), '/output_data/building_2021-10-05.csv')) %>% glimpse
+build <- read_csv(paste0(getwd(), '/output_data/building_2021-10-19.csv')) %>% glimpse
 
 ```
-
-
 
 ## 2 fit models
 ### A univariate-logistic regression to select from potentially redundant predictors
@@ -196,12 +195,13 @@ tic(); uni_log_mods <- build %>%
 #               min_rmse= var[which.min(rmse)]) 
 # )
 
- # distance to destroyed
+# distance to destroyed
 # near_dest - better predictor than near_exposure. 
-    log_near_dest <- glm(damage_binary ~ build_near_dest, family = binomial, data = build)
+    log_near_dest <- glm(damage_binary ~ build_dist_to_burned_build_ft, 
+                         family = binomial, data = build)
     log_near_exp <- glm(damage_binary ~ build_near_exp, family = binomial, data = build)
     
-    anova(log_near_dest,log_near_exp)
+    anova(log_near_dest, log_near_exp)
 
 # destroyed is better, *JUST* like Miranda said it was
 compare_performance(log_near_dest, log_near_exp, rank = TRUE)
@@ -228,9 +228,11 @@ log_build_reg_data <- build %>%
                   , build_has_tree_overhang
                   , build_overhang_ht
                   , build_perc_overhang
-                  
-                  , build_dist_angle
+                
+                  # , build_dist_angle
+                  # , build_dist_to_burned_build_ft
                   , build_dist_to_build_ft_jod
+                  , build_near_exp
                   
                   , build_p_tree_100
                   , build_p_grass_300 
@@ -242,7 +244,7 @@ log_build_reg_data <- build %>%
                   , build_p_shrub_300
                     
                   , build_area
-                  , near_dest
+                  # , near_dest
                   , parcel_UseType
                     # parcel_UseDescription, # colinear with above?
                     # parcel_Roll_ImpValue, # colinear with below?
@@ -276,13 +278,15 @@ log_build_reg_data_lc <- build %>%
                   ,  build_Mean_distall_road 
                   ,  build_min_dist_tree
                   ,  build_min_dist_shrub 
-                  , near_dest
+                  
                   , build_has_tree_overhang
                   , build_overhang_ht
                   , build_perc_overhang
-                  
-                  , build_dist_angle
+                
+                  # , build_dist_angle
+                  # , build_dist_to_burned_build_ft
                   , build_dist_to_build_ft_jod
+                  , build_near_exp
                   
                   # , build_p_tree_100
                   , build_p_grass_300 
@@ -317,11 +321,64 @@ log_build_reg_data_lc <- build %>%
 
 log_maximal_lc <- glm(damage_binary ~ ., family = binomial, data = log_build_reg_data_lc)
 
-# FIXME
+# FIXME examine warning error
 tic();log_step_lc <- log_build_reg_data_lc %>% MASS::stepAIC(trace = FALSE); toc() # ~1.5 mins
 
 ```
 
+
+
+
+## PUNCHING IN Owen Price-inspired code
+```{r}
+
+library(rpart)
+library(pROC) #for AUC calculation
+
+tic(); final <- rpart(damage_binary ~ ., data = log_build_reg_data, method = 'anova'); toc()
+
+plot(final)
+
+
+# Owen Price
+# windows(4.5,4.5)
+# par(mar=c(1,1,2,1))
+# final3<-prune(final,cp=0.02)
+# plot(final3,branch=0.5);text(final3,cex=0.7)
+# printcp(final3)
+# print(final3)
+
+windows(4.5,4.5)
+par(mar=c(1,1,2,1))
+maximal_rpart<-prune(final,cp=0.02)
+plot(maximal_rpart, branch=0.5); text(maximal_rpart,cex=0.7)
+printcp(maximal_rpart)
+print(maximal_rpart)
+
+
+# combdat$predtree<-predict(final3, OOB = TRUE)
+# auc(roc(testdat$DAMAGED.x,predict(final2,testdat)))
+# auc(roc(moddat$DAMAGED.x,predict(final2,moddat)))
+# moddat$pred <- predict(final3, OOB = TRUE)
+# moddat$predtrue <- moddat$pred>0.37
+# with(moddat,table(DAMAGED.x,predtrue))
+
+log_build_reg_data$predtree<-predict(maximal_rpart, OOB = TRUE)
+auc(roc(testdat$DAMAGED.x,predict(final2,testdat)))
+auc(roc(moddat$DAMAGED.x,predict(final2,moddat)))
+moddat$pred <- predict(maximal_rpart, OOB = TRUE)
+moddat$predtrue <- moddat$pred>0.37
+with(moddat,table(DAMAGED.x,predtrue))
+
+# testdat$pred <- predict(final3,testdat, OOB = TRUE)
+# testdat$predtrue <- testdat$pred>0.15
+# with(testdat,table(DAMAGED.x,predtrue))
+ 
+testdat$pred <- predict(maximal_rpart,testdat, OOB = TRUE)
+testdat$predtrue <- testdat$pred>0.15
+with(testdat,table(DAMAGED.x,predtrue))
+
+```
 
 
 

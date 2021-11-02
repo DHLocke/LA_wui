@@ -332,13 +332,16 @@ tic();log_step_lc <- log_build_reg_data_lc %>% MASS::stepAIC(trace = FALSE); toc
 ## PUNCHING IN Owen Price-inspired code
 ```{r}
 
-library(rpart)
+library(rpart) 
 library(pROC) #for AUC calculation
 
-tic(); final <- rpart(damage_binary ~ ., data = log_build_reg_data, method = 'anova'); toc()
 
+
+
+tic(); final <- rpart(damage_binary ~ ., data = moddat, method = 'anova'); toc()
 plot(final)
-
+summary(final) #7537 observations
+plot(final, branch=0.5); text(final,cex=0.7)
 
 # Owen Price
 # windows(4.5,4.5)
@@ -350,12 +353,12 @@ plot(final)
 
 windows(4.5,4.5)
 par(mar=c(1,1,2,1))
-maximal_rpart<-prune(final,cp=0.02)
+maximal_rpart<-prune(final,cp=0.02)  
 plot(maximal_rpart, branch=0.5); text(maximal_rpart,cex=0.7)
 printcp(maximal_rpart)
 print(maximal_rpart)
 
-
+#Owen's code OOB accuracy testing
 # combdat$predtree<-predict(final3, OOB = TRUE)
 # auc(roc(testdat$DAMAGED.x,predict(final2,testdat)))
 # auc(roc(moddat$DAMAGED.x,predict(final2,moddat)))
@@ -363,9 +366,17 @@ print(maximal_rpart)
 # moddat$predtrue <- moddat$pred>0.37
 # with(moddat,table(DAMAGED.x,predtrue))
 
+#need to divide data into test (25%) and model (75%)
+log_build_reg_data$RANDSEL.x<-round(runif(nrow(log_build_reg_data)),2)
+testdat<-subset(log_build_reg_data,RANDSEL.x>0.75) #not the same obs every time, and also need to drop randsel?
+moddat<-subset(log_build_reg_data,RANDSEL.x<=0.75) #not the same obs every time, and also need to drop randsel?
+
+#can't get the below to work, number of samples wrong
+#Bagging with ipred instead? https://uc-r.github.io/regression_trees
+log_build_reg_data$predtree<-predict(maximal_rpart, OOB = TRUE) 
 log_build_reg_data$predtree<-predict(maximal_rpart, OOB = TRUE)
-auc(roc(testdat$DAMAGED.x,predict(final2,testdat)))
-auc(roc(moddat$DAMAGED.x,predict(final2,moddat)))
+auc(roc(testdat$DAMAGED.x,predict(final,testdat)))
+auc(roc(moddat$DAMAGED.x,predict(final,moddat)))
 moddat$pred <- predict(maximal_rpart, OOB = TRUE)
 moddat$predtrue <- moddat$pred>0.37
 with(moddat,table(DAMAGED.x,predtrue))

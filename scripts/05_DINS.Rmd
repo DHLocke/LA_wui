@@ -106,77 +106,121 @@ dins %>%
   st_drop_geometry() %>% 
   filter(!is.na(Buildings_ParcelID_DINS_intersects_INCIDENTST)) %>% View()
 
-#TO DO variables to include? - Dexter, these all seem to have ok data, but need some reclassing/your thoughts on models.
+#Variables to include
 #1. exterior siding materials 
-#2. fence materials
-#3. deck/porch materials
+#2. fence materials #reclass no fence to N/A
+#3. DECKPORCHO deck/porch materials #change 'no deck/porch' to N/A 
+#3.1 DECKPORCHE deck/porch materials #change 'no deck/porch' to N/A 
 #4. roof materials
-#5. patio/cover materials
-#6. propane tank distance
-#7. window panes
+#5. patio/cover materials #reclass 'no' to N/A
+#6. propane tank distance #reclass categories so blank is unknown and others are in order, N/A = no   tank
+#7. window panes #reclass No windows to NA
+#8. vegetation clearance #VEGCLEARAN #reclass missing to Unknown
+#10.eaves #eaves, has data for ~33% only. change no eaves to NA
+#11. vents - #No Vents needs to be NA
 
+
+#1
 dins %>% 
   st_drop_geometry() %>% 
   filter(!is.na(Buildings_ParcelID_DINS_intersects_INCIDENTST)) %>%
   tabyl(Buildings_ParcelID_DINS_intersects_EXTERIORSI) #exterior siding, have data for 75% of sample; categories ok
 
+#2
 dins %>%
 st_drop_geometry() %>% 
   filter(!is.na(Buildings_ParcelID_DINS_intersects_INCIDENTST)) %>% 
-   tabyl(Buildings_ParcelID_DINS_intersects_FENCEATTAC) #fence materials, have data for 70% of sample, although 50% had no fence; reclass no fence to N/A?
+   tabyl(Buildings_ParcelID_DINS_intersects_FENCEATTAC) #fence materials, have data for 70% of sample, although 50% had no fence; #reclass no fence to N/A
 
+#3
 dins %>% 
  st_drop_geometry() %>% 
   filter(!is.na(Buildings_ParcelID_DINS_intersects_INCIDENTST)) %>%
- tabyl(Buildings_ParcelID_DINS_intersects_DECKPORCHO) #deck and porch materials, have data for 65% of sample; should change 'no deck/porch' to N/A? 
+ tabyl(Buildings_ParcelID_DINS_intersects_DECKPORCHO) #deck and porch --not sure what E is vs O    
+#change 'no deck/porch' to N/A 
 
+#3.1
+dins %>% 
+ st_drop_geometry() %>% 
+  filter(!is.na(Buildings_ParcelID_DINS_intersects_INCIDENTST)) %>%
+ tabyl(Buildings_ParcelID_DINS_intersects_DECKPORCHE) #deck and porch --not sure what E is vs O  
+#change 'no deck/porch' to N/A  
+#4
 dins %>% 
   st_drop_geometry() %>% 
   filter(!is.na(Buildings_ParcelID_DINS_intersects_INCIDENTST)) %>%
-  tabyl(Buildings_ParcelID_DINS_intersects_ROOFCONSTR) #roof, have data for 65% sample, should drop 'other' bc only 8 observations
+  tabyl(Buildings_ParcelID_DINS_intersects_ROOFCONSTR) #roof, have data for 65% sample, should drop 'other' bc only 18 observations?
 
- dins %>% 
+#5
+dins %>% 
   st_drop_geometry() %>% 
   filter(!is.na(Buildings_ParcelID_DINS_intersects_INCIDENTST)) %>% 
-  tabyl(Buildings_ParcelID_DINS_intersects_PATIOCOVER) # materials on covered patio or carport, have data for 65% of sample although 44% have no carport or patio cover; reclass 'no' to N/A
- 
- 
- dins %>% 
-  st_drop_geometry() %>% 
-  filter(!is.na(Buildings_ParcelID_DINS_intersects_INCIDENTST)) %>%
-  tabyl(Buildings_ParcelID_DINS_intersects_EXTERIORSI,Buildings_ParcelID_DINS_intersects_PATIOCOVER) %>% adorn_totals()
+  tabyl(Buildings_ParcelID_DINS_intersects_PATIOCOVER) # materials on covered patio or carport, have data for 65% of sample although
+ #44% have no carport or patio cover; reclass 'no' to N/A
 
+#6 
 dins %>% 
  st_drop_geometry() %>% 
   filter(!is.na(Buildings_ParcelID_DINS_intersects_INCIDENTST)) %>%
-  tabyl(Buildings_ParcelID_DINS_intersects_PROPANETAN) #propane tank, has data for 56% of sample; reclass categories so blank is unknown and others are in order, N/A = no   tank
+  tabyl(Buildings_ParcelID_DINS_intersects_PROPANETAN) #propane tank, has data for 56% of sample; #reclass categories so blank is
+#unknown and others are in order, N/A = no   tank
 
+#7
 dins %>% 
   st_drop_geometry() %>% 
   filter(!is.na(Buildings_ParcelID_DINS_intersects_INCIDENTST)) %>%
   tabyl(Buildings_ParcelID_DINS_intersects_WINDOWPANE) #windowpane, have data for 40% of sample, categories ok
+#reclass No windows to NA
 
-  
-# also in DINS, but don't bother with? bc sample sizes are so low:
-  #tabyl(Buildings_ParcelID_DINS_intersects_DEFENSIVEA) #defensive actions, I think data for ~40% but don't know if blank is a no or an unknown
-  #tabyl(Buildings_ParcelID_DINS_intersects_EAVES) #eaves, has data for ~33% only.  
-  #tabyl(Buildings_ParcelID_DINS_intersects_VENTSCREEN) #only data on 29% of sample, and 11% of sample had no vents.
-                 
+#8
+
+dins %>% 
+  st_drop_geometry() %>% 
+  filter(!is.na(Buildings_ParcelID_DINS_intersects_INCIDENTST)) %>%
+  tabyl(Buildings_ParcelID_DINS_intersects_VEGCLEARAN)
+
+#10
+dins %>% 
+  st_drop_geometry() %>% 
+  filter(!is.na(Buildings_ParcelID_DINS_intersects_INCIDENTST)) %>%
+   tabyl(Buildings_ParcelID_DINS_intersects_EAVES) #eaves, has data for ~33% only. change no eaves to NA
+
+#11
+dins %>% 
+  st_drop_geometry() %>% 
+  filter(!is.na(Buildings_ParcelID_DINS_intersects_INCIDENTST)) %>%
+   tabyl(Buildings_ParcelID_DINS_intersects_VENTSCREEN) #only data on 29% of sample, and 11% of sample had no vents. 
+#No Vents needs to be NA
+ 
+#12? #don't know what to do with blank fields. don't use unless confirm
+dins %>% 
+  st_drop_geometry() %>% 
+  filter(!is.na(Buildings_ParcelID_DINS_intersects_INCIDENTST)) %>%
+  tabyl(Buildings_ParcelID_DINS_intersects_UTILITYMIS)
+ 
+
+#exploring cross walk - if you have unk for exterior siding, you do know carport sometimes and vice versa
+  dins %>% 
+  st_drop_geometry() %>% 
+  filter(!is.na(Buildings_ParcelID_DINS_intersects_INCIDENTST)) %>%
+  tabyl(Buildings_ParcelID_DINS_intersects_EXTERIORSI,Buildings_ParcelID_DINS_intersects_PATIOCOVER) %>% adorn_totals()
+
+#defensive action
+  #drop this one - email from Steve Hawks CALFIRE on 11/2/21 said the blanks are maybe unknown maybe nos, and that the field was new for Woolsey
+  dins %>% 
+  st_drop_geometry() %>% 
+  filter(!is.na(Buildings_ParcelID_DINS_intersects_INCIDENTST)) %>%
+  tabyl(Buildings_ParcelID_DINS_intersects_DEFENSIVEA)
+
+#9
+
 
 ```
 
 
 # 3 boxplots of DINS vars with outcome
 ```{r}
-#TO DO variables to include? - Dexter, these all seem to have ok data, but need some reclassing/your thoughts on models.
-#1. exterior siding materials 
-#2. fence materials
-#3. deck/porch materials
-#4. roof materials
-#5. patio/cover materials
-#6. propane tank distance
-#7. window panes
-
+ 
 
 dins
 
@@ -191,9 +235,15 @@ voi <- c('Buildings_ParcelID_DINS_intersects_EXTERIORSI',
           
 for(i in voi){
   #print(i)
-  #dins %>% filter(!is.na(Buildings_ParcelID_DINS_intersects_INCIDENTST)) %>% 
+ # dins %>% filter(!is.na(Buildings_ParcelID_DINS_intersects_INCIDENTST)) %>% 
   dins %>% ggplot(aes(damage_binary, i)) + geom_boxplot()
 }
+
+
+
+
+
+
 
 
 ```

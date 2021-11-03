@@ -1,5 +1,5 @@
 ---
-title: "05_DINS"
+title: "02.1_DINS"
 author: "Dexter H. Locke, PhD"
 date: "`r format(Sys.time())`"
 output: html_document
@@ -78,17 +78,18 @@ set.seed(19870630)
 ```
 
 
-## 1 bring in GIS data from Miranda, this will be the base from now on (August, 2020)
+## 1 bring in data
 ```{r}
-# GIS DATA from MIRANDA
+# GIS DATA from MIRANDA this will be the base from now on (August, 2020)
 st_layers(paste0(getwd(), '/data/Outgoing_BuildingSumms_DHL20200423.gdb'))
 
-
+#create DINS
 dins <- read_sf(dsn = paste0(getwd(), '/data/Outgoing_BuildingSumms_DHL20200423.gdb'),
                       layer = 'Buildings_ParcelID_DINS',
                       quiet = FALSE)
-build <- read_csv(paste0(getwd(), '/output_data/building_2021-10-05.csv')) %>% glimpse
-# dins <- read_csv(paste0(getwd(), '/output_data/building_2021-04-26.csv')) %>% glimpse
+
+#need to merge with build at end
+build <- read_csv(paste0(getwd(), '/output_data/building_2021-10-05.csv')) %>% glimpse 
 
 ```
 
@@ -107,17 +108,18 @@ dins %>%
   filter(!is.na(Buildings_ParcelID_DINS_intersects_INCIDENTST)) %>% View()
 
 #Variables to include
-#1. exterior siding materials 
-#2. fence materials #reclass no fence to N/A
-#3. DECKPORCHO deck/porch materials #change 'no deck/porch' to N/A 
-#4  DECKPORCHE deck/porch materials #change 'no deck/porch' to N/A 
-#5. roof materials
-#6. patio/cover materials #reclass 'no' to N/A
-#7. propane tank distance #reclass categories so blank is unknown and others are in order, N/A = no   tank
-#8. window panes #reclass No windows to NA
-#9. vegetation clearance #VEGCLEARAN #reclass missing to Unknown
-#10.eaves #eaves, has data for ~33% only. change no eaves to NA
-#11. vents - #No Vents needs to be NA
+#reclass unknowns or blanks to NA
+#1. EXTERIORSI exterior siding materials 
+#2. FENCEATTAC fence materials 
+#3. DECKPORCHO deck/porch materials  
+#4  DECKPORCHE deck/porch materials 
+#5. ROOFCONSTR roof materials
+#6. PATIOCOVER patio/cover materials  
+#7. PROPANETAN propane tank distance #reclass others are in order,  
+#8. WINDOWPANE window panes #reclass  
+#9. VEGCLEARAN vegetation clearance #VEGCLEARAN #reclass missing to Unknown, put in order
+#10.EAVES      eaves, has data for ~33% only. 
+#11.VENTSCREEN vents - 
 
 
 #1
@@ -215,7 +217,8 @@ dins %>%
   
 
 #defensive action-Drop
-  #drop this one - email from Steve Hawks CALFIRE on 11/2/21 said the blanks are maybe unknown maybe nos, and that the field was new for Woolsey
+  #drop this one - email from Steve Hawks CALFIRE on 11/2/21 said the blanks are maybe unknown maybe nos, and that the field was new
+  #for Woolsey
   dins %>% 
   st_drop_geometry() %>% 
   filter(!is.na(Buildings_ParcelID_DINS_intersects_INCIDENTST)) %>%
@@ -233,7 +236,7 @@ dins %>%
 
 
 ```
-## 2 reclass DINS
+## 3 reclass DINS
 ```{r}
  
 dins %>% 
@@ -243,33 +246,31 @@ dins %>%
   st_drop_geometry() %>% 
   filter(!is.na(Buildings_ParcelID_DINS_intersects_INCIDENTST)) %>% View()
 
-#Variables to include
-#1. exterior siding materials 
-#2. fence materials #reclass no fence to N/A
-#3. DECKPORCHO deck/porch materials #change 'no deck/porch' to N/A 
-#4  DECKPORCHE deck/porch materials #change 'no deck/porch' to N/A 
-#5. roof materials
-#6. patio/cover materials #reclass 'no' to N/A
-#7. propane tank distance #reclass categories so blank is unknown and others are in order, N/A = no   tank
-#8. window panes #reclass No windows to NA
-#9. vegetation clearance #VEGCLEARAN #reclass missing to Unknown
-#10.eaves #eaves, has data for ~33% only. change no eaves to NA
-#11. vents - #No Vents needs to be NA
+#for random forest blank and unknown need to be NA; when no fence etc, can remain a character 
  
+subdins<-dins %>% 
+  st_drop_geometry() %>% 
+  filter(!is.na(Buildings_ParcelID_DINS_intersects_INCIDENTST)) %>%
+  tidylog::select(ID_Build,
+                  build_EXTERIORSI = Buildings_ParcelID_DINS_intersects_EXTERIORSI,
+                  build_FENCEATTAC = Buildings_ParcelID_DINS_intersects_FENCEATTAC, 
+                  build_DECKPORCHO = Buildings_ParcelID_DINS_intersects_DECKPORCHO,
+                  build_DECKPORCHE = Buildings_ParcelID_DINS_intersects_DECKPORCHE,
+                  build_ROOFCONSTR = Buildings_ParcelID_DINS_intersects_ROOFCONSTR,
+                  build_PATIOCOVER = Buildings_ParcelID_DINS_intersects_PATIOCOVER,
+                  build_PROPANETAN = Buildings_ParcelID_DINS_intersects_PROPANETAN,
+                  build_WINDOWPANE = Buildings_ParcelID_DINS_intersects_WINDOWPANE,
+                  build_VEGCLEARAN = Buildings_ParcelID_DINS_intersects_VEGCLEARAN,
+                  build_EAVES = Buildings_ParcelID_DINS_intersects_EAVES,
+                  build_VENTSCREEN = Buildings_ParcelID_DINS_intersects_VENTSCREEN) %>% 
+  mutate_at(vars(c(2:12)), list(~ ifelse( . == "Unknown", NA, .)))%>% 
+  mutate_at(vars(c(2:12)), list(~ ifelse( . == " ", NA, .)))%>% 
+  mutate_at(vars(c(2:12)), list(~ ifelse( . == "N/A", "None", .)))
 
 
-tidylog::select(ID_Build : Mean_distall_road,
-                  structures_DAMAGE = Buildings_ParcelID_DINS_intersects_DAMAGE, # renaming
-                  starts_with('NEAR_'),
-                  Shape_Length, Shape_Area) %>% 
-  mutate(damage_cat =
-           as.factor(
-           case_when(is.na(structures_DAMAGE) ~ 'Survived',
-                     structures_DAMAGE == 'Affected (1-9%)' ~ 'Survived',
-                     structures_DAMAGE == 'Minor (10-25%)' ~ 'Survived',
-                     structures_DAMAGE == 'Major (26-50%)' ~ 'Destroyed',
-                     structures_DAMAGE == 'Destroyed (>50%)' ~ 'Destroyed')),
-
+#Here here here; need to order these 
+table(subdins$build_PROPANETAN)  
+table(subdins$build_VEGCLEARAN)  
 ```
 
 
@@ -277,23 +278,6 @@ tidylog::select(ID_Build : Mean_distall_road,
 ## 3 boxplots of DINS vars with outcome
 ```{r}
  
-
-dins
-
-
-voi <- c('Buildings_ParcelID_DINS_intersects_EXTERIORSI',
-        'Buildings_ParcelID_DINS_intersects_FENCEATTAC', 
-        'Buildings_ParcelID_DINS_intersects_DECKPORCHO',
-        'Buildings_ParcelID_DINS_intersects_ROOFCONSTR',
-        'Buildings_ParcelID_DINS_intersects_PATIOCOVER', 
-        'Buildings_ParcelID_DINS_intersects_PROPANETAN',
-        'Buildings_ParcelID_DINS_intersects_WINDOWPANE')
-          
-for(i in voi){
-  #print(i)
- # dins %>% filter(!is.na(Buildings_ParcelID_DINS_intersects_INCIDENTST)) %>% 
-  dins %>% ggplot(aes(damage_binary, i)) + geom_boxplot()
-}
 
 
 

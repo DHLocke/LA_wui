@@ -86,10 +86,12 @@ set.seed(19870630)
 # build <- read_csv(paste0(getwd(), '/output_data/building_2021-04-15.csv')) %>% glimpse
 # build <- read_csv(paste0(getwd(), '/output_data/building_2021-04-23.csv')) %>% glimpse
 # build <- read_csv(paste0(getwd(), '/output_data/building_2021-04-26.csv')) %>% glimpse
-
 # build <- read_csv(paste0(getwd(), '/output_data/building_2021-09-27.csv')) %>% glimpse
+# build <- read_csv(paste0(getwd(), '/output_data/building_2021-10-05.csv')) %>% glimpse
 
-build <- read_csv(paste0(getwd(), '/output_data/building_2021-10-05.csv')) %>% glimpse
+build <- read_csv(paste0(getwd(), '/output_data/building_2021-11-03.csv')) %>% glimpse
+
+ 
 
 ```
 
@@ -109,8 +111,8 @@ build %>%
   data.frame() %>% 
   rownames_to_column(var = 'variable_name') %>% 
   rename(variable_number = vars)  %>% 
- #  write_csv(., paste0(getwd(), '/output_data/describe_',
-  #                    gsub('[[:punct:]]', '_', Sys.time()), '.csv'))
+  # write_csv(., paste0(getwd(), '/output_data/describe_',
+  #                   gsub('[[:punct:]]', '_', Sys.time()), '.csv'))
 
 # Remember re sample size w RF, we should include parcel_year_built and build_Mean_distroad
 # are missing 1008 for parcel_year_built (will try to impute median) and missing 88 for build_Mean_distroad (drop?)

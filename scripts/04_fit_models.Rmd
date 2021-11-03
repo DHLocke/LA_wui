@@ -60,8 +60,7 @@ set.seed(19870630)
 # build <- read_csv(paste0(getwd(), '/output_data/building_2021-09-27.csv')) %>% glimpse
 
 # build <- read_csv(paste0(getwd(), '/output_data/building_2021-10-05.csv')) %>% glimpse
-build <- read_csv(paste0(getwd(), '/output_data/building_2021-10-19.csv')) %>% glimpse
-
+build <- read_csv(paste0(getwd(), '/output_data/building_2021-11-03.csv')) %>% glimpse
 ```
 
 ## 2 fit models
@@ -231,7 +230,7 @@ log_build_reg_data <- build %>%
                 
                   # , build_dist_angle
                   # , build_dist_to_burned_build_ft
-                  , build_dist_to_build_ft_jod
+                  # , build_dist_to_build_ft_jod #Dexter, what's up with this variable? goes missing?
                   , build_near_exp
                   
                   , build_p_tree_100
@@ -259,8 +258,11 @@ log_build_reg_data <- build %>%
                   , parcel_Shrub_P
                   , parcel_Perv_P
                   , parcel_Imperv_P
-                  , parcel_year_built
-                  , parcel_area) %>% 
+                  #, parcel_year_built #Dexter, what's up with this variable? goes missing?
+                  , parcel_area,
+                  build_EXTERIORSI,build_FENCEATTAC,build_DECKPORCHO,build_DECKPORCHE,build_ROOFCONSTR,build_PATIOCOVER,
+                  build_PROPANETAN,build_WINDOWPANE,build_VEGCLEARAN,build_EAVES,build_VENTSCREEN,build_DINS
+                  ) %>% 
   mutate_if(is.character, as.factor) %>% # random forest doesn't like characters
   drop_na()
 
@@ -338,11 +340,16 @@ library(pROC) #for AUC calculation
 
 
 
-tic(); final <- rpart(damage_binary ~ ., data = moddat, method = 'anova'); toc()
+tic(); final <- rpart(damage_binary ~ ., data = log_build_reg_data, method = 'anova'); toc()
 plot(final)
 summary(final) #7537 observations
 plot(final, branch=0.5); text(final,cex=0.7)
 
+dinsonly<-log_build_reg_data %>% filter(build_DINS==1)
+tic(); final <- rpart(damage_binary ~ ., data = dinsonly, method = 'anova'); toc()
+plot(final)
+summary(final) #1534 observations
+plot(final, branch=0.5); text(final,cex=0.7)
 # Owen Price
 # windows(4.5,4.5)
 # par(mar=c(1,1,2,1))

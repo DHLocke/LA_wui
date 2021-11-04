@@ -229,9 +229,9 @@ log_build_reg_data <- build %>%
                   , build_perc_overhang
                 
                   # , build_dist_angle
-                  # , build_dist_to_burned_build_ft
-                  # , build_dist_to_build_ft_jod #Dexter, what's up with this variable? goes missing?
-                  , build_near_exp
+                   , build_dist_to_build_ft
+                  # , build_dist_to_build_ft_jod 
+                  , build_near_dest
                   
                   , build_p_tree_100
                   , build_p_grass_300 
@@ -243,7 +243,6 @@ log_build_reg_data <- build %>%
                   , build_p_shrub_300
                     
                   , build_area
-                  # , near_dest
                   , parcel_UseType
                     # parcel_UseDescription, # colinear with above?
                     # parcel_Roll_ImpValue, # colinear with below?
@@ -258,18 +257,19 @@ log_build_reg_data <- build %>%
                   , parcel_Shrub_P
                   , parcel_Perv_P
                   , parcel_Imperv_P
-                  #, parcel_year_built #Dexter, what's up with this variable? goes missing?
+                  #, parcel_year_built #Dexter, shld this be parcel_recent?
+                  ,parcel_recent
                   , parcel_area,
                   build_EXTERIORSI,build_FENCEATTAC,build_DECKPORCHO,build_DECKPORCHE,build_ROOFCONSTR,build_PATIOCOVER,
                   build_PROPANETAN,build_WINDOWPANE,build_VEGCLEARAN,build_EAVES,build_VENTSCREEN,build_DINS
                   ) %>% 
   mutate_if(is.character, as.factor) %>% # random forest doesn't like characters
-  drop_na()
+  #drop_na() #now keeping NAs bc of Part
 
 
 
 
-log_build_reg_data_lc <- build %>%
+log_build_reg_data_lc <- build %>% #some of these variable names need to be cleaned up if we retain this subset of vars/data
   tidylog::select(damage_binary
                   , build_Mean_elev_30m
                   ,  build_Mean_aspect_100m_DEM
@@ -286,9 +286,9 @@ log_build_reg_data_lc <- build %>%
                   , build_perc_overhang
                 
                   # , build_dist_angle
-                  # , build_dist_to_burned_build_ft
-                  , build_dist_to_build_ft_jod
-                  , build_near_exp
+                   , build_dist_to_burned_build_ft
+                  #, build_dist_to_build_ft_jod
+                  , build_near_dest
                   
                   # , build_p_tree_100
                   , build_p_grass_300 
@@ -357,7 +357,7 @@ plot(final, branch=0.5); text(final,cex=0.7)
 # plot(final3,branch=0.5);text(final3,cex=0.7)
 # printcp(final3)
 # print(final3)
-
+ 
 windows(4.5,4.5)
 par(mar=c(1,1,2,1))
 maximal_rpart<-prune(final,cp=0.02)  

@@ -273,33 +273,8 @@ lu_counts %>%
 ## 8 boxplots of numeric predictors
 ```{r}
 
-#   #Boxplots for DINS!??
-# names(dins)
-# #1. EXTERIORSI exterior siding materials 
-# #2. FENCEATTAC fence materials #reclass no fence to NA
-# #3. DECKPORCHO deck/porch materials #change 'no deck/porch' to NA 
-# #4  DECKPORCHE deck/porch materials #change 'no deck/porch' to NA 
-# #5. ROOFCONSTR roof materials
-# #6. PATIOCOVER patio/cover materials #reclass 'no' to NA
-# #7. PROPANETAN propane tank distance #reclass categories so blank is Unknown and others are in order, NA = no   tank
-# #8. WINDOWPANE window panes #reclass No windows to NA
-# #9. VEGCLEARAN vegetation clearance #VEGCLEARAN #reclass missing to Unknown, put in order
-# #10.EAVES      eaves, has data for ~33% only. change no eaves to NA
-# #11.VENTSCREEN vents - #No Vents needs to be NA
+#  
 # 
-# voi <- c('Buildings_ParcelID_DINS_intersects_EXTERIORSI',
-#         'Buildings_ParcelID_DINS_intersects_FENCEATTAC', 
-#         'Buildings_ParcelID_DINS_intersects_DECKPORCHO',
-#         'Buildings_ParcelID_DINS_intersects_ROOFCONSTR',
-#         'Buildings_ParcelID_DINS_intersects_PATIOCOVER', 
-#         'Buildings_ParcelID_DINS_intersects_PROPANETAN',
-#         'Buildings_ParcelID_DINS_intersects_WINDOWPANE')
-#           
-# for(i in voi){
-#   #print(i)
-#  # dins %>% filter(!is.na(Buildings_ParcelID_DINS_intersects_INCIDENTST)) %>% 
-#   dins %>% ggplot(aes(damage_binary, i)) + geom_boxplot()
-# }
 
 
 

@@ -31,7 +31,8 @@ packs <- c('tidyverse'        # a must have!
            , 'tictoc'         # times things
            , 'beepr'          # makes noises
            , 'psych'          # describe is very useful for descriptive statistics
-           , 'sjPlot')        # useful plotting and regression support
+           , 'sjPlot'
+           ,'sciplot')        # useful plotting and regression support
 
 # check for all of the libraries
 if (length(setdiff(packs, rownames(installed.packages()))) > 0) {
@@ -121,6 +122,9 @@ build %>%
 length(unique(build$ID_Parcel)) #number of unique parcels
 table(build$damage_cat)
 table(build$build_structures_DAMAGE)
+
+#DINS has 12% survived only
+table(build$damage_binary,build$build_DINS)
 
 #type of parcel, 9983 were residential
 table(build$parcel_UseType)
@@ -270,13 +274,25 @@ lu_counts %>%
 ```
 
 
-## 8 boxplots of numeric predictors
+## 8 boxplots w/predictors
 ```{r}
 
 #  
-# 
-
-
+# DINS work
+#DINS has 12% survived only
+table(build$damage_binary,build$build_DINS)
+bargraph.CI(build$build_FENCEATTAC,build$damage_binary,main="Fence",ylab="P(Loss)",xlab="",las=2,ylim=c(0,1))
+bargraph.CI(build$build_EXTERIORSI,build$damage_binary,main="Ext Siding",ylab="P(Loss)",xlab="",las=2,ylim=c(0,1))
+bargraph.CI(build$build_DECKPORCHO,build$damage_binary,main="Deck/Porch Ongrade",ylab="P(Loss)",xlab="",las=2,ylim=c(0,1))
+bargraph.CI(build$build_DECKPORCHE,build$damage_binary,main="Deck/Porch Elev",ylab="P(Loss)",xlab="",las=2,ylim=c(0,1))
+bargraph.CI(build$build_ROOFCONSTR,build$damage_binary,main="Roof",ylab="P(Loss)",xlab="",las=2,ylim=c(0,1))
+bargraph.CI(build$build_PATIOCOVER,build$damage_binary,main="Patio",ylab="P(Loss)",xlab="",las=2,ylim=c(0,1))
+bargraph.CI(build$build_PROPANETAN,build$damage_binary,main="Propane",ylab="P(Loss)",xlab="",las=2,ylim=c(0,1))
+bargraph.CI(build$build_WINDOWPANE,build$damage_binary,main="Window",ylab="P(Loss)",xlab="",las=2,ylim=c(0,1))
+bargraph.CI(build$build_VEGCLEARAN,build$damage_binary,main="Veg clear",ylab="P(Loss)",xlab="",las=2,ylim=c(0,1))
+bargraph.CI(build$build_EAVES,build$damage_binary,main="Eaves",ylab="P(Loss)",xlab="",las=2,ylim=c(0,1))
+bargraph.CI(build$build_VENTSCREEN,build$damage_binary,main="VENTSCREEN",ylab="P(Loss)",xlab="",las=2,ylim=c(0,1)) 
+  
 
 box_plot_dat <- build %>%
   dplyr::select(damage_binary | where(is.double)) %>% 

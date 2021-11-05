@@ -279,8 +279,11 @@ lu_counts %>%
 
 #  
 # DINS work
-#DINS has 12% survived only
+#DINS has 12% survived only; how much value are these? 
 table(build$damage_binary,build$build_DINS)
+
+
+par(mfrow=c(3,4))
 bargraph.CI(build$build_FENCEATTAC,build$damage_binary,main="Fence",ylab="P(Loss)",xlab="",las=2,ylim=c(0,1))
 bargraph.CI(build$build_EXTERIORSI,build$damage_binary,main="Ext Siding",ylab="P(Loss)",xlab="",las=2,ylim=c(0,1))
 bargraph.CI(build$build_DECKPORCHO,build$damage_binary,main="Deck/Porch Ongrade",ylab="P(Loss)",xlab="",las=2,ylim=c(0,1))

@@ -64,7 +64,7 @@ build <- read_csv(paste0(getwd(), '/output_data/building_2021-11-03.csv')) %>% g
 ```
 
 ## 2 fit models
-### A univariate-logistic regression to select from potentially redundant predictors
+### A univariate-logistic regression 
 ```{r}
 tic(); uni_log_mods <- build %>%
   filter(parcel_UseType == 'Residential') %>% 
@@ -205,6 +205,8 @@ tic(); uni_log_mods <- build %>%
 # destroyed is better, *JUST* like Miranda said it was
 compare_performance(log_near_dest, log_near_exp, rank = TRUE)
 
+
+
 ```
 
 
@@ -333,6 +335,40 @@ tic();log_step_lc <- log_build_reg_data_lc %>% MASS::stepAIC(trace = FALSE); toc
 
 ## PUNCHING IN Owen Price-inspired code
 ```{r}
+
+####Univariate models####
+#for building materials we used a logit link and specified a binomial response, then calculated and compared the
+#deviance explained (D2), which is analogous to R-squared in linear regression for each variable.
+
+mod <- glm(damage_binary ~ build_Mean_elev_30m, data = build, family = binomial())
+
+#followed Owen Price code
+table1 <- read.csv('data/dep_var_20211109.csv', stringsAsFactors = FALSE)  
+#combdat<-read.csv("bia_anal_2020.csv") is my build
+#table1 contains a list of predictor variables for analysis and vectors to store the results for each variable 
+
+table1$dev2<-0
+table1$n2<-0
+
+dat.model <- data.frame(y = build$damage_binary, x = 0)
+i<-0
+for (varname in table1$upvar) {
+  i<-i+1
+  if (varname %in% colnames(build)) {
+    dat.model$x <- build[, varname]
+    mod <- glm(y ~ x, data = dat.model, family = binomial())
+  }
+}
+  
+  if (!is.null(mod)) {
+    table1$n2[i] <- nrow(combdat) - sum(is.na(dat.model$x))
+    table1$dev2[i] <- 100 * (mod$null.deviance - mod$deviance) / mod$null.deviance
+  }
+}
+
+table1<-table1[c(1,2,4,5,8,9)]
+write.csv(table1,"table1c.csv")
+
 
 library(rpart) 
 library(pROC) #for AUC calculation

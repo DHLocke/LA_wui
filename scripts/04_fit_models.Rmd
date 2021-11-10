@@ -340,11 +340,21 @@ tic();log_step_lc <- log_build_reg_data_lc %>% MASS::stepAIC(trace = FALSE); toc
 #for building materials we used a logit link and specified a binomial response, then calculated and compared the
 #deviance explained (D2), which is analogous to R-squared in linear regression for each variable.
 
+#Dexter - here here here
+# we want to calc deviance for each univariate model; Owen Price's code is on line 356 and I can't get it to work.
+# did a few cals 'by hand' to look at 
 mod <- glm(damage_binary ~ build_Mean_elev_30m, data = build, family = binomial())
+100 * (mod$null.deviance - mod$deviance) / mod$null.deviance
 
-#followed Owen Price code
-table1 <- read.csv('data/dep_var_20211109.csv', stringsAsFactors = FALSE)  
-#combdat<-read.csv("bia_anal_2020.csv") is my build
+mod <- glm(damage_binary ~ build_near_dest, data = build, family = binomial())
+100 * (mod$null.deviance - mod$deviance) / mod$null.deviance
+
+mod <- glm(damage_binary ~ build_p_soil_300, data = build, family = binomial())
+100 * (mod$null.deviance - mod$deviance) / mod$null.deviance
+
+
+#tried to use Owen Price's code, can't get this to work. #Dexter - here here here
+table1 <- read.csv('data/dep_var_20211109.csv', stringsAsFactors = FALSE)  #created a list of predictor analyses as a csv
 #table1 contains a list of predictor variables for analysis and vectors to store the results for each variable 
 
 table1$dev2<-0
@@ -369,19 +379,34 @@ for (varname in table1$upvar) {
 table1<-table1[c(1,2,4,5,8,9)]
 write.csv(table1,"table1c.csv")
 
+#Dexter - here here here - if you want you can check out some trees I ran, here thru line 413
+# next step after that is to build Random Forests
 
 library(rpart) 
 library(pROC) #for AUC calculation
 
+#create dataset with only table1 predictor variables in it
+table1 <- read.csv('data/dep_var_20211109.csv', stringsAsFactors = FALSE)  #created a list of predictor analyses as a csv
+test<-build %>% 
+  tidylog::select()#only the variables listed in table1, not sure how to do that?
 
+rfdat<-build %>% #manually selected variables, not ideal
+  tidylog::select(build_Mean_elev_30m:build_Mean_distall_road,
+                  damage_binary,
+                  build_area:build_near_dest,
+                  parcel_Can_P:parcel_Imperv_P,
+                  parcel_area:build_DINS)
 
+rfdat1<-rfdat%>% #dropping the binary value that indicates in DINS
+  tidylog::select(!build_DINS)
 
-tic(); final <- rpart(damage_binary ~ ., data = log_build_reg_data, method = 'anova'); toc()
+#random forest for full data set
+tic(); final <- rpart(damage_binary ~ ., data = rfdat1, method = 'anova'); toc()
 plot(final)
-summary(final) #7537 observations
+summary(final) # 
 plot(final, branch=0.5); text(final,cex=0.7)
 
-dinsonly<-log_build_reg_data %>% filter(build_DINS==1)
+dinsonly<-rfdat%>% filter(build_DINS==1)
 tic(); final <- rpart(damage_binary ~ ., data = dinsonly, method = 'anova'); toc()
 plot(final)
 summary(final) #1534 observations

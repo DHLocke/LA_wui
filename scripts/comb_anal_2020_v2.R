@@ -383,5 +383,6 @@ for (varname in table1$upvar) {
     table1$dev2[i] <- 100 * (mod$null.deviance - mod$deviance) / mod$null.deviance
   }
 }
+
 table1<-table1[c(1,2,4,5,8,9)]
 write.csv(table1,"table1c.csv")

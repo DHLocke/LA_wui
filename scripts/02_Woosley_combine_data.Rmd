@@ -79,8 +79,8 @@ lapply(packs, library, character.only = TRUE)
 # changing from tidyr v0.8.3 -> v1.0.0 broke things for nest and unnest!
 # https://tidyr.tidyverse.org/articles/in-packages.html#tidyr-v0-8-3---v1-0-0
 library(tidyr)
-nest <- nest_legacy                     # Why Hadley, WHY!
-unnest <- unnest_legacy
+#nest <- nest_legacy                     # Why Hadley, WHY!
+#unnest <- unnest_legacy
 
 
 # set custom function for getting spatial data
@@ -204,7 +204,8 @@ build_dist_to_build <-
                                                        'character',
                                                        'character'),
                                         sep = ';'))) %>%  # a new data column
-  unnest() %>%
+ # unnest() %>%
+  unnest_legacy() %>% 
   clean_names() %>%
   mutate(dist_to_build_ft = pxl_to_ft_conversion*as.numeric(distance_to_buildings_pxl),
          dist_to_build_ft = ifelse(is.na(dist_to_build_ft), 0, dist_to_build_ft),
@@ -276,7 +277,8 @@ build_tree_overhang <-
                                                        'numeric',
                                                        'character'),
                                         sep = ';'))) %>%  # a new data column
-  unnest() %>%
+  # unnest() %>%
+  unnest_legacy() %>% 
   clean_names() %>% 
   mutate(has_tree_overhang = ifelse(mean_n_dsm_tree_canopy_sub_objects == 'undefined',
                                     0, 1),
@@ -326,7 +328,8 @@ build_tree_landcover_buff <-
                              ~ read.csv(file.path(data_path, .),
                                         colClasses = c('character'),
                                         sep = ';'))) %>%  # a new data column
-  unnest() %>%
+  unnest_legacy() %>% 
+  # unnest() %>%
   clean_names() %>% 
   select(ID_Build = id_build_building_centroids, 
          ID_Parcel = id_parcel_parcels,
@@ -393,7 +396,8 @@ files <- dir(data_path, recursive = TRUE, pattern = "^donut"); files # get file 
 build_tree_landcover_buff <- tibble(filename = files) %>% # create a data frame, holding the file names
   mutate(file_contents = map(filename,  # read files into
                              ~ read.csv(file.path(data_path, .), sep = ','))) %>%  # a new data column
-  unnest() %>%
+  # unnest() %>%
+  unnest_legacy() %>% 
   clean_names() %>% 
   arrange(polygon_id) %>% # cosmetic
   tidylog::select(filename, polygon_id, starts_with('p_')) %>% 
@@ -612,22 +616,25 @@ glimpse(build)
 
 #output building data with the nearest distance to exposed and destroyed - just output all the variables, no selection 
 
+build %>% glimpse()
+
 build %>% # glimpse()
   st_drop_geometry() %>%
   tidylog::select(ID_Build, ID_Parcel, parcel_AIN,
                   damage_cat : damage_severity, build_structures_DAMAGE,
                   build_Mean_elev_30m : build_Mean_distall_road,
                   build_min_dist_tree : build_perc_overhang,
-                  build_dist_angle = build_NEAR_ANGLE,
-                  build_dist_to_burned_build_ft = build_NEAR_DIST,
-                  build_near_exp,
+                 # build_dist_angle = build_NEAR_ANGLE, #don't think we need this 11/16/2021
+                  # build_dist_to_burned = build_NEAR_DIST, #don't think we need this 11/16/2021
+                  build_near_dest:build_near_exp,#building distance to destroyed and exposed
                   build_dist_to_build_ft_jod = build_dist_to_build_ft,
-                  build_p_tree_10: build_p_shrub_300, # FIXME add value here?
+                  build_p_tree_10: build_p_shrub_300, # looks good for building and veg data 11/16/2021
                   build_area,
                   parcel_UseType : parcel_Imperv_P,
                   parcel_year_built = parcel_recent,
                   parcel_area) %>%
-  write_csv(., paste0(getwd(), '/output_data/building_', Sys.Date(), '.csv'))
+  # write_csv(., paste0(getwd(), '/output_data/building_', Sys.Date(), '.csv')) #last exported on 11/16/2021
+  #next run 02_1 DINS
 
 ```
 

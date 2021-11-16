@@ -294,13 +294,13 @@ table(subdins$build_VEGCLEARAN)
 ```{r}
  
 #need to merge with DINS
-build <- read_csv(paste0(getwd(), '/output_data/building_2021-10-05.csv')) %>% glimpse 
+build <- read_csv(paste0(getwd(), '/output_data/building_2021-11-16.csv')) %>% glimpse 
 
 build %<>% 
   left_join(., subdins, by = c('ID_Build' = 'ID_Build'))
 
 build %>% 
-  write_csv(., paste0(getwd(), '/output_data/building_', Sys.Date(), '.csv'))#building_2021-11-03.csv'
+  write_csv(., paste0(getwd(), '/output_data/building_', Sys.Date(), 'v2.csv'))#building_2021-11-16v2.csv' #added the v2 bc 2nd export that day
 
 ```
 

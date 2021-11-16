@@ -17,7 +17,7 @@ editor_options:
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-This assumes "02_Woosley_combine_data.Rmd" was run
+This assumes "02_Woosley_combine_data.Rmd" as well as "02.1_DINS.Rmd" were run
 
 
 
@@ -58,9 +58,10 @@ set.seed(19870630)
 ```{r}
 # build <- read_csv(paste0(getwd(), '/output_data/building_2021-04-26.csv')) %>% glimpse
 # build <- read_csv(paste0(getwd(), '/output_data/building_2021-09-27.csv')) %>% glimpse
-
 # build <- read_csv(paste0(getwd(), '/output_data/building_2021-10-05.csv')) %>% glimpse
-build <- read_csv(paste0(getwd(), '/output_data/building_2021-11-03.csv')) %>% glimpse
+# build <- read_csv(paste0(getwd(), '/output_data/building_2021-11-03.csv')) %>% glimpse
+
+build <- read_csv(paste0(getwd(), '/output_data/building_2021-11-16v2.csv')) %>% glimpse
 ```
 
 ## 2 fit models
@@ -121,9 +122,9 @@ tic(); uni_log_mods <- build %>%
     log_build_p_shrub_100= map(., ~glm(damage_binary ~ build_p_shrub_100,family = binomial, data = data.frame(.))),
     log_build_p_shrub_200= map(., ~glm(damage_binary ~ build_p_shrub_200,family = binomial, data = data.frame(.))),
     log_build_p_shrub_300= map(., ~glm(damage_binary ~ build_p_shrub_300,family = binomial, data = data.frame(.))) #,
- # TODO what is going on here?
-    # log_build_dist_buliddistdhl_0= map(., ~glm(damage_binary ~ build_dist_to_build_ft,family = binomial, data = data.frame(.))),
-    # log_build_dist_builddistjod_0= map(., ~glm(damage_binary ~ build_dist_to_build_ft_jod,family = binomial, data = data.frame(.)))
+ 
+    log_build_near_dest= map(., ~glm(damage_binary ~ build_near_dest,family = binomial, data = data.frame(.))), #Dexter this and line below are still giving errors but these variables are in data. not sure what's up; maybe issues is build_dist_to_build_ft_jod has some NAs?
+    log_build_dist_to_build_ft_jod= map(., ~glm(damage_binary ~ build_dist_to_build_ft_jod,family = binomial, data = data.frame(.)))
     ) %>%
   dplyr::select(-data) %>% 
   rowid_to_column() %>% 
@@ -196,7 +197,7 @@ tic(); uni_log_mods <- build %>%
 
 # distance to destroyed
 # near_dest - better predictor than near_exposure. 
-    log_near_dest <- glm(damage_binary ~ build_dist_to_burned_build_ft, 
+    log_near_dest <- glm(damage_binary ~ build_near_dest, 
                          family = binomial, data = build)
     log_near_exp <- glm(damage_binary ~ build_near_exp, family = binomial, data = build)
     
@@ -231,8 +232,8 @@ log_build_reg_data <- build %>%
                   , build_perc_overhang
                 
                   # , build_dist_angle
-                   , build_dist_to_build_ft
-                  # , build_dist_to_build_ft_jod 
+                   , build_dist_to_build_ft_jod
+                  # , build_dist_to_build_ft 
                   , build_near_dest
                   
                   , build_p_tree_100
@@ -265,7 +266,7 @@ log_build_reg_data <- build %>%
                   build_EXTERIORSI,build_FENCEATTAC,build_DECKPORCHO,build_DECKPORCHE,build_ROOFCONSTR,build_PATIOCOVER,
                   build_PROPANETAN,build_WINDOWPANE,build_VEGCLEARAN,build_EAVES,build_VENTSCREEN,build_DINS
                   ) %>% 
-  mutate_if(is.character, as.factor) %>% # random forest doesn't like characters
+  mutate_if(is.character, as.factor)  # random forest doesn't like characters
   #drop_na() #now keeping NAs bc of Part
 
 
@@ -288,8 +289,8 @@ log_build_reg_data_lc <- build %>% #some of these variable names need to be clea
                   , build_perc_overhang
                 
                   # , build_dist_angle
-                   , build_dist_to_burned_build_ft
-                  #, build_dist_to_build_ft_jod
+                  # , build_dist_to_burned_build_ft
+                  , build_dist_to_build_ft_jod
                   , build_near_dest
                   
                   # , build_p_tree_100
@@ -319,8 +320,8 @@ log_build_reg_data_lc <- build %>% #some of these variable names need to be clea
                   , parcel_Imperv_P
                   , parcel_year_built
                   , parcel_area) %>% 
-  mutate_if(is.character, as.factor) %>% # random forest doesn't like characters
-  drop_na()
+  mutate_if(is.character, as.factor)  # random forest doesn't like characters
+  #drop_na() #party is ok with NAs
 
 
 log_maximal_lc <- glm(damage_binary ~ ., family = binomial, data = log_build_reg_data_lc)

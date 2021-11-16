@@ -354,7 +354,7 @@ mod <- glm(damage_binary ~ build_p_soil_300, data = build, family = binomial())
 
 
 #tried to use Owen Price's code, can't get this to work. #Dexter - here here here
-table1 <- read.csv('data/dep_var_20211109.csv', stringsAsFactors = FALSE)  #created a list of predictor analyses as a csv
+table1 <- read.csv('data/dep_var_20211109.csv', stringsAsFactors = FALSE)  %>% glimpse #created a list of predictor analyses as a csv
 #table1 contains a list of predictor variables for analysis and vectors to store the results for each variable 
 
 table1$dev2<-0

@@ -32,7 +32,6 @@ look at importance values for an all-variables random forest
   (do not use variable selection)
 =
 
-# TODO can we keep use codes in final output?
 # https://www.titleadvantage.com/mdocs/LA%20County%20Use%20Codes%20nm.pdf
 # See parcel_UseType, parcel_UseDescription, parcel_Roll_ImpValue, and
 # parcel_Roll_HomeOwnersExemp 
@@ -611,12 +610,223 @@ glimpse(build)
 
 
 
-## 4 write out the data
+## 4 DINS data
+```{r}
+# GIS DATA from MIRANDA this will be the base from now on (August, 2020)
+st_layers(paste0(getwd(), '/data/Outgoing_BuildingSumms_DHL20200423.gdb'))
+
+#create DINS
+dins <- read_sf(dsn = paste0(getwd(), '/data/Outgoing_BuildingSumms_DHL20200423.gdb'),
+                      layer = 'Buildings_ParcelID_DINS',
+                      quiet = FALSE)
+
+```
+
+
+### a explore DINS
 ```{r}
 
-#output building data with the nearest distance to exposed and destroyed - just output all the variables, no selection 
+# Past Syphard et al papers had roof, exterior, window pane, window frame
+# More recent ones include wider range of information in DINS
+
+dins %>% 
+  st_drop_geometry() %>% names()
+
+dins %>% 
+  st_drop_geometry() %>% 
+  filter(!is.na(Buildings_ParcelID_DINS_intersects_INCIDENTST)) %>% View()
+
+#Variables to include
+#reclass unknowns or blanks to NA
+#1. EXTERIORSI exterior siding materials 
+#2. FENCEATTAC fence materials 
+#3. DECKPORCHO deck/porch materials  
+#4  DECKPORCHE deck/porch materials 
+#5. ROOFCONSTR roof materials
+#6. PATIOCOVER patio/cover materials  
+#7. PROPANETAN propane tank distance #reclass others are in order,  
+#8. WINDOWPANE window panes #reclass  
+#9. VEGCLEARAN vegetation clearance #VEGCLEARAN #reclass missing to Unknown, put in order
+#10.EAVES      eaves, has data for ~33% only. 
+#11.VENTSCREEN vents - 
+
+
+#1
+dins %>% 
+  st_drop_geometry() %>% 
+  filter(!is.na(Buildings_ParcelID_DINS_intersects_INCIDENTST)) %>%
+  tabyl(Buildings_ParcelID_DINS_intersects_EXTERIORSI) #exterior siding, have data for 75% of sample; categories ok
+
+#2
+dins %>%
+st_drop_geometry() %>% 
+  filter(!is.na(Buildings_ParcelID_DINS_intersects_INCIDENTST)) %>% 
+   tabyl(Buildings_ParcelID_DINS_intersects_FENCEATTAC) #fence materials, have data for 70% of sample, although 50% had no fence; #reclass no fence to N/A
+
+#3
+#DECKPORCHO is a deck that is on grade 
+dins %>% 
+ st_drop_geometry() %>% 
+  filter(!is.na(Buildings_ParcelID_DINS_intersects_INCIDENTST)) %>%
+ tabyl(Buildings_ParcelID_DINS_intersects_DECKPORCHO) #deck and porch --ongrade
+#change 'no deck/porch' to N/A 
+
+#4
+# DECKPORCHE is a deck that is elevated off the ground
+dins %>% 
+ st_drop_geometry() %>% 
+  filter(!is.na(Buildings_ParcelID_DINS_intersects_INCIDENTST)) %>%
+ tabyl(Buildings_ParcelID_DINS_intersects_DECKPORCHE) #deck and porch --not sure what E is vs O  
+#change 'no deck/porch' to N/A 
+
+#5
+dins %>% 
+  st_drop_geometry() %>% 
+  filter(!is.na(Buildings_ParcelID_DINS_intersects_INCIDENTST)) %>%
+  tabyl(Buildings_ParcelID_DINS_intersects_ROOFCONSTR) #roof, have data for 65% sample, should drop 'other' bc only 18 observations?
+
+#6
+dins %>% 
+  st_drop_geometry() %>% 
+  filter(!is.na(Buildings_ParcelID_DINS_intersects_INCIDENTST)) %>% 
+  tabyl(Buildings_ParcelID_DINS_intersects_PATIOCOVER) # materials on covered patio or carport, have data for 65% of sample although
+ #44% have no carport or patio cover; reclass 'no' to N/A
+
+#7 
+dins %>% 
+ st_drop_geometry() %>% 
+  filter(!is.na(Buildings_ParcelID_DINS_intersects_INCIDENTST)) %>%
+  tabyl(Buildings_ParcelID_DINS_intersects_PROPANETAN) #propane tank, has data for 56% of sample; #reclass categories so blank is
+#unknown and others are in order, N/A = no   tank
+
+
+#8
+dins %>% 
+  st_drop_geometry() %>% 
+  filter(!is.na(Buildings_ParcelID_DINS_intersects_INCIDENTST)) %>%
+  tabyl(Buildings_ParcelID_DINS_intersects_WINDOWPANE) #windowpane, have data for 40% of sample, categories ok
+#reclass No windows to NA
+
+#9
+dins %>% 
+  st_drop_geometry() %>% 
+  filter(!is.na(Buildings_ParcelID_DINS_intersects_INCIDENTST)) %>%
+  tabyl(Buildings_ParcelID_DINS_intersects_VEGCLEARAN)
+
+#10
+dins %>% 
+  st_drop_geometry() %>% 
+  filter(!is.na(Buildings_ParcelID_DINS_intersects_INCIDENTST)) %>%
+   tabyl(Buildings_ParcelID_DINS_intersects_EAVES) #eaves, has data for ~33% only. change no eaves to NA
+
+#11
+dins %>% 
+  st_drop_geometry() %>% 
+  filter(!is.na(Buildings_ParcelID_DINS_intersects_INCIDENTST)) %>%
+   tabyl(Buildings_ParcelID_DINS_intersects_VENTSCREEN) #only data on 29% of sample, and 11% of sample had no vents. 
+#No Vents needs to be NA
+ 
+
+#exploring cross walk - if you have unk for exterior siding, you do know carport sometimes and vice versa
+  dins %>% 
+  st_drop_geometry() %>% 
+  filter(!is.na(Buildings_ParcelID_DINS_intersects_INCIDENTST)) %>%
+  tabyl(Buildings_ParcelID_DINS_intersects_EXTERIORSI,Buildings_ParcelID_DINS_intersects_PATIOCOVER) %>% adorn_totals()
+
+#exploring cross walk 
+# DECKPORCHE is a deck that is elevated off the ground
+# DECKPORCHO is a deck that is on grade 
+#there are some cases where information was entered for both, indicating that part of a deck was elevated and part on grade?
+
+  dins %>% 
+  st_drop_geometry() %>% 
+  filter(!is.na(Buildings_ParcelID_DINS_intersects_INCIDENTST)) %>%
+  tabyl(Buildings_ParcelID_DINS_intersects_DECKPORCHE,Buildings_ParcelID_DINS_intersects_DECKPORCHO) %>% adorn_totals()
+  
+  
+
+#defensive action-Drop
+  #drop this one - email from Steve Hawks CALFIRE on 11/2/21 said the blanks are maybe unknown maybe nos, and that the field was new
+  #for Woolsey
+  dins %>% 
+  st_drop_geometry() %>% 
+  filter(!is.na(Buildings_ParcelID_DINS_intersects_INCIDENTST)) %>%
+  tabyl(Buildings_ParcelID_DINS_intersects_DEFENSIVEA)
+
+#UTILITYMIS-Drop
+# distance to a utility or misc structure that is over 120 s q. ft.  This is the threshold where a building permit is required.  It
+# also is currently the sq. ft. thresholds for the California Building Code Chapter 7A where certain standards apply.  If there are mor
+# than one qualifying utility/misc structure, it is the distance to the one that is the closest.  
+# don't know what to do with blank fields, even after Steve Hawks email. Drop
+dins %>% 
+  st_drop_geometry() %>% 
+  filter(!is.na(Buildings_ParcelID_DINS_intersects_INCIDENTST)) %>%
+  tabyl(Buildings_ParcelID_DINS_intersects_UTILITYMIS)
+
+
+```
+### b reclass DINS
+```{r}
+ 
+dins %>% 
+  st_drop_geometry() %>% names()
+
+dins %>% 
+  st_drop_geometry() %>% 
+  filter(!is.na(Buildings_ParcelID_DINS_intersects_INCIDENTST)) %>% View()
+
+#for random forest blank and unknown need to be NA; when no fence etc, can remain a character 
+subdins<-dins %>% 
+  st_drop_geometry() %>% 
+  filter(!is.na(Buildings_ParcelID_DINS_intersects_INCIDENTST)) %>%
+  filter(!(ID_Build==4681)) %>% #removed this off investig below, is three mobile homes w diff features assigned to same point
+  filter(!(ID_Build==5543)) %>% #removed this off investig below, is three mobile homes w diff features assigned to same point
+  tidylog::select(ID_Build,
+                  build_EXTERIORSI = Buildings_ParcelID_DINS_intersects_EXTERIORSI,
+                  build_FENCEATTAC = Buildings_ParcelID_DINS_intersects_FENCEATTAC, 
+                  build_DECKPORCHO = Buildings_ParcelID_DINS_intersects_DECKPORCHO,
+                  build_DECKPORCHE = Buildings_ParcelID_DINS_intersects_DECKPORCHE,
+                  build_ROOFCONSTR = Buildings_ParcelID_DINS_intersects_ROOFCONSTR,
+                  build_PATIOCOVER = Buildings_ParcelID_DINS_intersects_PATIOCOVER,
+                  build_PROPANETAN = Buildings_ParcelID_DINS_intersects_PROPANETAN,
+                  build_WINDOWPANE = Buildings_ParcelID_DINS_intersects_WINDOWPANE,
+                  build_VEGCLEARAN = Buildings_ParcelID_DINS_intersects_VEGCLEARAN,
+                  build_EAVES = Buildings_ParcelID_DINS_intersects_EAVES,
+                  build_VENTSCREEN = Buildings_ParcelID_DINS_intersects_VENTSCREEN) %>% 
+  mutate_at(vars(c(2:12)), list(~ ifelse( . == "Unknown", NA, .)))%>% #if unknown, make missing or NA
+  mutate_at(vars(c(2:12)), list(~ ifelse( . == " ", NA, .)))%>%  #if blank, make missing or NA
+  mutate_at(vars(c(2:12)), list(~ ifelse( . == "N/A", "None", .)))%>% #if not applicable, turn into 'none'
+  mutate(build_PROPANETAN =as.factor(case_when(
+                     build_PROPANETAN == "0-10" ~ "1. 0-10",
+                     build_PROPANETAN == "11-20" ~ "2. 11-20",
+                     build_PROPANETAN == "21-30" ~ "3. 21-30",
+                     build_PROPANETAN == ">30'" ~ "4.>30")))%>% 
+mutate(build_VEGCLEARAN =as.factor(case_when(
+                     build_VEGCLEARAN == "0-30'" ~ "1. 0-30",
+                     build_VEGCLEARAN == "30-100'" ~ "2. 30-100",
+                     build_VEGCLEARAN == ">100'" ~ "3. >100"))) %>%
+  mutate(build_DINS=1)%>% #create a variable to say had a record in DINS
+unique() #at this point keeping only unique based on ID build does not remove any data, just deletes repeated lines
+
+#looking at duplicate data; appears that for two ID_Build (4681,5543) there are duplicated and conflicting data; delete these obs
+#for all other dupes, the data are the same, so we should just delete repeats
+# # length(unique(subdins$ID_Build))
+# test<-subset(subdins,duplicated(subdins$ID_Build))
+# View(test)
+# length(unique(test$ID_Build))
+# test2<-subset(test,duplicated(test$ID_Build))
+
+table(subdins$build_PROPANETAN)  
+table(subdins$build_VEGCLEARAN)  
+```
+
+
+
+## 5 merge DINS with full data set & write
+```{r}
 
 build %>% glimpse()
+subdins %>% glimpse()
 
 build %>% # glimpse()
   st_drop_geometry() %>%
@@ -632,9 +842,13 @@ build %>% # glimpse()
                   build_area,
                   parcel_UseType : parcel_Imperv_P,
                   parcel_year_built = parcel_recent,
-                  parcel_area) %>%
-  # write_csv(., paste0(getwd(), '/output_data/building_', Sys.Date(), '.csv')) #last exported on 11/16/2021
-  #next run 02_1 DINS
+                  parcel_area)
+   
+build %<>% 
+  left_join(., subdins, by = c('ID_Build' = 'ID_Build'))
+
+build %>% 
+  write_csv(., paste0(getwd(), '/output_data/building_', Sys.Date(), '.csv'))#building_2021-12-01.csv' 
 
 ```
 

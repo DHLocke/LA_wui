@@ -825,30 +825,29 @@ table(subdins$build_VEGCLEARAN)
 ## 5 merge DINS with full data set & write
 ```{r}
 
-build %>% glimpse()
+build %>% glimpse() #84 variables
+length(build)
 subdins %>% glimpse()
 
-build %>% # glimpse()
+build_exp <-build %>% # drops 10, this is what we want to export from build
   st_drop_geometry() %>%
-  tidylog::select(ID_Build, ID_Parcel, parcel_AIN,
-                  damage_cat : damage_severity, build_structures_DAMAGE,
-                  build_Mean_elev_30m : build_Mean_distall_road,
-                  build_min_dist_tree : build_perc_overhang,
-                 # build_dist_angle = build_NEAR_ANGLE, #don't think we need this 11/16/2021
-                  # build_dist_to_burned = build_NEAR_DIST, #don't think we need this 11/16/2021
-                  build_near_dest:build_near_exp,#building distance to destroyed and exposed
-                  build_dist_to_build_ft_jod = build_dist_to_build_ft,
-                  build_p_tree_10: build_p_shrub_300, # looks good for building and veg data 11/16/2021
-                  build_area,
-                  parcel_UseType : parcel_Imperv_P,
-                  parcel_year_built = parcel_recent,
-                  parcel_area)
+  tidylog::select(ID_Build, ID_Parcel, parcel_AIN, #ok
+                  damage_cat : damage_severity, build_structures_DAMAGE, #ok
+                  build_Mean_elev_30m : build_Mean_distall_road, #ok
+                  build_min_dist_tree : build_perc_overhang, #ok 
+                  build_near_dest:build_near_exp,#building distance to destroyed and exposed #ok
+                  build_dist_to_build_ft_jod = build_dist_to_build_ft, #unclear to me why named   jod but will keep name 12/2/21 #ok
+                  build_p_tree_10: build_p_shrub_300, # looks good for building and veg data 11/16/2021 #ok
+                  build_area, #ok
+                  parcel_UseType : parcel_Imperv_P, #ok
+                  parcel_year_built = parcel_recent, #ok
+                  parcel_area) #ok
    
-build %<>% 
+build_exp %<>% 
   left_join(., subdins, by = c('ID_Build' = 'ID_Build'))
 
-build %>% 
-  write_csv(., paste0(getwd(), '/output_data/building_', Sys.Date(), '.csv'))#building_2021-12-01.csv' 
+build_exp %>% 
+  write_csv(., paste0(getwd(), '/output_data/building_', Sys.Date(), '.csv'))#building_2021-12-02.csv' 
 
 ```
 

@@ -67,6 +67,9 @@ set.seed(19870630)
 # build <- read_csv(paste0(getwd(), '/output_data/building_2021-11-03.csv')) %>% glimpse
 
 build <- read_csv(paste0(getwd(), '/output_data/building_2021-12-01.csv')) %>% glimpse
+
+build%>%
+  mutate_if(is.character, as.factor) #need factors for analyses to come
 ```
 
 ## 2 fit models
@@ -74,7 +77,7 @@ build <- read_csv(paste0(getwd(), '/output_data/building_2021-12-01.csv')) %>% g
 ```{r}
 tic(); uni_log_mods <- build %>%
   filter(parcel_UseType == 'Residential') %>% 
-  nest(data=everything()) %>%
+  nest(data=everything()) %>% #DEXTER - this gives me an error "`everything()` must be used within a *selecting* function."
   # nest()%>%
   mutate(
     # ~landscape position
@@ -203,9 +206,9 @@ tic(); uni_log_mods <- build %>%
 #               min_rmse= var[which.min(rmse)]) 
 # )
 
-# Miranda what is *this* near dist then and should we add it above? What are "build_near_dest" and 
-# "build_near_exp" and are these rundundant with the other distnance measure or not?
-# distance to destroyed
+# Dexter, near_dest is nearest distance to destroyed building. near_exp is nearest distance to any building with wildfire damage
+# that is, exposed
+# we have the work showing that destroyed is better. they are also highly correlated in script 03. I think we can just use near_dest
 # near_dest - better predictor than near_exposure. 
     log_near_dest <- glm(damage_binary ~ build_near_dest, 
                          family = binomial, data = build)
@@ -225,6 +228,7 @@ compare_performance(log_near_dest, log_near_exp, rank = TRUE)
 ### B data prep
 ```{r}
 # maximal set of predictors after winnowing down among potentially redundant vars
+#Dexter see note below, I don't think we need this section to come up with a maximal model for regression. 
 log_build_reg_data <- build %>%
   tidylog::select(damage_binary
                   , build_Mean_elev_30m
@@ -270,22 +274,14 @@ log_build_reg_data <- build %>%
                   , parcel_Shrub_P
                   , parcel_Perv_P
                   , parcel_Imperv_P
-                  , parcel_year_built # Dexter, shld this be parcel_recent?
-                  # Miranda: this is my question to you? We can change it here, but this is what
-                  # should be done in script 02.
-                  # What comes into 03 and 04 should require no more modification. You tell me which
-                  # vars to use. Also, we can rename them in 02. Straighten this out on line 634 in script 02
-                  # , parcel_recent
+                  , parcel_recent # Dexter, fixed this to be parcel_recent
                   , parcel_area,
                   build_EXTERIORSI,build_FENCEATTAC,build_DECKPORCHO,build_DECKPORCHE,build_ROOFCONSTR,build_PATIOCOVER,
                   build_PROPANETAN,build_WINDOWPANE,build_VEGCLEARAN,build_EAVES,build_VENTSCREEN,build_DINS
-                  ) %>% 
-  mutate_if(is.character, as.factor)  # random forest doesn't like characters
-  #drop_na() #now keeping NAs bc of Part
-
-
+                  )  
 
 # Miranda do you remember why we have two versions of build?
+#Dexter, it was because one of them included land cover data. And bc we were going to do a  big maximal model. I don't think we are anymore - just univariates and Random Forest so should we delete this whole section?
 log_build_reg_data_lc <- build %>% #some of these variable names need to be cleaned up if we retain this subset of vars/data
   tidylog::select(damage_binary
                   , build_Mean_elev_30m
@@ -348,15 +344,94 @@ tic();log_step_lc <- log_build_reg_data_lc %>% MASS::stepAIC(trace = FALSE); toc
 
 
 
-## PUNCHING IN Owen Price-inspired code
+## New B data prep 
 ```{r}
+
+#Dexter, since you don't like bringing in a csv with the variables of interest I did it below in code. Does this work for you?
+
+build_a <- build %>% #retain only the 72 variables of interest for final analyses; go from 96 in build to 72
+  tidylog::select(damage_binary,
+                  build_area    ,
+            build_DECKPORCHE    ,
+            build_DECKPORCHO    ,
+                 build_EAVES    ,
+            build_EXTERIORSI    ,
+            build_FENCEATTAC    ,
+            build_PATIOCOVER    ,
+            build_PROPANETAN    ,
+            build_ROOFCONSTR    ,
+           build_VEGCLEARAN    ,
+           build_VENTSCREEN    ,
+           build_WINDOWPANE    ,
+          parcel_recent    ,
+ build_dist_to_build_ft_jod    ,
+    build_has_tree_overhang    ,
+       build_min_dist_shrub    ,
+        build_min_dist_tree    ,
+          build_overhang_ht    ,
+        build_perc_overhang    ,
+             parcel_Build_P    ,
+               parcel_Can_P    ,
+             parcel_Grass_P    ,
+            parcel_Imperv_P    ,
+             parcel_Paved_P    ,
+              parcel_Perv_P    ,
+              parcel_Road_P    ,
+             parcel_Shrub_P    ,
+              parcel_Soil_P    ,
+             parcel_Water_P    ,
+            build_near_dest    ,
+        build_p_building_10    ,
+       build_p_building_100    ,
+       build_p_building_200    ,
+       build_p_building_300    ,
+           build_p_grass_10    ,
+          build_p_grass_100    ,
+          build_p_grass_200    ,
+          build_p_grass_300    ,
+      build_p_otherpaved_10    ,
+     build_p_otherpaved_100    ,
+     build_p_otherpaved_200    ,
+     build_p_otherpaved_300    ,
+            build_p_road_10    ,
+           build_p_road_100    ,
+           build_p_road_200    ,
+           build_p_road_300    ,
+           build_p_shrub_10    ,
+          build_p_shrub_100    ,
+          build_p_shrub_200    ,
+          build_p_shrub_300    ,
+            build_p_soil_10    ,
+           build_p_soil_100    ,
+         build_p_soil_200    ,
+           build_p_soil_300    ,
+            build_p_tree_10    ,
+           build_p_tree_100    ,
+           build_p_tree_200    ,
+           build_p_tree_300    ,
+           build_p_water_10    ,
+          build_p_water_100    ,
+          build_p_water_200    ,
+          build_p_water_300    ,
+                parcel_area    ,
+       build_Mean_builddens    ,
+    build_Mean_distall_road    ,
+        build_Mean_distroad    ,
+ build_Mean_aspect_100m_DEM    ,
+  build_Mean_aspect_30m_DEM    ,
+       build_Mean_elev_100m    ,
+        build_Mean_elev_30m    ,
+  build_Mean_slope_100m_DEM    ,
+   build_Mean_slope_30m_DEM)   
+
+
 
 ####Univariate models####
 #for building materials we used a logit link and specified a binomial response, then calculated and compared the
 #deviance explained (D2), which is analogous to R-squared in linear regression for each variable.
 
-#Dexter - here here here
-# we want to calc deviance for each univariate model; Owen Price's code is on line 356 and I can't get it to work.
+
+# we want to calc deviance for each univariate model;
 # did a few cals 'by hand' to look at 
 mod <- glm(damage_binary ~ build_Mean_elev_30m, data = build, family = binomial())
 100 * (mod$null.deviance - mod$deviance) / mod$null.deviance

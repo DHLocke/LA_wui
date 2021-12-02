@@ -66,7 +66,7 @@ set.seed(19870630)
 # build <- read_csv(paste0(getwd(), '/output_data/building_2021-10-05.csv')) %>% glimpse
 # build <- read_csv(paste0(getwd(), '/output_data/building_2021-11-03.csv')) %>% glimpse
 
-build <- read_csv(paste0(getwd(), '/output_data/building_2021-12-01.csv')) %>% glimpse
+build <- read_csv(paste0(getwd(), '/output_data/building_2021-12-02.csv')) %>% glimpse
 
 build%>%
   mutate_if(is.character, as.factor) #need factors for analyses to come
@@ -77,7 +77,7 @@ build%>%
 ```{r}
 tic(); uni_log_mods <- build %>%
   filter(parcel_UseType == 'Residential') %>% 
-  nest(data=everything()) %>% #DEXTER - this gives me an error "`everything()` must be used within a *selecting* function."
+  nest(data=everything()) %>%
   # nest()%>%
   mutate(
     # ~landscape position
@@ -162,7 +162,7 @@ tic(); uni_log_mods <- build %>%
 
 
 # which distance provides the best fit per variable?
-# in the case of build_near_dest and build_dist_to_build_ft_jod, pick between distroyed or not
+# in the case of build_near_dest and build_dist_to_build_ft_jod, pick between destroyed or not
 (
   best_dist <- gof %>% 
     group_by(var) %>% 
@@ -349,7 +349,7 @@ tic();log_step_lc <- log_build_reg_data_lc %>% MASS::stepAIC(trace = FALSE); toc
 
 #Dexter, since you don't like bringing in a csv with the variables of interest I did it below in code. Does this work for you?
 
-build_a <- build %>% #retain only the 72 variables of interest for final analyses; go from 96 in build to 72
+build_a <- build %>% #retain only the 72 predictors of interest for final analyses and damage_binary as response 
   tidylog::select(damage_binary,
                   build_area    ,
             build_DECKPORCHE    ,
@@ -363,7 +363,7 @@ build_a <- build %>% #retain only the 72 variables of interest for final analyse
            build_VEGCLEARAN    ,
            build_VENTSCREEN    ,
            build_WINDOWPANE    ,
-          parcel_recent    ,
+          parcel_year_built    ,
  build_dist_to_build_ft_jod    ,
     build_has_tree_overhang    ,
        build_min_dist_shrub    ,
@@ -433,36 +433,29 @@ build_a <- build %>% #retain only the 72 variables of interest for final analyse
 
 # we want to calc deviance for each univariate model;
 # did a few cals 'by hand' to look at 
-mod <- glm(damage_binary ~ build_Mean_elev_30m, data = build, family = binomial())
+mod <- glm(damage_binary ~ build_Mean_elev_30m, data = build_a, family = binomial())
 100 * (mod$null.deviance - mod$deviance) / mod$null.deviance
 
-mod <- glm(damage_binary ~ build_near_dest, data = build, family = binomial())
+mod <- glm(damage_binary ~ build_near_dest, data = build_a, family = binomial())
 100 * (mod$null.deviance - mod$deviance) / mod$null.deviance
 
-mod <- glm(damage_binary ~ build_p_soil_300, data = build, family = binomial())
+mod <- glm(damage_binary ~ build_p_soil_300, data = build_a, family = binomial())
 100 * (mod$null.deviance - mod$deviance) / mod$null.deviance
 
 
-#tried to use Owen Price's code, can't get this to work. #Dexter - here here here
 #table1 contains a list of predictor variables for analysis and vectors to store the results for each variable 
+ 
+table1 <- list(names(build_a)) %>% #created a list of predictors
+   data.frame()%>% 
+    mutate(dev2 = 0, n2 = 0) %>% 
+    data.frame()
+ 
 
-# DHL here, I don't like this because it is immediately out of date
-# IF 02's final export was done right the we would just do all variables but the dependent
-# its another piece to go wrong. If anything changes, it needs to change instead of just pulling from
-# the final analysis-ready data. Seem to invite error, hence the grumbles. And we keep having the same
-# problem with the columns.. so I want to cut that off at the pass.
-(table1 <- read_csv('data/dep_var_20211109.csv') %>% #created a list of predictor analyses as a csv
-  mutate(dev2 = 0, n2 = 0) %>% 
-    data.frame())
-
-# table1$dev2<-0 # go ahead and delete now, see how its done in the import step?
-# table1$n2<-0
-
-build %>% dplyr::select(any_of(table1$upvar)) # lots of character variables in the DINS vars
-build %>% glimpse                             # which could be the source of the error
+build_a %>% dplyr::select(any_of(table1$upvar)) # lots of character variables in the DINS vars
+build_a %>% glimpse                             # which could be the source of the error
 
 # find the numeric columns to test that theory
-build %>% dplyr::select_if(is_numeric) %>% 
+build_a %>% dplyr::select_if(is_numeric) %>% 
   dplyr::select(damage_binary, any_of(table1$upvar)) %>% # so first numeric, then what was in your list
   data.frame() -> test_data                              # tibbles can be problematic in loops
 

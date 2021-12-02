@@ -444,6 +444,7 @@ mod <- glm(damage_binary ~ build_p_soil_300, data = build_a, family = binomial()
 
 
 #table1 contains a list of predictor variables for analysis and vectors to store the results for each variable 
+
  
 table1 <- list(names(build_a)) %>% #created a list of predictors
    data.frame()%>% 

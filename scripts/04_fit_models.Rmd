@@ -47,7 +47,9 @@ if (length(setdiff(packs, rownames(installed.packages()))) > 0) {
   install.packages(setdiff(packs, rownames(installed.packages())))  
 }
 
-lapply(packs, library, character.only = TRUE)
+# lapply(packs, library, character.only = TRUE)
+vapply(packs, library, character.only = TRUE, logical(1),
+       logical.return = TRUE, quietly = TRUE)
 
 
 # custom function for "Not In"
@@ -68,7 +70,7 @@ set.seed(19870630)
 
 build <- read_csv(paste0(getwd(), '/output_data/building_2021-12-02.csv')) %>% glimpse
 
-build%>%
+build %>%
   mutate_if(is.character, as.factor) #need factors for analyses to come
 ```
 
@@ -157,7 +159,7 @@ tic(); uni_log_mods <- build %>%
     # dplyr::select(var, dist, AIC, dsqr, r2) %>%
     # unnest(dsqr, AIC, r2) %>% unnest(r2)
     unnest(everything()) %>% 
-    unnest(everything()) #TODO doesn't run for me
+    unnest(everything())
 )
 
 
@@ -329,37 +331,43 @@ mod <- glm(damage_binary ~ build_p_soil_300, data = build_a, family = binomial()
 #table1 contains a list of predictor variables for analysis and vectors to store the results for each variable 
 
  
-table1 <- list(names(build_a)) %>% #created a list of predictors
-   data.frame()%>% 
-    mutate(dev2 = 0, n2 = 0) %>%
-   rename(var=c..damage_binary....build_area....build_DECKPORCHE....build_DECKPORCHO...)%>%
-     data.frame()
+(table1 <- list(names(build_a)) %>% #created a list of predictors
+  data.frame() %>% 
+  mutate(dev2 = 0, n2 = 0) %>%
+  rename(upvar = c..damage_binary....build_area....build_DECKPORCHE....build_DECKPORCHO...) %>%
+  data.frame())
 
 build_a %>% dplyr::select(any_of(table1$upvar)) # lots of character variables in the DINS vars
 build_a %>% glimpse                             # which could be the source of the error
 
-# find the numeric columns to test that theory
-build_a %>% dplyr::select_if(is_numeric) %>% 
-  dplyr::select(damage_binary, any_of(table1$upvar)) %>% # so first numeric, then what was in your list
-  data.frame() -> test_data                              # tibbles can be problematic in loops
+# # find the numeric columns to test that theory
+# build_a %>%
+#   dplyr::select_if(is_numeric) %>% 
+#   dplyr::select(damage_binary, any_of(table1$upvar)) %>% # so first numeric, then what was in your list
+#   data.frame() -> test_data                              # tibbles can be problematic in loops
 
-dat.model <- data.frame(y = test_data$damage_binary, x = 0)
+dat.model <- data.frame(y = build_a$damage_binary, x = 0)
+
+
+dat.model <- data.frame(y = combdat$DAMAGED.x, x = 0)
 i<-0
 for (varname in table1$upvar) {
   i<-i+1
-  if (varname %in% colnames(test_data)) {
-    dat.model$x <- test_data[, varname]
+  if (varname %in% colnames(combdat)) {
+    dat.model$x <- combdat[, varname]
     mod <- glm(y ~ x, data = dat.model, family = binomial())
   } else {
-    warning(varname, " not found in test_data", immediate. = TRUE)
+    warning(varname, " not found in combdat", immediate. = TRUE)
     mod <- NULL
   }
   
   if (!is.null(mod)) {
-    table1$n2[i] <- nrow(test_data) - sum(is.na(dat.model$x))
+    table1$n2[i] <- nrow(combdat) - sum(is.na(dat.model$x))
     table1$dev2[i] <- 100 * (mod$null.deviance - mod$deviance) / mod$null.deviance
   }
 }
+
+
 
 # Indeed, characters as predictors causes the failur. Maybe we should recode as factors? Do we want to
 # test those predictors in Owen's deviance test?

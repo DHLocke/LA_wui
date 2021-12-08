@@ -1,0 +1,78 @@
+Type,Variable,Variable name,Deviance,n,Scale,Source
+CON,Predictor,build_DECKPORCHE,4.995825381841773,845,Building,Structure assessment-DINS
+CON,Predictor,build_EAVES,4.9186296521337,505,Building,Structure assessment-DINS
+CON,Predictor,build_WINDOWPANE,4.674076730447572,595,Building,Structure assessment-DINS
+CON,Predictor,build_PROPANETAN,4.004473292036537,291,Building,Structure assessment-DINS
+CON,Predictor,build_ROOFCONSTR,2.122094175385786,1104,Building,Structure assessment-DINS
+CON,Predictor,build_FENCEATTAC,1.1693388756684566,1074,Building,Structure assessment-DINS
+CON,Predictor,build_VEGCLEARAN,0.8680591808420128,1178,Building,Structure assessment-DINS
+CON,Predictor,build_DECKPORCHO,0.444885986563984,987,Building,Structure assessment-DINS
+CON,Predictor,build_VENTSCREEN,0.4004542475471275,436,Building,Structure assessment-DINS
+CON,Predictor,build_PATIOCOVER,0.21849818448858285,978,Building,Structure assessment-DINS
+CON,Predictor,build_EXTERIORSI,0.15205644833183793,1161,Building,Structure assessment-DINS
+CON,Predictor,build_area,0.026488049589303446,11181,Building,Structure assessment-DINS
+CON,Predictor,parcel_year_built,0.009358380445745712,10169,Parcel,LA County data
+DEF,Predictor,parcel_Imperv_P,7.585159894564152,11181,Parcel,UVM
+DEF,Predictor,parcel_Perv_P,7.585159894564152,11181,Parcel,UVM
+DEF,Predictor,parcel_Build_P,7.060139092877178,11181,Parcel,UVM
+DEF,Predictor,parcel_Paved_P,3.785633502534476,11181,Parcel,UVM
+DEF,Predictor,parcel_Grass_P,3.186113033422744,11181,Parcel,UVM
+DEF,Predictor,parcel_Can_P,2.6887999092828387,11181,Parcel,UVM
+DEF,Predictor,parcel_Shrub_P,1.7088947409749504,11181,Parcel,UVM
+DEF,Predictor,parcel_Soil_P,1.3204954448807216,11181,Parcel,UVM
+DEF,Predictor,build_overhang_ht,0.6024234985291698,11134,Building,UVM
+DEF,Predictor,build_min_dist_tree,0.434960037663672,11181,Building,UVM
+DEF,Predictor,build_min_dist_shrub,0.42262453156943947,11181,Building,UVM
+DEF,Predictor,build_dist_to_build_ft_jod,0.3739226573668074,11134,Building,UVM
+DEF,Predictor,build_has_tree_overhang,0.3184245495032635,11134,Building,UVM
+DEF,Predictor,parcel_Road_P,0.1329092375412862,11181,Parcel,UVM
+DEF,Predictor,build_perc_overhang,0.11552679597438853,11134,Building,UVM
+DEF,Predictor,parcel_Water_P,0.1115865092153893,11181,Parcel,UVM
+EXP,Predictor,build_near_dest,5.820444208172247,11181,Building,Structure assessment-DINS; Miranda calc'd in Arc
+LAND,Predictor,build_p_otherpaved_300,5.8596019129044015,11181,Building,UVM
+LAND,Predictor,build_p_building_300,5.15013690932194,11181,Building,UVM
+LAND,Predictor,build_p_otherpaved_200,4.868003191437281,11181,Building,UVM
+LAND,Predictor,build_p_building_200,4.83470057658022,11181,Building,UVM
+LAND,Predictor,build_p_road_300,3.9383406791692193,11181,Building,UVM
+LAND,Predictor,build_p_building_100,3.7259340751317334,11181,Building,UVM
+LAND,Predictor,build_p_grass_300,3.486917197113805,11181,Building,UVM
+LAND,Predictor,build_p_otherpaved_100,3.0809738318850037,11181,Building,UVM
+LAND,Predictor,build_p_road_200,3.0307873581500364,11181,Building,UVM
+LAND,Predictor,build_p_grass_200,2.8784137727981323,11181,Building,UVM
+LAND,Predictor,build_p_soil_200,2.705663281379247,11181,Building,UVM
+LAND,Predictor,build_p_tree_100,2.475428827721521,11181,Building,UVM
+LAND,Predictor,build_p_tree_300,2.45032106245729,11181,Building,UVM
+LAND,Predictor,build_p_soil_300,2.2866584530281275,11181,Building,UVM
+LAND,Predictor,build_Mean_builddens,2.2809787359593705,11093,Point of building,Alex's data D:\ArcGISfiles\2017_LACounty\1_Data_20200320\Data_from_Alex\dens_1kmr_ha
+LAND,Predictor,build_p_soil_100,2.2538374466365485,11181,Building,UVM
+LAND,Predictor,build_p_tree_200,2.2344666614628337,11181,Building,UVM
+LAND,Predictor,build_p_road_100,2.148822186931795,11181,Building,UVM
+LAND,Predictor,build_p_grass_100,2.0523056351310722,11181,Building,UVM
+LAND,Predictor,build_Mean_distroad,1.3585778787775642,11093,Point of building,Alex's data D:\ArcGISfiles\2017_LACounty\1_Data_20200320\Data_from_Alex\dist_psroad
+LAND,Predictor,build_p_grass_10,1.2975022057675094,11181,Building,UVM
+LAND,Predictor,build_p_shrub_300,1.0570402209893137,11181,Building,UVM
+LAND,Predictor,build_p_tree_10,0.7744836600071708,11181,Building,UVM
+LAND,Predictor,build_p_otherpaved_10,0.5280810397471757,11181,Building,UVM
+LAND,Predictor,build_p_soil_10,0.5167541964337065,11181,Building,UVM
+LAND,Predictor,build_p_shrub_200,0.5127195288754366,11181,Building,UVM
+LAND,Predictor,parcel_area,0.3014077915788108,11181,Parcel,UVM
+LAND,Predictor,build_p_building_10,0.196194945808589,11181,Building,UVM
+LAND,Predictor,build_Mean_distall_road,0.12044908343846661,11169,Point of building,Alex's data D:\ArcGISfiles\2017_LACounty\1_Data_20200320\Data_from_Alex\dens_1kmr_ha
+LAND,Predictor,build_p_shrub_100,0.11789858186171902,11181,Building,UVM
+LAND,Predictor,build_p_water_10,0.061161596704386145,11181,Building,UVM
+LAND,Predictor,build_p_shrub_10,0.044520753419511616,11181,Building,UVM
+LAND,Predictor,build_p_water_100,0.03894840337971708,11181,Building,UVM
+LAND,Predictor,build_p_water_300,0.028958700659130365,11181,Building,UVM
+LAND,Predictor,build_p_water_200,0.019334895363558983,11181,Building,UVM
+LAND,Predictor,build_p_road_10,0.0037179475044652305,11181,Building,UVM
+na,Response,major/destroyed (DINS) vs all other buildings,NA,NA,Building,Structure assessment-DINS
+na,na,parcel_Roll_HomeOwnersExem,NA,NA,Parcel,NA
+na,na,parcel_Roll_ImpValue,NA,NA,Parcel,NA
+na,na,parcel_UseDescription,NA,NA,Parcel,NA
+na,na,parcel_UseType,NA,NA,Parcel,NA
+TOPO,Predictor,build_Mean_slope_100m_DEM,4.498661274898812,11181,Building,UVM DEM and nDSM--Miranda and Dexter did this
+TOPO,Predictor,build_Mean_slope_30m_DEM,3.551025508162437,11181,Building,UVM DEM and nDSM--Miranda and Dexter did this
+TOPO,Predictor,build_Mean_aspect_100m_DEM,0.1730377345696588,11181,Building,UVM DEM and nDSM--Miranda and Dexter did this
+TOPO,Predictor,build_Mean_aspect_30m_DEM,0.09853720017831595,11181,Building,UVM DEM and nDSM--Miranda and Dexter did this
+TOPO,Predictor,build_Mean_elev_30m,0.06978721022150662,11181,Building,UVM DEM and nDSM--Miranda and Dexter did this
+TOPO,Predictor,build_Mean_elev_100m,0.05477010303909614,11181,Building,UVM DEM and nDSM--Miranda and Dexter did this

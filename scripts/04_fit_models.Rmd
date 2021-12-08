@@ -307,7 +307,8 @@ build_a <- build %>% #retain only the 72 predictors of interest for final analys
        build_Mean_elev_100m    ,
         build_Mean_elev_30m    ,
   build_Mean_slope_100m_DEM    ,
-   build_Mean_slope_30m_DEM)   
+   build_Mean_slope_30m_DEM) %>% 
+  data.frame()
 
 
 
@@ -349,24 +350,34 @@ build_a %>% glimpse                             # which could be the source of t
 dat.model <- data.frame(y = build_a$damage_binary, x = 0)
 
 
-dat.model <- data.frame(y = combdat$DAMAGED.x, x = 0)
 i<-0
 for (varname in table1$upvar) {
   i<-i+1
-  if (varname %in% colnames(combdat)) {
-    dat.model$x <- combdat[, varname]
+  if (varname %in% colnames(build_a)) {
+    dat.model$x <- build_a[, varname]
     mod <- glm(y ~ x, data = dat.model, family = binomial())
   } else {
-    warning(varname, " not found in combdat", immediate. = TRUE)
+    warning(varname, " not found in build_a", immediate. = TRUE)
     mod <- NULL
   }
   
   if (!is.null(mod)) {
-    table1$n2[i] <- nrow(combdat) - sum(is.na(dat.model$x))
+    table1$n2[i] <- nrow(build_a) - sum(is.na(dat.model$x))
     table1$dev2[i] <- 100 * (mod$null.deviance - mod$deviance) / mod$null.deviance
   }
 }
 
+
+(tab_labs <- readxl::read_xlsx('data/Data LA Study 20211208.xlsx') %>% 
+  left_join(., table1, by = c(`Variable name` = 'upvar')) %>% 
+  tidylog::select(Type, Variable, `Variable name`, Deviance = dev2, n = n2,
+         Scale, Source) %>% 
+  arrange(Type, desc(Deviance)))
+
+tab_labs %>% 
+  write_csv('data/high_deviance_explained_bivariates.csv')
+
+# ended Dec 8.
 
 
 # Indeed, characters as predictors causes the failur. Maybe we should recode as factors? Do we want to

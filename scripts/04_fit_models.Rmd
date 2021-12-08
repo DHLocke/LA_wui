@@ -225,126 +225,9 @@ compare_performance(log_near_dest, log_near_exp, rank = TRUE)
 
 
 
-### B data prep
-```{r}
-# maximal set of predictors after winnowing down among potentially redundant vars
-#Dexter see note below, I don't think we need this section to come up with a maximal model for regression. 
-log_build_reg_data <- build %>%
-  tidylog::select(damage_binary
-                  , build_Mean_elev_30m
-                  ,  build_Mean_aspect_100m_DEM
-                  ,  build_Mean_slope_100m_DEM
-                  ,  build_Mean_aspect_100m_DEM 
-                  ,  build_Mean_distroad
-                  ,  build_Mean_builddens 
-                  ,  build_Mean_distall_road 
-                  ,  build_min_dist_tree
-                  ,  build_min_dist_shrub 
-                  
-                  , build_has_tree_overhang
-                  , build_overhang_ht
-                  , build_perc_overhang
-                
-                  # , build_dist_angle
-                   , build_dist_to_build_ft_jod
-                  # , build_dist_to_build_ft 
-                  , build_near_dest
-                  
-                  , build_p_tree_100
-                  , build_p_grass_300 
-                  , build_p_soil_200 
-                  , build_p_water_100 
-                  , build_p_building_300 
-                  , build_p_road_300
-                  , build_p_otherpaved_300
-                  , build_p_shrub_300
-                    
-                  , build_area
-                  , parcel_UseType
-                    # parcel_UseDescription, # colinear with above?
-                    # parcel_Roll_ImpValue, # colinear with below?
-                  , parcel_Roll_HomeOwnersExemp
-                  , parcel_Can_P
-                  , parcel_Grass_P
-                  , parcel_Soil_P 
-                  , parcel_Water_P
-                  , parcel_Build_P
-                  , parcel_Road_P
-                  , parcel_Paved_P
-                  , parcel_Shrub_P
-                  , parcel_Perv_P
-                  , parcel_Imperv_P
-                  , parcel_recent # Dexter, fixed this to be parcel_recent
-                  , parcel_area,
-                  build_EXTERIORSI,build_FENCEATTAC,build_DECKPORCHO,build_DECKPORCHE,build_ROOFCONSTR,build_PATIOCOVER,
-                  build_PROPANETAN,build_WINDOWPANE,build_VEGCLEARAN,build_EAVES,build_VENTSCREEN,build_DINS
-                  )  
-
-# Miranda do you remember why we have two versions of build?
-#Dexter, it was because one of them included land cover data. And bc we were going to do a  big maximal model. I don't think we are anymore - just univariates and Random Forest so should we delete this whole section?
-log_build_reg_data_lc <- build %>% #some of these variable names need to be cleaned up if we retain this subset of vars/data
-  tidylog::select(damage_binary
-                  , build_Mean_elev_30m
-                  ,  build_Mean_aspect_100m_DEM
-                  ,  build_Mean_slope_100m_DEM
-                  ,  build_Mean_aspect_100m_DEM 
-                  ,  build_Mean_distroad
-                  ,  build_Mean_builddens 
-                  ,  build_Mean_distall_road 
-                  ,  build_min_dist_tree
-                  ,  build_min_dist_shrub 
-                  
-                  , build_has_tree_overhang
-                  , build_overhang_ht
-                  , build_perc_overhang
-                
-                  # , build_dist_angle
-                  # , build_dist_to_burned_build_ft
-                  , build_dist_to_build_ft_jod
-                  , build_near_dest
-                  
-                  # , build_p_tree_100
-                  , build_p_grass_300 
-                  # , build_p_soil_200 
-                  # , build_p_water_100 
-                  , build_p_building_300 
-                  # , build_p_road_300
-                  # , build_p_otherpaved_300
-                  # , build_p_shrub_300
-                    
-                  , build_area
-                  
-                  , parcel_UseType
-                    # parcel_UseDescription, # colinear with above?
-                    # parcel_Roll_ImpValue, # colinear with below?
-                  , parcel_Roll_HomeOwnersExemp
-                  , parcel_Can_P
-                  , parcel_Grass_P
-                  , parcel_Soil_P 
-                  , parcel_Water_P
-                  , parcel_Build_P
-                  , parcel_Road_P
-                  , parcel_Paved_P
-                  , parcel_Shrub_P
-                  , parcel_Perv_P
-                  , parcel_Imperv_P
-                  , parcel_year_built
-                  , parcel_area) %>% 
-  mutate_if(is.character, as.factor)  # random forest doesn't like characters
-  #drop_na() #party is ok with NAs
 
 
-log_maximal_lc <- glm(damage_binary ~ ., family = binomial, data = log_build_reg_data_lc)
-
-# FIXME examine warning error
-tic();log_step_lc <- log_build_reg_data_lc %>% MASS::stepAIC(trace = FALSE); toc() # ~1.5 mins
-
-```
-
-
-
-
-## New B data prep 
+### B data prep 
 ```{r}
 
 #Dexter, since you don't like bringing in a csv with the variables of interest I did it below in code. Does this work for you?
@@ -448,9 +331,9 @@ mod <- glm(damage_binary ~ build_p_soil_300, data = build_a, family = binomial()
  
 table1 <- list(names(build_a)) %>% #created a list of predictors
    data.frame()%>% 
-    mutate(dev2 = 0, n2 = 0) %>% 
-    data.frame()
- 
+    mutate(dev2 = 0, n2 = 0) %>%
+   rename(var=c..damage_binary....build_area....build_DECKPORCHE....build_DECKPORCHO...)%>%
+     data.frame()
 
 build_a %>% dplyr::select(any_of(table1$upvar)) # lots of character variables in the DINS vars
 build_a %>% glimpse                             # which could be the source of the error
@@ -1054,6 +937,123 @@ build_bin %>% filter(parcel_year_built == 0) %>% dim()
 ```
 
 
+
+
+### OLD data prep/max model
+```{r}
+# maximal set of predictors after winnowing down among potentially redundant vars
+#Dexter see note below, I don't think we need this section to come up with a maximal model for regression. 
+log_build_reg_data <- build %>%
+  tidylog::select(damage_binary
+                  , build_Mean_elev_30m
+                  ,  build_Mean_aspect_100m_DEM
+                  ,  build_Mean_slope_100m_DEM
+                  ,  build_Mean_aspect_100m_DEM 
+                  ,  build_Mean_distroad
+                  ,  build_Mean_builddens 
+                  ,  build_Mean_distall_road 
+                  ,  build_min_dist_tree
+                  ,  build_min_dist_shrub 
+                  
+                  , build_has_tree_overhang
+                  , build_overhang_ht
+                  , build_perc_overhang
+                
+                  # , build_dist_angle
+                   , build_dist_to_build_ft_jod
+                  # , build_dist_to_build_ft 
+                  , build_near_dest
+                  
+                  , build_p_tree_100
+                  , build_p_grass_300 
+                  , build_p_soil_200 
+                  , build_p_water_100 
+                  , build_p_building_300 
+                  , build_p_road_300
+                  , build_p_otherpaved_300
+                  , build_p_shrub_300
+                    
+                  , build_area
+                  , parcel_UseType
+                    # parcel_UseDescription, # colinear with above?
+                    # parcel_Roll_ImpValue, # colinear with below?
+                  , parcel_Roll_HomeOwnersExemp
+                  , parcel_Can_P
+                  , parcel_Grass_P
+                  , parcel_Soil_P 
+                  , parcel_Water_P
+                  , parcel_Build_P
+                  , parcel_Road_P
+                  , parcel_Paved_P
+                  , parcel_Shrub_P
+                  , parcel_Perv_P
+                  , parcel_Imperv_P
+                  , parcel_recent # Dexter, fixed this to be parcel_recent
+                  , parcel_area,
+                  build_EXTERIORSI,build_FENCEATTAC,build_DECKPORCHO,build_DECKPORCHE,build_ROOFCONSTR,build_PATIOCOVER,
+                  build_PROPANETAN,build_WINDOWPANE,build_VEGCLEARAN,build_EAVES,build_VENTSCREEN,build_DINS
+                  )  
+
+# Miranda do you remember why we have two versions of build?
+#Dexter, it was because one of them included land cover data. And bc we were going to do a  big maximal model. I don't think we are anymore - just univariates and Random Forest so should we delete this whole section?
+log_build_reg_data_lc <- build %>% #some of these variable names need to be cleaned up if we retain this subset of vars/data
+  tidylog::select(damage_binary
+                  , build_Mean_elev_30m
+                  ,  build_Mean_aspect_100m_DEM
+                  ,  build_Mean_slope_100m_DEM
+                  ,  build_Mean_aspect_100m_DEM 
+                  ,  build_Mean_distroad
+                  ,  build_Mean_builddens 
+                  ,  build_Mean_distall_road 
+                  ,  build_min_dist_tree
+                  ,  build_min_dist_shrub 
+                  
+                  , build_has_tree_overhang
+                  , build_overhang_ht
+                  , build_perc_overhang
+                
+                  # , build_dist_angle
+                  # , build_dist_to_burned_build_ft
+                  , build_dist_to_build_ft_jod
+                  , build_near_dest
+                  
+                  # , build_p_tree_100
+                  , build_p_grass_300 
+                  # , build_p_soil_200 
+                  # , build_p_water_100 
+                  , build_p_building_300 
+                  # , build_p_road_300
+                  # , build_p_otherpaved_300
+                  # , build_p_shrub_300
+                    
+                  , build_area
+                  
+                  , parcel_UseType
+                    # parcel_UseDescription, # colinear with above?
+                    # parcel_Roll_ImpValue, # colinear with below?
+                  , parcel_Roll_HomeOwnersExemp
+                  , parcel_Can_P
+                  , parcel_Grass_P
+                  , parcel_Soil_P 
+                  , parcel_Water_P
+                  , parcel_Build_P
+                  , parcel_Road_P
+                  , parcel_Paved_P
+                  , parcel_Shrub_P
+                  , parcel_Perv_P
+                  , parcel_Imperv_P
+                  , parcel_year_built
+                  , parcel_area) %>% 
+  mutate_if(is.character, as.factor)  # random forest doesn't like characters
+  #drop_na() #party is ok with NAs
+
+
+log_maximal_lc <- glm(damage_binary ~ ., family = binomial, data = log_build_reg_data_lc)
+
+# FIXME examine warning error
+tic();log_step_lc <- log_build_reg_data_lc %>% MASS::stepAIC(trace = FALSE); toc() # ~1.5 mins
+
+```
 
 
 ```{r, citations}

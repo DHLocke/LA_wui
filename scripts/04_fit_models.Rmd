@@ -392,63 +392,80 @@ tab_labs %>% filter(Deviance > 5) %>%  mutate_if(is.double, round, 3) #top 5
 
 
 
-### C fit: null, maximal, stepwise logistic regression
+### C Random forest
 ```{r} 
 
-library(rpart) 
+library(rpart) #DEXTER, do you want this to go elsewhere?
 library(pROC) #for AUC calculation
 
-#create dataset with only table1 predictor variables in it
-table1 <- read.csv('data/dep_var_20211109.csv', stringsAsFactors = FALSE)  #created a list of predictor analyses as a csv
-test<-build %>% 
-  tidylog::select()#only the variables listed in table1, not sure how to do that?
-                  # DHL the new code above does exaclty that. BUT we would't have to if the final block
-                  # in script 02 did this. Sorry to sound like a broken recored: the output of 02 does not match what is bing called for here, and earlier, and later. Rather than re-write each of those sections, lets 'stick the landing' 10/10 on the last section of 02.
+#build - full dataset - 11181 obs, 85 cols
+#build_a - all variables you want as predictor for random forest - 11,181 obs, 72 cols
 
-rfdat<-build %>% #manually selected variables, not ideal
-  # wouldn't have to.....
-  tidylog::select(build_Mean_elev_30m:build_Mean_distall_road,
-                  damage_binary,
-                  build_area:build_near_dest,
-                  parcel_Can_P:parcel_Imperv_P,
-                  parcel_area:build_DINS)
-
-# DHL ok fine here, but just this once be
-rfdat <- build %>% 
-  tidylog::select(damage_binary, any_of(table1$upvar))
-
-# rfdat1<-rfdat%>% #dropping the binary value that indicates in DINS
-#   tidylog::select(!build_DINS)
-
-#random forest for full data set
-tic(); final <- rpart(damage_binary ~ ., data = #rfdat1
-                        rfdat, method = 'anova'); toc()
-plot(final)
-summary(final) # 
-plot(final, branch=0.5); text(final,cex=0.7)
-
-# DHL ended here.
-
-dinsonly<-rfdat%>% filter(build_DINS==1) # but this column is dropped manually above. 
-tic(); final <- rpart(damage_binary ~ ., data = dinsonly, method = 'anova'); toc()
-plot(final)
-summary(final) #1534 observations
-plot(final, branch=0.5); text(final,cex=0.7)
-# Owen Price
-# windows(4.5,4.5)
-# par(mar=c(1,1,2,1))
-# final3<-prune(final,cp=0.02)
-# plot(final3,branch=0.5);text(final3,cex=0.7)
-# printcp(final3)
-# print(final3)
+#build_dins- dataset without DINS variables - 11181 obs, 60 vars;
+#DEXTER alternatively if we need this can just exclude these cols from random forest model?
+build_nodins <- build_a %>% tidylog::select(!c(build_DECKPORCHE,
+            build_DECKPORCHO    ,
+                 build_EAVES    ,
+            build_EXTERIORSI    ,
+            build_FENCEATTAC    ,
+            build_PATIOCOVER    ,
+            build_PROPANETAN    ,
+            build_ROOFCONSTR    ,
+           build_VEGCLEARAN    ,
+           build_VENTSCREEN    ,
+           build_WINDOWPANE    ))
  
+#build_dins -  dataset just of DINS data - 1534 obs, 72 cols
+build_dins <- build %>% filter(build_DINS==1)%>% 
+  tidylog::select(any_of(table1$upvar))
+
+ 
+#RF1 random forest for DINS data set
+tic(); dins <- rpart(damage_binary ~ ., data = build_dins,
+                        method = 'anova'); toc()
+plot(dins); text(dins,cex=0.7)
+summary(dins)  
+
+#code from Owen
 windows(4.5,4.5)
 par(mar=c(1,1,2,1))
-maximal_rpart<-prune(final,cp=0.02)  
-plot(maximal_rpart, branch=0.5); text(maximal_rpart,cex=0.7)
-printcp(maximal_rpart)
-print(maximal_rpart)
+dins1<-prune(dins,cp=0.02)
+plot(dins1,branch=0.5);text(dins1,cex=0.7)
+printcp(dins1)
+print(dins1)
 
+
+#RF2 random forest for full data, includes DINS - when you do this, none of DINS variables are in top branches. 
+#not sure if it should include DINS or drop those variables. would be 11181 obs still
+tic(); final <- rpart(damage_binary ~ ., data = build_a, method = 'anova'); toc()
+plot(final)
+summary(final) # 11181  observations
+plot(final, branch=0.5); text(final,cex=0.7)
+
+#code from Owen
+windows(4.5,4.5)
+par(mar=c(1,1,2,1))
+final3<-prune(final,cp=0.02)
+plot(final3,branch=0.5);text(final3,cex=0.7)
+printcp(final3)
+print(final3)
+ 
+#RF3 random forest forall obs, drop DINS
+tic(); final <- rpart(damage_binary ~ ., data = build_nodins, method = 'anova'); toc()
+plot(final)
+summary(final) # 11181  observations
+plot(final, branch=0.5); text(final,cex=0.7)
+
+#code from Owen
+windows(4.5,4.5)
+par(mar=c(1,1,2,1))
+final3<-prune(final,cp=0.02)
+plot(final3,branch=0.5);text(final3,cex=0.7)
+printcp(final3)
+print(final3)
+ 
+
+ 
 #Owen's code OOB accuracy testing
 # combdat$predtree<-predict(final3, OOB = TRUE)
 # auc(roc(testdat$DAMAGED.x,predict(final2,testdat)))

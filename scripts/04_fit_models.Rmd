@@ -40,7 +40,10 @@ packs <- c('tidyverse'        # a must have!
            , 'broom'          # tidy up regression models
            , 'performance'    # nice regression diagnostics
            , 'psych'          # describe is very useful for descriptive statistics
-           , 'sjPlot')        # useful plotting and regression support
+           , 'sjPlot'         # useful plotting and regression support
+           , 'rpart'          # for random forests
+           # , pROC           # for AUC calculation
+           )        
 
 # check for all of the libraries
 if (length(setdiff(packs, rownames(installed.packages()))) > 0) {
@@ -77,6 +80,7 @@ build %>%
 ## 2 fit models
 ### A univariate-logistic regression 
 ```{r}
+
 tic(); uni_log_mods <- build %>%
   filter(parcel_UseType == 'Residential') %>% 
   nest(data=everything()) %>%
@@ -313,23 +317,9 @@ build_a <- build %>% #retain only the 71 predictors of interest for final analys
 
 
 ####Univariate models and deviance calcs
-#for building materials we used a logit link and specified a binomial response, then calculated and compared the
-#deviance explained (D2), which is analogous to R-squared in linear regression for each variable.
-
-
-# we want to calc deviance for each univariate model;
-# did a few cals 'by hand' to look at 
-mod <- glm(damage_binary ~ build_Mean_elev_30m, data = build_a, family = binomial())
-100 * (mod$null.deviance - mod$deviance) / mod$null.deviance
-
-mod <- glm(damage_binary ~ build_near_dest, data = build_a, family = binomial())
-100 * (mod$null.deviance - mod$deviance) / mod$null.deviance
-
-mod <- glm(damage_binary ~ build_p_soil_300, data = build_a, family = binomial())
-100 * (mod$null.deviance - mod$deviance) / mod$null.deviance
-
-
-#table1 contains a list of predictor variables for analysis and vectors to store the results for each variable 
+# for building materials we used a logit link and specified a binomial response, then calculated and compared the
+# deviance explained (D2), which is analogous to R-squared in linear regression for each variable.
+# table1 contains a list of predictor variables for analysis and vectors to store the results for each variable 
 
  
 (table1 <- list(names(build_a)) %>% #created a list of predictors
@@ -337,16 +327,8 @@ mod <- glm(damage_binary ~ build_p_soil_300, data = build_a, family = binomial()
   mutate(dev2 = 0, n2 = 0) %>%
   rename(upvar = c..damage_binary....build_area....build_DECKPORCHE....build_DECKPORCHO...) %>%
   data.frame())
-# DEXTER - CAN WE REMOVE THIS ?
-# build_a %>% dplyr::select(any_of(table1$upvar)) # lots of character variables in the DINS vars
-# build_a %>% glimpse                             # which could be the source of the error
-# 
-# # # find the numeric columns to test that theory
-# # build_a %>%
-# #   dplyr::select_if(is_numeric) %>% 
-# #   dplyr::select(damage_binary, any_of(table1$upvar)) %>% # so first numeric, then what was in your list
-# #   data.frame() -> test_data                              # tibbles can be problematic in loops
 
+# repurposed from Owne Price
 dat.model <- data.frame(y = build_a$damage_binary, x = 0)
 
 i<-0
@@ -366,19 +348,33 @@ for (varname in table1$upvar) {
   }
 }
 
+# Mockrin: we may cut 4 DINS variables, waiting to hear back from Alex
+
+# TODO drop 'parcel_Perv_P' here or above
 #read in variable descriptions
 (tab_labs <- readxl::read_xlsx('data/Data LA Study 20211208.xlsx') %>% 
-  left_join(., table1, by = c(`Variable name` = 'upvar')) %>% 
-  tidylog::select(Type, `Variable name`, Deviance = dev2, n = n2,
-         Scale, Source) %>% 
-  arrange(Type, desc(Deviance)))
+  left_join(.
+            , table1 %>% filter(upvar != 'damage_binary')
+            , by = c(`Variable name` = 'upvar')) %>% 
+  tidylog::select(Type
+                  , `Variable name`
+                  , Deviance = dev2
+                  , n = n2
+                  , Scale
+                  , Source
+                  ) %>% 
+  arrange(Type, desc(Deviance)) %>% 
+  mutate_if(is.double, round, 3))
 
-#looking at deviance table for univariate
-head(tab_labs)
-tab_labs %>% filter(Deviance > 5) %>%  mutate_if(is.double, round, 3) #top 5
+tab_labs %>% 
+  write_csv(paste0(getwd(), 'data/Table_XX_Deviance_Explained.csv'))
+
 #next steps for getting table to look nice 
 #If you already have the variable name, type look up table, why not add a pretty variable/alias name for reporting? build_DECKPORCHE,
+
 #for example, could be in human-friendly English.
+# TODO in Data LA Study 20211208.xlsx
+
 
 #output
 # tab_labs %>% 
@@ -395,75 +391,102 @@ tab_labs %>% filter(Deviance > 5) %>%  mutate_if(is.double, round, 3) #top 5
 ### C Random forest
 ```{r} 
 
-library(rpart) #DEXTER, do you want this to go elsewhere?
-library(pROC) #for AUC calculation
+# binary outcome random forest forall obs, drop DINS columns
+tic()
+binary_without_dins_cols <- rpart(damage_binary ~ ., 
+                                  data = build_a %>% 
+                                    tidylog::select( # dropping columns containing specific DINS data
+                                            # very detailed but sparse (lots of NAs)
+                                      !c(  build_DECKPORCHE
+                                         , build_DECKPORCHO
+                                         , build_EAVES
+                                         , build_EXTERIORSI
+                                         , build_FENCEATTAC
+                                         , build_PATIOCOVER
+                                         , build_PROPANETAN
+                                         , build_ROOFCONSTR
+                                         , build_VEGCLEARAN
+                                         , build_VENTSCREEN
+                                         , build_WINDOWPANE    
+                                    ))
+                                  , method = 'anova'); toc()
 
-#build - full dataset - 11181 obs, 85 cols
-#build_a - all variables you want as predictor for random forest - 11,181 obs, 72 cols
+plot(binary_without_dins_cols)
+summary(binary_without_dins_cols) # 11181  observations
+plot(binary_without_dins_cols, branch=0.5); text(binary_without_dins_cols,cex=0.7)
 
-#build_dins- dataset without DINS variables - 11181 obs, 60 vars;
-#DEXTER alternatively if we need this can just exclude these cols from random forest model?
-build_nodins <- build_a %>% tidylog::select(!c(build_DECKPORCHE,
-            build_DECKPORCHO    ,
-                 build_EAVES    ,
-            build_EXTERIORSI    ,
-            build_FENCEATTAC    ,
-            build_PATIOCOVER    ,
-            build_PROPANETAN    ,
-            build_ROOFCONSTR    ,
-           build_VEGCLEARAN    ,
-           build_VENTSCREEN    ,
-           build_WINDOWPANE    ))
- 
-#build_dins -  dataset just of DINS data - 1534 obs, 72 cols
-build_dins <- build %>% filter(build_DINS==1)%>% 
-  tidylog::select(any_of(table1$upvar))
-
- 
-#RF1 random forest for DINS data set
-tic(); dins <- rpart(damage_binary ~ ., data = build_dins,
-                        method = 'anova'); toc()
-plot(dins); text(dins,cex=0.7)
-summary(dins)  
-
-#code from Owen
+# code from Owen
 windows(4.5,4.5)
 par(mar=c(1,1,2,1))
-dins1<-prune(dins,cp=0.02)
-plot(dins1,branch=0.5);text(dins1,cex=0.7)
-printcp(dins1)
-print(dins1)
+binary_without_dins_cols_pruned<-prune(binary_without_dins_cols,cp=0.02)
+plot(binary_without_dins_cols_pruned,branch=0.5);text(binary_without_dins_cols_pruned,cex=0.7)
+printcp(binary_without_dins_cols_pruned)
+print(binary_without_dins_cols_pruned)
 
 
-#RF2 random forest for full data, includes DINS - when you do this, none of DINS variables are in top branches. 
-#not sure if it should include DINS or drop those variables. would be 11181 obs still
-tic(); final <- rpart(damage_binary ~ ., data = build_a, method = 'anova'); toc()
-plot(final)
-summary(final) # 11181  observations
-plot(final, branch=0.5); text(final,cex=0.7)
 
-#code from Owen
+# binary outcome for just DINS-surveyed buildings, including those more specific colums
+tic()
+binary_with_dins_cols <- rpart(damage_binary ~ .
+                               , data = build %>% 
+                                 filter(build_DINS==1) %>% 
+                                # damage_severity
+                                tidylog::select(any_of(table1$upvar)),
+                              , method = 'anova'); toc()
+
+plot(binary_with_dins_cols)
+summary(binary_with_dins_cols) # 11181  observations
+plot(binary_with_dins_cols, branch=0.5); text(binary_with_dins_cols,cex=0.7)
+
+# code from Owen
 windows(4.5,4.5)
 par(mar=c(1,1,2,1))
-final3<-prune(final,cp=0.02)
-plot(final3,branch=0.5);text(final3,cex=0.7)
-printcp(final3)
-print(final3)
- 
-#RF3 random forest forall obs, drop DINS
-tic(); final <- rpart(damage_binary ~ ., data = build_nodins, method = 'anova'); toc()
-plot(final)
-summary(final) # 11181  observations
-plot(final, branch=0.5); text(final,cex=0.7)
+binary_with_dins_cols_pruned<-prune(binary_with_dins_cols, cp=0.02)
+plot(binary_with_dins_cols_pruned,branch=0.5);text(binary_with_dins_cols_pruned,cex=0.7)
+printcp(binary_with_dins_cols_pruned)
+print(binary_with_dins_cols_pruned)
 
-#code from Owen
+
+
+
+# severity for just DINS-surveyed buildings, including those more specific colums
+tic()
+severity_with_dins_cols <- rpart(damage_severity ~ .
+                               , data = build %>% 
+                                 filter(build_DINS==1) %>% 
+                                tidylog::select(damage_severity
+                                                , any_of(table1$upvar)
+                                                , -damage_binary),
+                              , method = 'anova'); toc()
+
+plot(severity_with_dins_cols)
+summary(severity_with_dins_cols) # 11181  observations
+plot(severity_with_dins_cols, branch=0.5); text(severity_with_dins_cols,cex=0.7)
+
+# code from Owen
 windows(4.5,4.5)
 par(mar=c(1,1,2,1))
-final3<-prune(final,cp=0.02)
-plot(final3,branch=0.5);text(final3,cex=0.7)
-printcp(final3)
-print(final3)
- 
+severity_with_dins_cols_pruned<-prune(severity_with_dins_cols,cp=0.02)
+plot(severity_with_dins_cols_pruned,branch=0.5);text(severity_with_dins_cols_pruned,cex=0.7)
+printcp(severity_with_dins_cols_pruned)
+print(severity_with_dins_cols_pruned)
+
+
+# look at pruned models side by side
+print(binary_without_dins_cols_pruned)
+print(binary_with_dins_cols_pruned)
+print(severity_with_dins_cols_pruned)
+
+
+summary(binary_without_dins_cols_pruned)
+summary(binary_with_dins_cols_pruned)
+summary(severity_with_dins_cols_pruned)
+
+
+TODO model validation/diagnostics
+TODO selection
+TODO model accuracy
+
 
  
 #Owen's code OOB accuracy testing
@@ -501,6 +524,8 @@ with(testdat,table(DAMAGED.x,predtrue))
 
 
 ```
+
+
 
 ### Fit Jeffrey Evan's worked example: randomForest
 ```{r}

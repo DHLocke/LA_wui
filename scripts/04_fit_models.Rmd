@@ -431,7 +431,7 @@ binary_with_dins_cols <- rpart(damage_binary ~ .
                                , data = build %>% 
                                  filter(build_DINS==1) %>% 
                                 # damage_severity
-                                tidylog::select(any_of(table1$upvar)),
+                                tidylog::select(any_of(table1$upvar),-build_DECKPORCHE)  
                               , method = 'anova'); toc()
 
 plot(binary_with_dins_cols)
@@ -456,7 +456,8 @@ severity_with_dins_cols <- rpart(damage_severity ~ .
                                  filter(build_DINS==1) %>% 
                                 tidylog::select(damage_severity
                                                 , any_of(table1$upvar)
-                                                , -damage_binary),
+                                                , -damage_binary,
+                                                ,-build_DECKPORCHE),
                               , method = 'anova'); toc()
 
 plot(severity_with_dins_cols)

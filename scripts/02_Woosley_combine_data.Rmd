@@ -664,14 +664,14 @@ st_drop_geometry() %>%
    tabyl(Buildings_ParcelID_DINS_intersects_FENCEATTAC) #fence materials, have data for 70% of sample, although 50% had no fence;  
 
 #3
-#DECKPORCHO is a deck that is on grade 
+#DECKPORCHO is a deck that is on grade, data for approx 31% of sample 
 dins %>% 
  st_drop_geometry() %>% 
   filter(!is.na(Buildings_ParcelID_DINS_intersects_INCIDENTST)) %>%
  tabyl(Buildings_ParcelID_DINS_intersects_DECKPORCHO) #deck and porch --ongrade
  
 #4
-# DECKPORCHE is a deck that is elevated off the ground
+# DECKPORCHE is a deck that is elevated off the ground, there is data here for less than 10% of the same
 dins %>% 
  st_drop_geometry() %>% 
   filter(!is.na(Buildings_ParcelID_DINS_intersects_INCIDENTST)) %>%
@@ -714,8 +714,7 @@ dins %>%
 dins %>% 
   st_drop_geometry() %>% 
   filter(!is.na(Buildings_ParcelID_DINS_intersects_INCIDENTST)) %>%
-   tabyl(Buildings_ParcelID_DINS_intersects_EAVES) #eaves, has data for ~33% only. change no eaves to NA
-
+   tabyl(Buildings_ParcelID_DINS_intersects_EAVES) #eaves, has data for ~33% only.   
 #11
 dins %>% 
   st_drop_geometry() %>% 
@@ -841,11 +840,12 @@ subdins<-dins %>%
                      build_PROPANETAN == "0-10" ~ "1. 0-10",
                      build_PROPANETAN == "11-20" ~ "2. 11-20",
                      build_PROPANETAN == "21-30" ~ "3. 21-30",
-                     build_PROPANETAN == ">30'" ~ "4.>30")))%>% 
+                     build_PROPANETAN == ">30'" ~ "4.>30",
+                     build_PROPANETAN == "None" ~ "None")))%>% 
 mutate(build_VEGCLEARAN =as.factor(case_when(
                      build_VEGCLEARAN == "0-30'" ~ "1. 0-30",
                      build_VEGCLEARAN == "30-100'" ~ "2. 30-100",
-                     build_VEGCLEARAN == ">100'" ~ "3. >100"))) %>%
+                     build_VEGCLEARAN == ">100'" ~ "3. >100"))) %>% #this will change 6 n/as into blank - I think appropriate
   mutate(build_DINS=1)%>% #create a variable to say had a record in DINS
 unique() #at this point keeping only unique based on ID build does not remove any data, just deletes repeated lines
 
@@ -857,8 +857,18 @@ unique() #at this point keeping only unique based on ID build does not remove an
 # length(unique(test$ID_Build))
 # test2<-subset(test,duplicated(test$ID_Build))
 
-table(subdins$build_PROPANETAN)  
-table(subdins$build_VEGCLEARAN)  
+subdins %>%tabyl(build_DECKPORCHO)
+subdins %>%tabyl(build_DECKPORCHE)
+subdins %>%tabyl(build_EAVES)
+subdins %>%tabyl(build_EXTERIORSI)
+subdins %>%tabyl(build_FENCEATTAC)
+subdins %>%tabyl(build_PATIOCOVER)
+tabyl(subdins$build_PROPANETAN)  
+subdins %>%tabyl(build_ROOFCONSTR)
+tabyl(subdins$build_VEGCLEARAN) 
+tabyl(subdins$build_VENTSCREEN) 
+tabyl(subdins$build_WINDOWPANE) 
+
 ```
 
 
@@ -888,7 +898,7 @@ build_exp %<>%
   left_join(., subdins, by = c('ID_Build' = 'ID_Build'))
 
 build_exp %>% 
-  write_csv(., paste0(getwd(), '/output_data/building_', Sys.Date(), '.csv'))#building_2021-12-02.csv' 
+  write_csv(., paste0(getwd(), '/output_data/building_', Sys.Date(), '.csv'))#building_2021-12-22.csv' 
 
 ```
 

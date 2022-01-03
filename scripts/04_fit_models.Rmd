@@ -242,7 +242,7 @@ compare_performance(log_near_dest, log_near_exp, rank = TRUE)
 build_a <- build %>% #retain only the 71 predictors of interest for final analyses and damage_binary as response 
   tidylog::select(damage_binary,
                   build_area    ,
-            build_DECKPORCHE    ,
+           # build_DECKPORCHE    , #drop this on 12/20/21
             build_DECKPORCHO    ,
                  build_EAVES    ,
             build_EXTERIORSI    ,
@@ -326,7 +326,7 @@ build_a <- build %>% #retain only the 71 predictors of interest for final analys
 (table1 <- list(names(build_a)) %>% #created a list of predictors
   data.frame() %>% 
   mutate(dev2 = 0, n2 = 0) %>%
-  rename(upvar = c..damage_binary....build_area....build_DECKPORCHE....build_DECKPORCHO...) %>%
+  rename(upvar = c..damage_binary....build_area....build_DECKPORCHO....build_EAVES...) %>%
   data.frame())
 
 # repurposed from Owne Price
@@ -349,8 +349,6 @@ for (varname in table1$upvar) {
   }
 }
 
-# Mockrin: we may cut 4 DINS variables, waiting to hear back from Alex
-
 # TODO drop 'parcel_Perv_P' here or above
 #read in variable descriptions
 (tab_labs <- readxl::read_xlsx('data/Data LA Study 20211208.xlsx') %>% 
@@ -370,11 +368,7 @@ for (varname in table1$upvar) {
 tab_labs %>% 
   write_csv(paste0(getwd(), 'data/Table_XX_Deviance_Explained.csv'))
 
-#next steps for getting table to look nice 
-#If you already have the variable name, type look up table, why not add a pretty variable/alias name for reporting? build_DECKPORCHE,
-
-#for example, could be in human-friendly English.
-# TODO in Data LA Study 20211208.xlsx
+#next steps for getting table to look nice  type look up table, add alias name for reporting - is now in Data LA Study 20211208.xlsx
 
 
 #output
@@ -393,13 +387,14 @@ tab_labs %>%
 ```{r} 
 
 # binary outcome random forest forall obs, drop DINS columns
+
+#DEXTER - is rpart actual random forest? or is it classification tree (one?) 
 tic()
 binary_without_dins_cols <- rpart(damage_binary ~ ., 
                                   data = build_a %>% 
                                     tidylog::select( # dropping columns containing specific DINS data
                                             # very detailed but sparse (lots of NAs)
-                                      !c(  build_DECKPORCHE
-                                         , build_DECKPORCHO
+                                      !c(  build_DECKPORCHO
                                          , build_EAVES
                                          , build_EXTERIORSI
                                          , build_FENCEATTAC
@@ -412,19 +407,50 @@ binary_without_dins_cols <- rpart(damage_binary ~ .,
                                     ))
                                   , method = 'anova'); toc()
 
-plot(binary_without_dins_cols)
+plot(binary_without_dins_cols); text(binary_without_dins_cols,cex=0.7)
 summary(binary_without_dins_cols) # 11181  observations
 plot(binary_without_dins_cols, branch=0.5); text(binary_without_dins_cols,cex=0.7)
 
-# code from Owen
-windows(4.5,4.5)
-par(mar=c(1,1,2,1))
-binary_without_dins_cols_pruned<-prune(binary_without_dins_cols,cp=0.02)
-plot(binary_without_dins_cols_pruned,branch=0.5);text(binary_without_dins_cols_pruned,cex=0.7)
-printcp(binary_without_dins_cols_pruned)
-print(binary_without_dins_cols_pruned)
+# code from Owen, this time using party
+library(party) #if we keep move up
+tic()
+binary_without_dins_cols <-cforest(damage_binary ~ ., 
+                                  data = build_a %>% 
+                                    tidylog::select( # dropping columns containing specific DINS data
+                                            # very detailed but sparse (lots of NAs)
+                                      !c(  build_DECKPORCHO
+                                         , build_EAVES
+                                         , build_EXTERIORSI
+                                         , build_FENCEATTAC
+                                         , build_PATIOCOVER
+                                         , build_PROPANETAN
+                                         , build_ROOFCONSTR
+                                         , build_VEGCLEARAN
+                                         , build_VENTSCREEN
+                                         , build_WINDOWPANE    
+                                    ))
+                                  ,controls=cforest_control(mtry=5, ntree=2000, mincriterion=0)); toc() #takes 12 min, copied his settings
 
+#from owen
+forest<-binary_without_dins_cols
+build_a$predfor <- predict(forest, OOB = TRUE) 
+build_a$predtrue <- build_a$predfor>0.340
+blob<-with(build_a,table(damage_binary,predtrue))
+blob
+100*(blob[1]+blob[4])/sum(blob)
+tic();varimp(forest);toc() #takes 84 min! 
 
+#from Owen and ?https://favorableoutcomes.wordpress.com/2014/12/19/r-function-for-plotting-variable-importance-results-from-cforest-imlementation-of-random-forest-model/ ?
+cforestImpPlot <- function(x) {
+  cforest_importance <<- v <- varimp(x)
+  dotchart(v[order(v)])
+} 
+
+tic();figRF<-cforestImpPlot(forest);toc() #takes 50 min
+
+#doesn't work to save # Dexter, stopped here
+figRF %>% ggsave(file = paste0(getwd(), '/figures/var_impt_plot_',
+                    gsub('[[:punct:]]', '_', Sys.time()), '.png')) 
 
 # binary outcome for just DINS-surveyed buildings, including those more specific colums
 tic()
@@ -432,7 +458,7 @@ binary_with_dins_cols <- rpart(damage_binary ~ .
                                , data = build %>% 
                                  filter(build_DINS==1) %>% 
                                 # damage_severity
-                                tidylog::select(any_of(table1$upvar),-build_DECKPORCHE)  
+                                tidylog::select(any_of(table1$upvar))  
                               , method = 'anova'); toc()
 
 plot(binary_with_dins_cols)
@@ -445,20 +471,25 @@ par(mar=c(1,1,2,1))
 binary_with_dins_cols_pruned<-prune(binary_with_dins_cols, cp=0.02)
 plot(binary_with_dins_cols_pruned,branch=0.5);text(binary_with_dins_cols_pruned,cex=0.7)
 printcp(binary_with_dins_cols_pruned)
-print(binary_with_dins_cols_pruned)
+print(binary_with_dins_cols_pruned) 
+
+#attempting Owen's code on AUC - from 12/23/2021
+library(pROC) #if we keep move up
+test$predtree<-predict(binary_with_dins_cols_pruned, OOB = TRUE) #create predicted values
+model_data = build %>% filter(build_DINS==1) #filtering to just our data - feel free to condense into code below
+auc(roc(model_data$damage_binary,predict(binary_with_dins_cols_pruned,model_data))) #attempt at AUC - using pruned tree  
+ 
 
 
 
-
-# severity for just DINS-surveyed buildings, including those more specific colums
+# severity for just DINS-surveyed buildings, including those more specific columns for damage
 tic()
 severity_with_dins_cols <- rpart(damage_severity ~ .
                                , data = build %>% 
                                  filter(build_DINS==1) %>% 
                                 tidylog::select(damage_severity
                                                 , any_of(table1$upvar)
-                                                , -damage_binary,
-                                                ,-build_DECKPORCHE),
+                                                , -damage_binary),
                               , method = 'anova'); toc()
 
 plot(severity_with_dins_cols)
@@ -473,7 +504,6 @@ plot(severity_with_dins_cols_pruned,branch=0.5);text(severity_with_dins_cols_pru
 printcp(severity_with_dins_cols_pruned)
 print(severity_with_dins_cols_pruned)
 
-
 # look at pruned models side by side
 print(binary_without_dins_cols_pruned)
 print(binary_with_dins_cols_pruned)
@@ -485,9 +515,9 @@ summary(binary_with_dins_cols_pruned)
 summary(severity_with_dins_cols_pruned)
 
 
-TODO model validation/diagnostics
-TODO selection
-TODO model accuracy
+# TODO model validation/diagnostics
+# TODO selection
+# TODO model accuracy
 
 
  

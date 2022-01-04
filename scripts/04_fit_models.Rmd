@@ -383,8 +383,10 @@ tab_labs %>%
 
 
 
+suggested organization (put one full model in a chunk then repeat with second model)
 
 ### C Random forest
+### i binary
 ```{r} 
 
 # binary outcome random forest forall obs, drop DINS columns
@@ -570,6 +572,10 @@ with(testdat,table(DAMAGED.x,predtrue))
 
 ```
 
+### ii classification
+```{r}
+
+```
 
 
 ### Fit Jeffrey Evan's worked example: randomForest

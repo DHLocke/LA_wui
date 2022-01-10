@@ -320,55 +320,62 @@ build_a <- build %>% #retain only the 71 predictors of interest for final analys
 
 
 ####Univariate models and deviance calcs
-# for building materials we used a logit link and specified a binomial response, then calculated and compared the
-# deviance explained (D2), which is analogous to R-squared in linear regression for each variable.
-# table1 contains a list of predictor variables for analysis and vectors to store the results for each variable 
+#commented out this work and read in table of deviance below
+# # for building materials we used a logit link and specified a binomial response, then calculated and compared the
+# # deviance explained (D2), which is analogous to R-squared in linear regression for each variable.
+# # table1 contains a list of predictor variables for analysis and vectors to store the results for each variable 
+# 
+#  
+# (table1 <- list(names(build_a)) %>% #created a list of predictors
+#   data.frame() %>% 
+#   mutate(dev2 = 0, n2 = 0) %>%
+#   rename(upvar = c..damage_binary....build_area....build_DECKPORCHO....build_EAVES...) %>%
+#   data.frame())
+# 
+# # repurposed from Owne Price
+# dat.model <- data.frame(y = build_a$damage_binary, x = 0)
+# 
+# i<-0
+# for (varname in table1$upvar) {
+#   i<-i+1
+#   if (varname %in% colnames(build_a)) {
+#     dat.model$x <- build_a[, varname]
+#     mod <- glm(y ~ x, data = dat.model, family = binomial())
+#   } else {
+#     warning(varname, " not found in build_a", immediate. = TRUE)
+#     mod <- NULL
+#   }
+#   
+#   if (!is.null(mod)) {
+#     table1$n2[i] <- nrow(build_a) - sum(is.na(dat.model$x))
+#     table1$dev2[i] <- 100 * (mod$null.deviance - mod$deviance) / mod$null.deviance
+#   }
+# }
+# 
+# # TODO drop 'parcel_Perv_P' here or above
+# #read in variable descriptions
+# (tab_labs <- readxl::read_xlsx('data/Data LA Study 20211208.xlsx') %>% 
+#   left_join(.
+#             , table1 %>% filter(upvar != 'damage_binary')
+#             , by = c(`Variable name` = 'upvar')) %>% 
+#   tidylog::select(Type
+#                   , `Variable name`
+#                   , Deviance = dev2
+#                   , n = n2
+#                   , Scale
+#                   , Source
+#                   ) %>% 
+#   arrange(Type, desc(Deviance)) %>% 
+#   mutate_if(is.double, round, 3))
+# 
+# tab_labs %>% 
+#    drop_na()%>%
+#   write_csv(paste0(getwd(), '/data/Table_XX_Deviance_Explained.csv'))
+    
 
- 
-(table1 <- list(names(build_a)) %>% #created a list of predictors
-  data.frame() %>% 
-  mutate(dev2 = 0, n2 = 0) %>%
-  rename(upvar = c..damage_binary....build_area....build_DECKPORCHO....build_EAVES...) %>%
-  data.frame())
-
-# repurposed from Owne Price
-dat.model <- data.frame(y = build_a$damage_binary, x = 0)
-
-i<-0
-for (varname in table1$upvar) {
-  i<-i+1
-  if (varname %in% colnames(build_a)) {
-    dat.model$x <- build_a[, varname]
-    mod <- glm(y ~ x, data = dat.model, family = binomial())
-  } else {
-    warning(varname, " not found in build_a", immediate. = TRUE)
-    mod <- NULL
-  }
-  
-  if (!is.null(mod)) {
-    table1$n2[i] <- nrow(build_a) - sum(is.na(dat.model$x))
-    table1$dev2[i] <- 100 * (mod$null.deviance - mod$deviance) / mod$null.deviance
-  }
-}
-
-# TODO drop 'parcel_Perv_P' here or above
-#read in variable descriptions
-(tab_labs <- readxl::read_xlsx('data/Data LA Study 20211208.xlsx') %>% 
-  left_join(.
-            , table1 %>% filter(upvar != 'damage_binary')
-            , by = c(`Variable name` = 'upvar')) %>% 
-  tidylog::select(Type
-                  , `Variable name`
-                  , Deviance = dev2
-                  , n = n2
-                  , Scale
-                  , Source
-                  ) %>% 
-  arrange(Type, desc(Deviance)) %>% 
-  mutate_if(is.double, round, 3))
-
-tab_labs %>% 
-  write_csv(paste0(getwd(), 'data/Table_XX_Deviance_Explained.csv'))
+#reading in table of deviance explained, work done and commented out above
+tab_labs <- 
+  read_csv(paste0(getwd(), '/data/Table_XX_Deviance_Explained.csv'))
 
 #next steps for getting table to look nice  type look up table, add alias name for reporting - is now in Data LA Study 20211208.xlsx
 
@@ -393,8 +400,8 @@ suggested organization (put one full model in a chunk then repeat with second mo
 # binary outcome random forest for all obs, drop DINS columns
 
 # code from Owen, this time using party
-#n_tree <- 2000 #use this for final analyses
-n_tree <- 100 #testing number of trees
+n_tree <- 2000 #use this for final analyses
+#n_tree <- 100 #testing number of trees
 tic(); binary_without_dins_cols <-cforest(damage_binary ~ ., 
                                   data = build_a %>% 
                                     tidylog::select( # dropping columns containing specific DINS data
@@ -412,9 +419,19 @@ tic(); binary_without_dins_cols <-cforest(damage_binary ~ .,
                                     ))
                                   ,controls=cforest_control(mtry=5, ntree = n_tree, mincriterion=0)); toc() #takes 12 min with full data set, settings here from Owen 
 
+#use this to save this Random Forest 
+save(binary_without_dins_cols, file="../Massive_forests/binary_without_dins_cols.Rdata")
+ 
+load(file="../Massive_forests/binary_without_dins_cols.Rdata")
+
 #from owen
 forest<-binary_without_dins_cols # keeping Owen's naming conventions
-build_a$predfor <- predict(forest, OOB = TRUE) 
+#trying to figure out a binary (0,1) prediction
+tic();build_a$predfor <- predict(forest, type='prob',OOB = TRUE);toc() #with 100 trees, time is 180 sec
+tic();test <- predict(forest, type='prob',OOB = TRUE);toc() #with 100 trees, time is 180 sec
+
+
+
 build_a$predtrue <- build_a$predfor>0.34 # TODO figureout where this threshold comes from
 #Dexter, I'm not having much luck finding this threshold. Is it just going from continuous predictor to binary outcome?
 #some potential relevant information online -  

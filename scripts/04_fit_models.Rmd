@@ -43,6 +43,7 @@ packs <- c('tidyverse'        # a must have!
            , 'sjPlot'         # useful plotting and regression support
            , 'rpart'          # for random forests
            # , pROC           # for AUC calculation
+           , 'pdp'           #partial dep plots
            , 'party'          # for random forests using cforest
            )        
 
@@ -386,33 +387,10 @@ tab_labs %>%
 suggested organization (put one full model in a chunk then repeat with second model)
 
 ### C Random forest
-### i binary
+#### i binary outcome-all obs, no DINS
 ```{r} 
 
-# binary outcome random forest forall obs, drop DINS columns
-
-# # this is a classification tree, random forest below
-# tic()
-# binary_without_dins_cols <- rpart(damage_binary ~ ., 
-#                                   data = build_a %>% 
-#                                     tidylog::select( # dropping columns containing specific DINS data
-#                                             # very detailed but sparse (lots of NAs)
-#                                       !c(  build_DECKPORCHO
-#                                          , build_EAVES
-#                                          , build_EXTERIORSI
-#                                          , build_FENCEATTAC
-#                                          , build_PATIOCOVER
-#                                          , build_PROPANETAN
-#                                          , build_ROOFCONSTR
-#                                          , build_VEGCLEARAN
-#                                          , build_VENTSCREEN
-#                                          , build_WINDOWPANE    
-#                                     ))
-#                                   , method = 'anova'); toc()
-# 
-# plot(binary_without_dins_cols); text(binary_without_dins_cols,cex=0.7)
-# summary(binary_without_dins_cols) # 11181  observations
-# plot(binary_without_dins_cols, branch=0.5); text(binary_without_dins_cols,cex=0.7)
+# binary outcome random forest for all obs, drop DINS columns
 
 # code from Owen, this time using party
 #n_tree <- 2000 #use this for final analyses
@@ -437,21 +415,48 @@ tic(); binary_without_dins_cols <-cforest(damage_binary ~ .,
 #from owen
 forest<-binary_without_dins_cols # keeping Owen's naming conventions
 build_a$predfor <- predict(forest, OOB = TRUE) 
-build_a$predtrue <- build_a$predfor>0.340 # TODO figureout where this threshold comes from
+build_a$predtrue <- build_a$predfor>0.34 # TODO figureout where this threshold comes from
+#Dexter, I'm not having much luck finding this threshold. Is it just going from continuous predictor to binary outcome?
+#some potential relevant information online -  
+#https://cran.r-project.org/web/packages/party/party.pdf (pages 5 -7)
+#https://stats.stackexchange.com/questions/77290/does-party-package-in-r-provide-out-of-bag-estimates-of-error-for-random-forest
+#https://stackoverflow.com/questions/49893104/issue-with-caseweights-and-oob-prediction-using-cforest-from-the-party-package
 blob<-with(build_a,table(damage_binary,predtrue))
 blob
-100*(blob[1]+blob[4])/sum(blob) # 89% accurate!!!
+round(100*(blob[1]+blob[4])/sum(blob),1) #overall accuracy
+round(100*(blob[3]/sum(blob)),1) #false negative rate
+round(100*(blob[2]/sum(blob)),1) #false pos rate
+# with 100 trees,the model had 89.9% accuracy with 2.5% false negative and 7.6% false positive rate - just checking is it ok that dataset unbalanced?
+ 
 tic();varimp(forest);toc() # ~90 seconds with 100 trees, takes 84 min with 2000 trees! 
 
+#plot important variables
 #from Owen and ?https://favorableoutcomes.wordpress.com/2014/12/19/r-function-for-plotting-variable-importance-results-from-cforest-imlementation-of-random-forest-model/ ?
 cforestImpPlot <- function(x) {
   cforest_importance <<- v <- varimp(x)
   dotchart(v[order(v)])
 } 
 
-tic(); figRF <- cforestImpPlot(forest);toc() # ~95 seconds with 100 trees, takes 50 min with 2000 trees
+tic(); figRF <- cforestImpPlot(forest);toc() # ~165 seconds with 100 trees, takes 50 min with 2000 trees
 
-# TODO? do this in ggplot with colors or other symbols corrisponding to framework categories.
+#This one only the best 20 variable
+cforestImpPlot20 <- function(x) {
+  cforest_importance <<- v <- varimp(x)
+  v<-v[order(v)]
+  end<-length(v)
+  start<-end-20
+  dotchart(v[start:end],pch=19)
+}
+tic(); figRF_20 <- cforestImpPlot20(forest);toc() # ~165 seconds with 100 trees, takes 50 min with 2000 trees
+# TODO--getinto ggplot with colors or other symbols corrisponding to framework categories.
+#key variables: build_near_dest, build_Mean_distroad, build_p_building_300, build_Mean_elev_30m, build_Mean_elev_100m, build_area
+
+#how Owen codes partial plots
+#hung for me
+forest %>% 
+  partial(pred.var = "build_near_dest") %>%
+  plotPartial(smooth = FALSE, lwd = 2, ylab = "Prob. of Destruction", xlim=c(0,150),ylim=c(0,0.5), xlab="Axis label")
+
 
 #doesn't work to save # Dexter, stopped here
 # 
@@ -463,11 +468,10 @@ tic(); figRF <- cforestImpPlot(forest);toc() # ~95 seconds with 100 trees, takes
 #      xlab = "wt", ylab = "mpg", col = "#2E9FDF")
 # # 3. Close the file
 # dev.off()
-
-figRF %>% ggsave(file = paste0(getwd(), '/figures/var_impt_plot_',
-                    gsub('[[:punct:]]', '_', Sys.time()), '.png')) 
-
-# binary outcome for just DINS-surveyed buildings, including those more specific colums
+```
+ 
+#### ii binary outcome for just DINS-surveyed 
+```{r} 
 tic()
 binary_with_dins_cols <- rpart(damage_binary ~ .
                                , data = build %>% 
@@ -494,6 +498,30 @@ test$predtree<-predict(binary_with_dins_cols_pruned, OOB = TRUE) #create predict
 model_data = build %>% filter(build_DINS==1) #filtering to just our data - feel free to condense into code below
 auc(roc(model_data$damage_binary,predict(binary_with_dins_cols_pruned,model_data))) #attempt at AUC - using pruned tree  
  
+# # this is a classification tree, not sure we need this
+# tic()
+# binary_without_dins_cols <- rpart(damage_binary ~ ., 
+#                                   data = build_a %>% 
+#                                     tidylog::select( # dropping columns containing specific DINS data
+#                                             # very detailed but sparse (lots of NAs)
+#                                       !c(  build_DECKPORCHO
+#                                          , build_EAVES
+#                                          , build_EXTERIORSI
+#                                          , build_FENCEATTAC
+#                                          , build_PATIOCOVER
+#                                          , build_PROPANETAN
+#                                          , build_ROOFCONSTR
+#                                          , build_VEGCLEARAN
+#                                          , build_VENTSCREEN
+#                                          , build_WINDOWPANE    
+#                                     ))
+#                                   , method = 'anova'); toc()
+# 
+# plot(binary_without_dins_cols); text(binary_without_dins_cols,cex=0.7)
+# summary(binary_without_dins_cols) # 11181  observations
+# plot(binary_without_dins_cols, branch=0.5); text(binary_without_dins_cols,cex=0.7)
+
+
 
 
 
@@ -572,13 +600,14 @@ with(testdat,table(DAMAGED.x,predtrue))
 
 ```
 
-### ii classification
+#### iii multivariate outcome for just DINS-surveyed
 ```{r}
+#TODO 
 
 ```
 
 
-### Fit Jeffrey Evan's worked example: randomForest
+###OLD Fit Jeffrey Evan's worked example: randomForest
 ```{r}
 # modeled after and adapted from this page
 # from https://evansmurphy.wixsite.com/evansspatial/random-forest-sdm

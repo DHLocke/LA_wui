@@ -373,8 +373,8 @@ tab_labs %>%
 
 
 #output
-# tab_labs %>% 
-#   write_csv('data/high_deviance_explained_bivariates.csv')
+ # tab_labs %>% 
+ #   write_csv('data/high_deviance_explained_bivariates.csv')
 
 # ended __________
 
@@ -415,8 +415,8 @@ suggested organization (put one full model in a chunk then repeat with second mo
 # plot(binary_without_dins_cols, branch=0.5); text(binary_without_dins_cols,cex=0.7)
 
 # code from Owen, this time using party
-n_tree <- 2000
-n_tree <- 100
+#n_tree <- 2000 #use this for final analyses
+n_tree <- 100 #testing number of trees
 tic(); binary_without_dins_cols <-cforest(damage_binary ~ ., 
                                   data = build_a %>% 
                                     tidylog::select( # dropping columns containing specific DINS data
@@ -432,7 +432,7 @@ tic(); binary_without_dins_cols <-cforest(damage_binary ~ .,
                                          , build_VENTSCREEN
                                          , build_WINDOWPANE    
                                     ))
-                                  ,controls=cforest_control(mtry=5, ntree = n_tree, mincriterion=0)); toc() #takes 12 min, copied his settings
+                                  ,controls=cforest_control(mtry=5, ntree = n_tree, mincriterion=0)); toc() #takes 12 min with full data set, settings here from Owen 
 
 #from owen
 forest<-binary_without_dins_cols # keeping Owen's naming conventions

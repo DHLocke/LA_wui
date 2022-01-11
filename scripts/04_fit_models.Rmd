@@ -399,40 +399,45 @@ suggested organization (put one full model in a chunk then repeat with second mo
 
 # binary outcome random forest for all obs, drop DINS columns
 
-# code from Owen, this time using party
-n_tree <- 2000 #use this for final analyses
-#n_tree <- 100 #testing number of trees
-tic(); binary_without_dins_cols <-cforest(damage_binary ~ ., 
-                                  data = build_a %>% 
-                                    tidylog::select( # dropping columns containing specific DINS data
-                                            # very detailed but sparse (lots of NAs)
-                                      !c(  build_DECKPORCHO
-                                         , build_EAVES
-                                         , build_EXTERIORSI
-                                         , build_FENCEATTAC
-                                         , build_PATIOCOVER
-                                         , build_PROPANETAN
-                                         , build_ROOFCONSTR
-                                         , build_VEGCLEARAN
-                                         , build_VENTSCREEN
-                                         , build_WINDOWPANE    
-                                    ))
-                                  ,controls=cforest_control(mtry=5, ntree = n_tree, mincriterion=0)); toc() #takes 12 min with full data set, settings here from Owen 
+# # code from Owen, this time using party
+# n_tree <- 2000 #use this for final analyses
+# #n_tree <- 100 #testing number of trees
+# tic(); binary_without_dins_cols <-cforest(damage_binary ~ ., 
+#                                   data = build_a %>% 
+#                                     tidylog::select( # dropping columns containing specific DINS data
+#                                             # very detailed but sparse (lots of NAs)
+#                                       !c(  build_DECKPORCHO
+#                                          , build_EAVES
+#                                          , build_EXTERIORSI
+#                                          , build_FENCEATTAC
+#                                          , build_PATIOCOVER
+#                                          , build_PROPANETAN
+#                                          , build_ROOFCONSTR
+#                                          , build_VEGCLEARAN
+#                                          , build_VENTSCREEN
+#                                          , build_WINDOWPANE    
+#                                     ))
+#                                   ,controls=cforest_control(mtry=5, ntree = n_tree, mincriterion=0)); toc() #takes 12 min with full data set, settings here from Owen (DHL 7 mins with n_tree = 2000 )
+# 
+# #use this to save this Random Forest 
+# tic(); save(binary_without_dins_cols, file="../Massive_forests/binary_without_dins_cols.Rdata"); toc()
 
-#use this to save this Random Forest 
-#save(binary_without_dins_cols, file="../Massive_forests/binary_without_dins_cols.Rdata")
- 
-load(file="../Massive_forests/binary_without_dins_cols.Rdata")
+tic(); load(file="../Massive_forests/binary_without_dins_cols.Rdata"); toc() # ~40 seconds
 
-#from owen
-forest<-binary_without_dins_cols # keeping Owen's naming conventions
-#trying to figure out a binary (0,1) prediction
-tic();build_a$predfor <- predict(forest, type='prob',OOB = TRUE);toc() #with 100 trees, time is 180 sec
-tic();test <- predict(forest, type='prob',OOB = TRUE);toc() #with 100 trees, time is 180 sec
+# from owen
+forest<-binary_without_dins_cols; rm(binary_without_dins_cols) # keeping Owen's naming conventions
 
+tic();test <- predict(forest, OOB = TRUE);toc() #with 100 trees, time is 180 sec, ~20 mins with 2000 trees
 
 
-build_a$predtrue <- build_a$predfor>0.34 # TODO figureout where this threshold comes from
+# # trying to figure out a binary (0,1) prediction
+# tic();build_a$predfor <- predict(forest, type='prob', OOB = TRUE);toc() #with 100 trees, time is 180 sec
+
+test |> hist()
+test |> summary()
+
+build_a$predtrue <- test > .34 # TODO figureout where this threshold comes from
+# build_a$predtrue <- build_a$predfor>0.34 # TODO figureout where this threshold comes from
 #Dexter, I'm not having much luck finding this threshold. Is it just going from continuous predictor to binary outcome?
 #some potential relevant information online -  
 #https://cran.r-project.org/web/packages/party/party.pdf (pages 5 -7)
@@ -444,8 +449,9 @@ round(100*(blob[1]+blob[4])/sum(blob),1) #overall accuracy
 round(100*(blob[3]/sum(blob)),1) #false negative rate
 round(100*(blob[2]/sum(blob)),1) #false pos rate
 # with 100 trees,the model had 89.9% accuracy with 2.5% false negative and 7.6% false positive rate - just checking is it ok that dataset unbalanced?
- 
-tic();varimp(forest);toc() # ~90 seconds with 100 trees, takes 84 min with 2000 trees! 
+
+# DHL 23 mins 
+# tic();varimp(forest);toc() # ~90 seconds with 100 trees, takes 84 min with 2000 trees! 
 
 #plot important variables
 #from Owen and ?https://favorableoutcomes.wordpress.com/2014/12/19/r-function-for-plotting-variable-importance-results-from-cforest-imlementation-of-random-forest-model/ ?
@@ -454,7 +460,7 @@ cforestImpPlot <- function(x) {
   dotchart(v[order(v)])
 } 
 
-tic(); figRF <- cforestImpPlot(forest);toc() # ~165 seconds with 100 trees, takes 50 min with 2000 trees
+tic(); figRF <- cforestImpPlot(forest);toc() # ~165 seconds with 100 trees, takes 50 min with 2000 trees, DHL: 23 mins with 2000
 
 #This one only the best 20 variable
 cforestImpPlot20 <- function(x) {

@@ -354,28 +354,29 @@ build_a <- build %>% #retain only the 71 predictors of interest for final analys
 # 
 # # TODO drop 'parcel_Perv_P' here or above
 # #read in variable descriptions
-# (tab_labs <- readxl::read_xlsx('data/Data LA Study 20211208.xlsx') %>% 
+# (tab_labs <- readxl::read_xlsx('data/Data LA Study 20211208.xlsx') %>%
 #   left_join(.
 #             , table1 %>% filter(upvar != 'damage_binary')
-#             , by = c(`Variable name` = 'upvar')) %>% 
+#             , by = c(`Variable name` = 'upvar')) %>%
 #   tidylog::select(Type
 #                   , `Variable name`
+#                   , Alias # added this 
 #                   , Deviance = dev2
 #                   , n = n2
 #                   , Scale
 #                   , Source
-#                   ) %>% 
-#   arrange(Type, desc(Deviance)) %>% 
+#                   ) %>%
+#   arrange(Type, desc(Deviance)) %>%
 #   mutate_if(is.double, round, 3))
 # 
-# tab_labs %>% 
+# tab_labs %>%
 #    drop_na()%>%
 #   write_csv(paste0(getwd(), '/data/Table_XX_Deviance_Explained.csv'))
-    
 
-#reading in table of deviance explained, work done and commented out above
-tab_labs <- 
-  read_csv(paste0(getwd(), '/data/Table_XX_Deviance_Explained.csv'))
+
+# reading in table of deviance explained, work done and commented out above
+(tab_labs <- 
+  read_csv(paste0(getwd(), '/data/Table_XX_Deviance_Explained.csv')))
 
 #next steps for getting table to look nice  type look up table, add alias name for reporting - is now in Data LA Study 20211208.xlsx
 
@@ -460,7 +461,77 @@ cforestImpPlot <- function(x) {
   dotchart(v[order(v)])
 } 
 
-tic(); figRF <- cforestImpPlot(forest);toc() # ~165 seconds with 100 trees, takes 50 min with 2000 trees, DHL: 23 mins with 2000
+tic(); figRF <- cforestImpPlot(forest);toc() # ~165 seconds with 100 trees, takes 50 min with 2000 trees, DHL: 30 mins with 2000
+
+
+# graph importance
+cforest_importance
+(
+  cforest_importance |> 
+    data.frame() |> 
+    rownames_to_column(var = 'Variable name') |> 
+    tibble() |> 
+    rename('Variable Importance' = cforest_importance) |> 
+    left_join(
+      tab_labs |> 
+        tidylog::select(`Variable name`, Alias, Type, Scale)) |> 
+    arrange(desc('Variable Importance')) -> cforest_importance_to_graph)
+
+cforest_importance_to_graph |> tail()
+
+# graph importance by type and scale
+(cforest_importance_to_graph |> 
+  ggplot(aes(  x = `Variable Importance`
+             , y = reorder(Alias, `Variable Importance`)
+             , color  = Scale)) + 
+  geom_point(aes(shape = Type)) + 
+  theme_bw() +
+  NULL -> importance_graph)
+
+ggsave(file = paste0(getwd(),
+                     '/figures/rf_importance_',
+                     gsub('[[:punct:]]', '_', Sys.Date()), '.png')
+       , width = 5*2
+       , height = 6.5*1.5)
+
+
+
+# graph importance by type and scale - faceted
+(cforest_importance_to_graph |> 
+  ggplot(aes(  x = `Variable Importance`
+             , y = reorder(Alias, `Variable Importance`)
+             , color  = Type)) + 
+  geom_point(aes(shape = Type)) + 
+  theme_bw() +
+  facet_wrap(~Type, scales = 'free', ncol = 1) + 
+  NULL -> importance_graph)
+
+ggsave(file = paste0(getwd(),
+                     '/figures/rf_importance_facet_',
+                     gsub('[[:punct:]]', '_', Sys.Date()), '.png')
+       , width = 5*2
+       , height = 6.5*1.5)
+
+
+# graph importance by type and scale - faceted, top n
+top_n <- 20
+(cforest_importance_to_graph |> 
+  slice(1:top_n) |> 
+  ggplot(aes(  x = `Variable Importance`
+             , y = reorder(Alias, `Variable Importance`)
+             , color  = Type)) + 
+  geom_point(aes(shape = Type)) + 
+  theme_bw() +
+  facet_wrap(~Type, scales = 'free', ncol = 1) + 
+  NULL -> importance_graph)
+
+ggsave(file = paste0(getwd(),
+                     '/figures/rf_importance_facet_top_n_',
+                     gsub('[[:punct:]]', '_', Sys.Date()), '.png')
+       , width = 5*2
+       , height = 6.5*1.5)
+
+  
 
 #This one only the best 20 variable
 cforestImpPlot20 <- function(x) {

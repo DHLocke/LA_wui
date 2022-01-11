@@ -420,7 +420,7 @@ tic(); binary_without_dins_cols <-cforest(damage_binary ~ .,
                                   ,controls=cforest_control(mtry=5, ntree = n_tree, mincriterion=0)); toc() #takes 12 min with full data set, settings here from Owen 
 
 #use this to save this Random Forest 
-save(binary_without_dins_cols, file="../Massive_forests/binary_without_dins_cols.Rdata")
+#save(binary_without_dins_cols, file="../Massive_forests/binary_without_dins_cols.Rdata")
  
 load(file="../Massive_forests/binary_without_dins_cols.Rdata")
 

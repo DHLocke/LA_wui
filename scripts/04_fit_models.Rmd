@@ -43,7 +43,7 @@ packs <- c('tidyverse'        # a must have!
            , 'sjPlot'         # useful plotting and regression support
            , 'rpart'          # for random forests
            # , pROC           # for AUC calculation
-           , 'pdp'           #partial dep plots
+           , 'pdp'            # partial dep plots
            , 'party'          # for random forests using cforest
            )        
 
@@ -428,23 +428,35 @@ tic(); load(file="../Massive_forests/binary_without_dins_cols.Rdata"); toc() # ~
 # from owen
 forest<-binary_without_dins_cols; rm(binary_without_dins_cols) # keeping Owen's naming conventions
 
-tic();test <- predict(forest, OOB = TRUE);toc() #with 100 trees, time is 180 sec, ~20 mins with 2000 trees
+# tic();preds <- predict(forest, OOB = TRUE);toc() #with 100 trees, time is 180 sec, ~20 mins with 2000 trees
 
+# # type change..
+# build_a_df <- build_a |> data.frame()
+# tic(); build_a_df$predfor = predict(forest, OOB = TRUE); toc() 
+
+# tic(); save(build_a_df, file="../Massive_forests/build_a_df.Rdata"); toc()
+
+tic(); load(file="../Massive_forests/build_a_df.Rdata"); toc() # ~40 seconds
+
+
+
+# combdat$predfor <- predict(forest, OOB = TRUE)
+# combdat$predtrue <- combdat$predfor>0.340
 
 # # trying to figure out a binary (0,1) prediction
 # tic();build_a$predfor <- predict(forest, type='prob', OOB = TRUE);toc() #with 100 trees, time is 180 sec
 
-test |> hist()
-test |> summary()
+# preds |> hist()
+# preds |> summary()
 
-build_a$predtrue <- test > .34 # TODO figureout where this threshold comes from
+# build_a$predtrue <- test > .34 # TODO figureout where this threshold comes from
 # build_a$predtrue <- build_a$predfor>0.34 # TODO figureout where this threshold comes from
 #Dexter, I'm not having much luck finding this threshold. Is it just going from continuous predictor to binary outcome?
 #some potential relevant information online -  
 #https://cran.r-project.org/web/packages/party/party.pdf (pages 5 -7)
 #https://stats.stackexchange.com/questions/77290/does-party-package-in-r-provide-out-of-bag-estimates-of-error-for-random-forest
 #https://stackoverflow.com/questions/49893104/issue-with-caseweights-and-oob-prediction-using-cforest-from-the-party-package
-blob<-with(build_a,table(damage_binary,predtrue))
+blob<-with(build_a_df, table(damage_binary, predtrue))
 blob
 round(100*(blob[1]+blob[4])/sum(blob),1) #overall accuracy
 round(100*(blob[3]/sum(blob)),1) #false negative rate
@@ -461,8 +473,12 @@ cforestImpPlot <- function(x) {
   dotchart(v[order(v)])
 } 
 
-tic(); figRF <- cforestImpPlot(forest);toc() # ~165 seconds with 100 trees, takes 50 min with 2000 trees, DHL: 30 mins with 2000
 
+# tic(); cforest_importance <- cforestImpPlot(forest);toc() # ~165 seconds with 100 trees, takes 50 min with 2000 trees, DHL: 30 mins with 2000
+# 
+# tic(); save(cforest_importance, file="../Massive_forests/cforest_importance"); toc()
+
+tic(); load(file="../Massive_forests/cforest_importance.Rdata"); toc()
 
 # graph importance
 cforest_importance
@@ -479,78 +495,81 @@ cforest_importance
 
 cforest_importance_to_graph |> tail()
 
-# graph importance by type and scale
-(cforest_importance_to_graph |> 
-  ggplot(aes(  x = `Variable Importance`
-             , y = reorder(Alias, `Variable Importance`)
-             , color  = Scale)) + 
-  geom_point(aes(shape = Type)) + 
-  theme_bw() +
-  NULL -> importance_graph)
-
-ggsave(file = paste0(getwd(),
-                     '/figures/rf_importance_',
-                     gsub('[[:punct:]]', '_', Sys.Date()), '.png')
-       , width = 5*2
-       , height = 6.5*1.5)
-
-
-
-# graph importance by type and scale - faceted
-(cforest_importance_to_graph |> 
-  ggplot(aes(  x = `Variable Importance`
-             , y = reorder(Alias, `Variable Importance`)
-             , color  = Type)) + 
-  geom_point(aes(shape = Type)) + 
-  theme_bw() +
-  facet_wrap(~Type, scales = 'free', ncol = 1) + 
-  NULL -> importance_graph)
-
-ggsave(file = paste0(getwd(),
-                     '/figures/rf_importance_facet_',
-                     gsub('[[:punct:]]', '_', Sys.Date()), '.png')
-       , width = 5*2
-       , height = 6.5*1.5)
+# # graph importance by type and scale
+# (cforest_importance_to_graph |> 
+#   ggplot(aes(  x = `Variable Importance`
+#              , y = reorder(Alias, `Variable Importance`)
+#              , color  = Scale)) + 
+#   geom_point(aes(shape = Type)) + 
+#   theme_bw() +
+#   NULL -> importance_graph)
+# 
+# ggsave(file = paste0(getwd(),
+#                      '/figures/rf_importance_',
+#                      gsub('[[:punct:]]', '_', Sys.Date()), '.png')
+#        , width = 5*2
+#        , height = 6.5*1.5)
 
 
-# graph importance by type and scale - faceted, top n
+
+# # graph importance by type and scale - faceted
+# (cforest_importance_to_graph |> 
+#   ggplot(aes(  x = `Variable Importance`
+#              , y = reorder(Alias, `Variable Importance`)
+#              , color  = Type)) + 
+#   geom_point(aes(shape = Type)) + 
+#   theme_bw() +
+#   facet_wrap(~Type, scales = 'free', ncol = 1) + 
+#   NULL -> importance_graph)
+# 
+# ggsave(file = paste0(getwd(),
+#                      '/figures/rf_importance_facet_',
+#                      gsub('[[:punct:]]', '_', Sys.Date()), '.png')
+#        , width = 5*2
+#        , height = 6.5*1.5)
+
+
+# graph importance by type and scale, top n
+# color for type and symbol for scale
 top_n <- 20
-(cforest_importance_to_graph |> 
-  slice(1:top_n) |> 
-  ggplot(aes(  x = `Variable Importance`
-             , y = reorder(Alias, `Variable Importance`)
-             , color  = Type)) + 
-  geom_point(aes(shape = Type)) + 
-  theme_bw() +
-  facet_wrap(~Type, scales = 'free', ncol = 1) + 
-  NULL -> importance_graph)
+(
+  cforest_importance_to_graph |> 
+    slice(1:top_n) |> 
+    ggplot(aes(  x = `Variable Importance`
+               , y = reorder(Alias, `Variable Importance`)
+               , color  = Type)) + 
+    geom_point(aes(shape = Scale), size = 3) + 
+    labs(y = 'Variable') + 
+    scale_color_brewer(palette = 'Paired'
+                       , direction = -1
+                       ) +
+    theme_bw() +
+    theme(  legend.position = c(0.8, 0.2)
+          , axis.text.y = element_text(size = 12)) + 
+    # facet_wrap(~Type, scales = 'free', ncol = 1) + 
+    NULL -> importance_graph
+  )
 
-ggsave(file = paste0(getwd(),
-                     '/figures/rf_importance_facet_top_n_',
-                     gsub('[[:punct:]]', '_', Sys.Date()), '.png')
-       , width = 5*2
-       , height = 6.5*1.5)
+# # save out
+# ggsave(file = paste0(getwd(),
+#                      '/figures/rf_importance_facet_top_n_',
+#                      gsub('[[:punct:]]', '_', Sys.Date()), '.png')
+#        , width = 5*2
+#        , height = 6.5*1.5)
 
-  
 
-#This one only the best 20 variable
-cforestImpPlot20 <- function(x) {
-  cforest_importance <<- v <- varimp(x)
-  v<-v[order(v)]
-  end<-length(v)
-  start<-end-20
-  dotchart(v[start:end],pch=19)
-}
-tic(); figRF_20 <- cforestImpPlot20(forest);toc() # ~165 seconds with 100 trees, takes 50 min with 2000 trees
+
 # TODO--getinto ggplot with colors or other symbols corrisponding to framework categories.
 #key variables: build_near_dest, build_Mean_distroad, build_p_building_300, build_Mean_elev_30m, build_Mean_elev_100m, build_area
 
-#how Owen codes partial plots
-#hung for me
-forest %>% 
+# TODO DHL - match colors 
+# how Owen codes partial plots
+# hung for me
+tic(); forest %>% 
   partial(pred.var = "build_near_dest") %>%
-  plotPartial(smooth = FALSE, lwd = 2, ylab = "Prob. of Destruction", xlim=c(0,150),ylim=c(0,0.5), xlab="Axis label")
+  plotPartial(smooth = FALSE, lwd = 2, ylab = "Prob. of Destruction", xlim=c(0,150),ylim=c(0,0.5), xlab="Axis label"); toc()
 
+# https://www.r-bloggers.com/2019/08/in-search-of-the-perfect-partial-plot/
 
 #doesn't work to save # Dexter, stopped here
 # 

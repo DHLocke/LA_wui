@@ -7,9 +7,6 @@ editor_options:
   chunk_output_type: console
 ---
 
-# TODO fit model with 'best' land cover instead of distance
-
-# TODO focus only on residential
 
 
 
@@ -314,8 +311,10 @@ build_a <- build %>% #retain only the 71 predictors of interest for final analys
        build_Mean_elev_100m    ,
         build_Mean_elev_30m    ,
   build_Mean_slope_100m_DEM    ,
-   build_Mean_slope_30m_DEM) %>% 
-  data.frame()
+   build_Mean_slope_30m_DEM,
+          build_DINS) %>% 
+  data.frame() %>%
+  mutate_if(is.character, as.factor) 
 
 
 
@@ -325,14 +324,15 @@ build_a <- build %>% #retain only the 71 predictors of interest for final analys
 # # deviance explained (D2), which is analogous to R-squared in linear regression for each variable.
 # # table1 contains a list of predictor variables for analysis and vectors to store the results for each variable 
 # 
-#  
+# 
+# 
 # (table1 <- list(names(build_a)) %>% #created a list of predictors
-#   data.frame() %>% 
+#   data.frame() %>%
 #   mutate(dev2 = 0, n2 = 0) %>%
 #   rename(upvar = c..damage_binary....build_area....build_DECKPORCHO....build_EAVES...) %>%
 #   data.frame())
-# 
-# # repurposed from Owne Price
+# # 
+# # # repurposed from Owne Price
 # dat.model <- data.frame(y = build_a$damage_binary, x = 0)
 # 
 # i<-0
@@ -345,14 +345,14 @@ build_a <- build %>% #retain only the 71 predictors of interest for final analys
 #     warning(varname, " not found in build_a", immediate. = TRUE)
 #     mod <- NULL
 #   }
-#   
+# 
 #   if (!is.null(mod)) {
 #     table1$n2[i] <- nrow(build_a) - sum(is.na(dat.model$x))
 #     table1$dev2[i] <- 100 * (mod$null.deviance - mod$deviance) / mod$null.deviance
 #   }
 # }
-# 
-# # TODO drop 'parcel_Perv_P' here or above
+
+# # TODO drop 'parcel_Perv_P' here or above; same with build_DINS
 # #read in variable descriptions
 # (tab_labs <- readxl::read_xlsx('data/Data LA Study 20211208.xlsx') %>%
 #   left_join(.
@@ -402,9 +402,9 @@ suggested organization (put one full model in a chunk then repeat with second mo
 
 # # code from Owen, this time using party
 # n_tree <- 2000 #use this for final analyses
-# #n_tree <- 100 #testing number of trees
-# tic(); binary_without_dins_cols <-cforest(damage_binary ~ ., 
-#                                   data = build_a %>% 
+# n_tree <- 100 #testing number of trees
+# tic(); binary_without_dins_cols <-cforest(damage_binary ~ .,
+#                                   data = build_a %>%
 #                                     tidylog::select( # dropping columns containing specific DINS data
 #                                             # very detailed but sparse (lots of NAs)
 #                                       !c(  build_DECKPORCHO
@@ -416,10 +416,10 @@ suggested organization (put one full model in a chunk then repeat with second mo
 #                                          , build_ROOFCONSTR
 #                                          , build_VEGCLEARAN
 #                                          , build_VENTSCREEN
-#                                          , build_WINDOWPANE    
+#                                          , build_WINDOWPANE
 #                                     ))
 #                                   ,controls=cforest_control(mtry=5, ntree = n_tree, mincriterion=0)); toc() #takes 12 min with full data set, settings here from Owen (DHL 7 mins with n_tree = 2000 )
-# 
+
 # #use this to save this Random Forest 
 # tic(); save(binary_without_dins_cols, file="../Massive_forests/binary_without_dins_cols.Rdata"); toc()
 
@@ -585,6 +585,96 @@ tic(); forest %>%
  
 #### ii binary outcome for just DINS-surveyed 
 ```{r} 
+
+
+# code from Owen, this time using party
+#n_tree <- 2000 #use this for final analyses
+n_tree <- 100 #testing number of trees
+#NOTE DHL - i need to remove build_DINS from the build_a dataset.
+tic(); binary_with_dins_cols <-cforest(damage_binary ~ .,
+                                  data = build_a %>% tidylog::select(!build_DINS)                                    
+                                  ,controls=cforest_control(mtry=5, ntree = n_tree, mincriterion=0)); toc() 
+#MHM takes 2 min with 100 trees, settings here from Owen (DHL 7 mins with n_tree = 2000 )
+
+# #when finalized use this to save this Random Forest 
+# tic(); save(binary_with_dins_cols, file="../Massive_forests/binary_with_dins_cols.Rdata"); toc()
+
+# #when finalized use this to load Random Forest
+#tic(); load(file="../Massive_forests/binary_with_dins_cols.Rdata"); toc() # ~40 seconds
+
+
+# from owen
+forest<-binary_with_dins_cols; rm(binary_with_dins_cols) # keeping Owen's naming conventions
+# # type change..
+build_a_df <- build_a  %>%  data.frame()
+tic(); build_a_df$predfor = predict(forest, OOB = TRUE); toc()
+build_a_df$predtrue<-build_a_df$predfor>0.340
+# #change names tic(); save(build_a_df, file="../Massive_forests/build_a_df.Rdata"); toc()
+#change names #tic(); load(file="../Massive_forests/build_a_df.Rdata"); toc() # ~40 seconds
+ 
+# preds |> hist()
+# preds |> summary()
+
+# build_a$predtrue <- test > .34 # TODO figureout where this threshold comes from
+# build_a$predtrue <- build_a$predfor>0.34 # TODO figureout where this threshold comes from
+#Dexter, I'm not having much luck finding this threshold. Is it just going from continuous predictor to binary outcome?
+#some potential relevant information online -  
+#https://cran.r-project.org/web/packages/party/party.pdf (pages 5 -7)
+#https://stats.stackexchange.com/questions/77290/does-party-package-in-r-provide-out-of-bag-estimates-of-error-for-random-forest
+#https://stackoverflow.com/questions/49893104/issue-with-caseweights-and-oob-prediction-using-cforest-from-the-party-package
+blob<-with(build_a_df, table(damage_binary, predtrue))
+blob
+round(100*(blob[1]+blob[4])/sum(blob),1) #overall accuracy
+round(100*(blob[3]/sum(blob)),1) #false negative rate
+round(100*(blob[2]/sum(blob)),1) #false pos rate
+# with 100 trees,the model had 91.8% accuracy with 2% false negative and 6% false positive rate - just checking is it ok that dataset unbalanced?
+
+# 
+ tic();varimp(forest);toc() # ~4 min with 100 trees, takes 84 min with 2000 trees! 
+
+#plot important variables
+#from Owen and ?https://favorableoutcomes.wordpress.com/2014/12/19/r-function-for-plotting-variable-importance-results-from-cforest-imlementation-of-random-forest-model/ ?
+cforestImpPlot <- function(x) {
+  cforest_importance <<- v <- varimp(x)
+  dotchart(v[order(v)])
+} 
+
+
+ tic(); plotsave <- cforestImpPlot(forest);toc() # ~362 seconds with 100 trees, takes XX min with 2000 trees 
+# 
+# #need to change name tic(); save(cforest_importance, file="../Massive_forests/cforest_importance"); toc()
+
+#ned to change name tic(); load(file="../Massive_forests/cforest_importance.Rdata"); toc()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#here here here
+
+
+
+
+
+
+
+
+
 tic()
 binary_with_dins_cols <- rpart(damage_binary ~ .
                                , data = build %>% 

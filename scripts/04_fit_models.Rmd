@@ -62,7 +62,6 @@ set.seed(19870630)
 ```
 
 
-
 ## 1 read in the data
 ```{r}
 # build <- read_csv(paste0(getwd(), '/output_data/building_2021-04-26.csv')) %>% glimpse
@@ -71,11 +70,12 @@ set.seed(19870630)
 # build <- read_csv(paste0(getwd(), '/output_data/building_2021-11-03.csv')) %>% glimpse
 #build <- read_csv(paste0(getwd(), '/output_data/building_2021-12-02.csv')) %>% glimpse
 
-build <- read_csv(paste0(getwd(), '/output_data/building_2021-12-22.csv')) %>% glimpse
+build <- read_csv(paste0(getwd(), '/output_data/building_2021-12-22.csv')) %>%
+  mutate_if(is.character, as.factor) |>  # need factors for analyses to come
+  glimpse()
 
-build %>%
-  mutate_if(is.character, as.factor) #need factors for analyses to come
 ```
+
 
 ## 2 fit models
 ### A univariate-logistic regression 
@@ -199,7 +199,6 @@ tic(); uni_log_mods <- build %>%
               min_AIC= var[which.min(AIC)],
               min_rmse= var[which.min(rmse)]) 
 )
-
 
 
 # # Is this needed or confusing?
@@ -378,7 +377,8 @@ build_a <- build %>% #retain only the 71 predictors of interest for final analys
 (tab_labs <- 
   read_csv(paste0(getwd(), '/data/Table_XX_Deviance_Explained.csv')))
 
-#next steps for getting table to look nice  type look up table, add alias name for reporting - is now in Data LA Study 20211208.xlsx
+# next steps for getting table to look nice  type look up table, add alias name for reporting - is now in Data LA Study 20211208.xlsx
+
 
 
 #output
@@ -513,14 +513,15 @@ cforest_importance_to_graph |> tail()
 
 
 # # graph importance by type and scale - faceted
-# (cforest_importance_to_graph |> 
-#   ggplot(aes(  x = `Variable Importance`
-#              , y = reorder(Alias, `Variable Importance`)
-#              , color  = Type)) + 
-#   geom_point(aes(shape = Type)) + 
-#   theme_bw() +
-#   facet_wrap(~Type, scales = 'free', ncol = 1) + 
-#   NULL -> importance_graph)
+(cforest_importance_to_graph |>
+  ggplot(aes(  x = `Variable Importance`
+             , y = reorder(Alias, `Variable Importance`)
+             , color  = Type)) +
+  geom_point(aes(shape = Type)) +
+  theme_bw() +
+  # theme(legend.position = 'bottom')
+  facet_wrap(~Type, scales = 'free_y', ncol = 1) +
+  NULL -> importance_graph)
 # 
 # ggsave(file = paste0(getwd(),
 #                      '/figures/rf_importance_facet_',
@@ -588,26 +589,30 @@ tic(); forest %>%
 
 
 # code from Owen, this time using party
-#n_tree <- 2000 #use this for final analyses
-n_tree <- 100 #testing number of trees
+n_tree <- 2000 #use this for final analyses
+# n_tree <- 100 #testing number of trees
 #NOTE DHL - i need to remove build_DINS from the build_a dataset.
+# DHL: I don't understand what is meant?
 tic(); binary_with_dins_cols <-cforest(damage_binary ~ .,
-                                  data = build_a %>% tidylog::select(!build_DINS)                                    
-                                  ,controls=cforest_control(mtry=5, ntree = n_tree, mincriterion=0)); toc() 
-#MHM takes 2 min with 100 trees, settings here from Owen (DHL 7 mins with n_tree = 2000 )
+                                  data = build_a %>% tidylog::select(!build_DINS)
+                                  , controls = cforest_control(mtry = 5, ntree = n_tree, mincriterion = 0)); toc() 
+# MHM takes 2 min with 100 trees, settings here from Owen
+# DHL takes 14 mins with 2000 trees
 
 # #when finalized use this to save this Random Forest 
-# tic(); save(binary_with_dins_cols, file="../Massive_forests/binary_with_dins_cols.Rdata"); toc()
+# # ~3.6 Gb - yikes
+# tic(); save(binary_with_dins_cols, file="../Massive_forests/binary_with_dins_cols.Rdata"); toc() # ~ 75 seconds
 
 # #when finalized use this to load Random Forest
-#tic(); load(file="../Massive_forests/binary_with_dins_cols.Rdata"); toc() # ~40 seconds
+# tic(); load(file="../Massive_forests/binary_with_dins_cols.Rdata"); toc() # ~ 30 seconds
 
 
 # from owen
 forest<-binary_with_dins_cols; rm(binary_with_dins_cols) # keeping Owen's naming conventions
+
 # # type change..
 build_a_df <- build_a  %>%  data.frame()
-tic(); build_a_df$predfor = predict(forest, OOB = TRUE); toc()
+tic(); build_a_df$predfor = predict(forest, OOB = TRUE); toc() # ~20 mins
 build_a_df$predtrue<-build_a_df$predfor>0.340
 # #change names tic(); save(build_a_df, file="../Massive_forests/build_a_df.Rdata"); toc()
 #change names #tic(); load(file="../Massive_forests/build_a_df.Rdata"); toc() # ~40 seconds
@@ -630,7 +635,7 @@ round(100*(blob[2]/sum(blob)),1) #false pos rate
 # with 100 trees,the model had 91.8% accuracy with 2% false negative and 6% false positive rate - just checking is it ok that dataset unbalanced?
 
 # 
- tic();varimp(forest);toc() # ~4 min with 100 trees, takes 84 min with 2000 trees! 
+tic();varimp(forest);toc() # ~53 mins
 
 #plot important variables
 #from Owen and ?https://favorableoutcomes.wordpress.com/2014/12/19/r-function-for-plotting-variable-importance-results-from-cforest-imlementation-of-random-forest-model/ ?

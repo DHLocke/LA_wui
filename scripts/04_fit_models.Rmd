@@ -354,12 +354,20 @@ build_a <- build %>% #retain only the 71 predictors of interest for final analys
 # # TODO drop 'parcel_Perv_P' here or above; same with build_DINS
 # #read in variable descriptions
 # (tab_labs <- readxl::read_xlsx('data/Data LA Study 20211208.xlsx') %>%
+#   mutate(Type = 
+#            case_when(
+#                Type == 'CON' ~ 'Construction'
+#              , Type == 'DEF' ~ 'Defensible Space'
+#              , Type == 'LAND'~ 'Landscape Attributes'
+#              , Type == 'TOPO'~ 'Topography'
+#              , Type == 'EXP' ~ 'Exposure'
+#              , TRUE ~ 'last thing')) %>% # Miranda to add last category, something meaningful
 #   left_join(.
 #             , table1 %>% filter(upvar != 'damage_binary')
 #             , by = c(`Variable name` = 'upvar')) %>%
 #   tidylog::select(Type
 #                   , `Variable name`
-#                   , Alias # added this 
+#                   , Alias # added this
 #                   , Deviance = dev2
 #                   , n = n2
 #                   , Scale
@@ -367,7 +375,7 @@ build_a <- build %>% #retain only the 71 predictors of interest for final analys
 #                   ) %>%
 #   arrange(Type, desc(Deviance)) %>%
 #   mutate_if(is.double, round, 3))
-# 
+
 # tab_labs %>%
 #    drop_na()%>%
 #   write_csv(paste0(getwd(), '/data/Table_XX_Deviance_Explained.csv'))
@@ -539,7 +547,8 @@ top_n <- 20
     ggplot(aes(  x = `Variable Importance`
                , y = reorder(Alias, `Variable Importance`)
                , color  = Type)) + 
-    geom_point(aes(shape = Scale), size = 3) + 
+    # geom_point(aes(shape = Scale), size = 3) + 
+    geom_point(size = 3) + 
     labs(y = 'Variable') + 
     scale_color_brewer(palette = 'Paired'
                        , direction = -1
@@ -572,7 +581,7 @@ tic(); forest %>%
 
 # https://www.r-bloggers.com/2019/08/in-search-of-the-perfect-partial-plot/
 
-#doesn't work to save # Dexter, stopped here
+# doesn't work to save # Dexter, stopped here
 # 
 # # 1. Open jpeg file
 # jpeg("rplot.jpg", width = 350, height = "350")

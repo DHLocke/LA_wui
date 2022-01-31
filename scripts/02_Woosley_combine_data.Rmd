@@ -492,6 +492,8 @@ test<-build %>%
 filter(build$build_near_exp<build$build_dist_to_build_ft_jod) %>%
   tidylog::select(ID_Build,build_dist_to_build_ft_jod,build_near_dest,build_near_exp)
 
+
+#HERE HERE HERE
 # #exporting new build data set
 # build %>% 
 #   write_csv(., paste0(getwd(), '/output_data/building_', Sys.Date(), '.csv'))

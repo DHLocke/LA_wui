@@ -417,40 +417,80 @@ build %<>%
 ```{r} 
 
 # rather than re-run all of the above building dataset, importing april csv and adding just distance to building
-# destroyed and building exposed
-# build <- read_csv(paste0(getwd(), '/output_data/building_2021-04-26.csv')) %>% glimpse
+# # destroyed and building exposed, 11,134 observations
+ build <- read_csv(paste0(getwd(), '/output_data/building_2021-04-26.csv')) %>% glimpse
+
+# processing to get to min distance to destroyed, has repeats and 5 dists, remove dupes
+min_dest2<- read_csv('data/Near_dest220131_2.csv') %>%  #distance to destroyed building;
+  # if this is 0, it is distance to self, value 2
+  dplyr::select(c(ID_Build=Buildings_ParcelID_DINS_ID_Build,near_dest=NEAR_DIST,Rank=NEAR_RANK)) %>%
+      filter(near_dest!=0) %>% #removes zeroes bc that is measuring distance to self
+  group_by(ID_Build) %>%
+  filter(near_dest == min(near_dest)) %>% #keeps smallest distance to building
+  ungroup()%>% dplyr::select(ID_Build,near_dest) %>% 
+  distinct()
+#  
+# # older processing on min_dest2 to check number of duplicates
+# min_dest2 %>% duplicated() %>% tabyl() #11140 are not duplicates
+# min_dest2 %>% distinct()%>%glimpse()#keeps only the 11140 that are unique
+
+
+# processing to get to min distance to exposed, has repeats and 5 dists, remove dupes
+min_exp2<- read_csv('data/Near_exp220131_2.csv') %>%  #distance to exposed building;
+  # if this is 0, it is distance to self, delete
+  dplyr::select(c(ID_Build=Buildings_ParcelID_DINS_ID_Build,near_exp=NEAR_DIST,Rank=NEAR_RANK)) %>%
+      filter(near_exp!=0) %>%
+  group_by(ID_Build) %>%
+  filter(near_exp == min(near_exp)) %>%
+  ungroup()%>% dplyr::select(ID_Build,near_exp)%>% 
+  distinct()
 
  
-# processing to get to min distance to destroyed
-min_dest<- read_csv('data/Near_dest210922.csv') %>%  #distance to destroyed building;
-  # if this is 0, it is distance to self, value 2
-  dplyr::select(c(IN_FID,Dist=NEAR_DIST,Rank=NEAR_RANK)) %>%
-    tidyr::pivot_wider(names_from = "Rank", names_prefix = "dest_",values_from = "Dist") %>%
-        mutate(near_dest =
-           case_when(dest_1==0 ~dest_2,
-                     dest_1>0~dest_1)) %>% 
-                         dplyr::select(IN_FID,near_dest)
+# older processing on min_exp2 to check number of duplicates
+# min_exp2 %>% duplicated() %>% tabyl() #11140 are not duplicates
+# min_exp2 %>% distinct()%>%glimpse()#keeps only the 11140 that are unique
 
+# processing to get to min distance to any building has repeats and 5 dists, remove dupes
+min_build<- read_csv('data/near_allbuild220131.csv') %>%  #distance to destroyed building;
+  # if this is 0, it is distance to self, delete
+  dplyr::select(c(ID_Build=Buildings_ParcelID_DINS_ID_Build,dist_build=NEAR_DIST,Rank=NEAR_RANK)) %>%
+      filter(dist_build!=0) %>%
+  group_by(ID_Build) %>%
+  filter(dist_build == min(dist_build)) %>%
+  ungroup()%>% dplyr::select(ID_Build,dist_build)%>% 
+  distinct()
 
-# Jan 31 2022 - had to add in field with ID Build to csv -Buildings_ParcelID_DINS_ID_Build
-#need to troubleshoot this import 
-min_exp<- read_csv('data/Near_exp220131.csv') %>%  #distance to exposed building
-  # if this is 0, it is distance to self,  value 2
-  # processing to get to min distance to exposed
-  dplyr::select(c(Buildings_ParcelID_DINS_ID_Build,Dist=NEAR_DIST,Rank=NEAR_RANK)) %>%
-    tidyr::pivot_wider(names_from = "Rank", names_prefix = "exp_", values_from = "Dist") %>%
-        mutate(near_exp =
-           case_when(exp_1==0 ~exp_2,
-                     exp_1>0~exp_1)) %>%                          dplyr::select(Buildings_ParcelID_DINS_ID_Build,near_exp)
+# older processing on min_exp2 to check number of duplicates
+# min_build %>% duplicated() %>% tabyl() #11140 are not duplicates
+# min_build %>% distinct()%>%glimpse()#keeps only the 11140 that are unique
 
 
 build %<>% 
-  left_join(., min_dest, by = c('ID_Build' = 'IN_FID')) %>% 
-  left_join(., min_exp, by = c('ID_Build' = 'Buildings_ParcelID_DINS_ID_Build')) %>% 
+  left_join(., min_dest2, by = c('ID_Build' = 'ID_Build')) %>% 
+  left_join(., min_exp2, by = c('ID_Build' = 'ID_Build')) %>% 
+  left_join(., min_build, by = c('ID_Build' = 'ID_Build')) %>% 
   rename(build_near_dest = near_dest,
-         build_near_exp = near_exp)
+         build_near_exp = near_exp,
+         build_near_build=dist_build)
 
-build %$% cor(build_near_dest, build_near_exp, method=c("pearson")) #highly correlated
+#testing to see if any NAs for near_dest or near_exp - are none
+# test <-
+#   build %>%
+#   filter_at(vars(starts_with("build_near")), any_vars(is.na(.)))
+
+table(build$build_near_exp>build$build_near_dest) #build_near_dest is always equal to or bigger than build_near_exp
+plot(build$build_near_exp,build$build_near_dest) #highly correlated 
+
+
+table(build$build_near_exp>=build$build_near_build)
+plot(build$build_near_build,build$build_near_exp) #does this seem right? #Dexter 
+
+#different building distance measures, #Dexter - talk next steps
+table(build$build_near_exp<build$build_dist_to_build_ft_jod) #Dexter - how can build_near_exp be smaller than distance to another building?
+table(build$build_near_build==build$build_dist_to_build_ft_jod)
+test<-build %>% 
+filter(build$build_near_exp<build$build_dist_to_build_ft_jod) %>%
+  tidylog::select(ID_Build,build_dist_to_build_ft_jod,build_near_dest,build_near_exp)
 
 # #exporting new build data set
 # build %>% 

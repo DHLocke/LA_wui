@@ -71,8 +71,9 @@ set.seed(19870630)
 #build <- read_csv(paste0(getwd(), '/output_data/building_2021-12-02.csv')) %>% glimpse
 
 build <- read_csv(paste0(getwd(), '/output_data/building_2021-12-22.csv')) %>%
-  mutate_if(is.character, as.factor) |>  # need factors for analyses to come
+  mutate_if(is.character, as.factor) %>% # need factors for analyses to come
   glimpse()
+
 
 ```
 

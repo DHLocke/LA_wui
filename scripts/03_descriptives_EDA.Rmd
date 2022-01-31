@@ -101,6 +101,12 @@ build <- read_csv(paste0(getwd(), '/output_data/building_2021-12-22.csv')) %>% g
 ## 2 descriptive statistics
 ```{r eval=FALSE, include=FALSE}
 
+#looking at build_near_dest and build_dist_to_build_ft_jod
+test<-build %>% filter(build_near_dest<build_dist_to_build_ft_jod)
+View(test)
+
+table(build$build$)
+
 # generates report of univariate distributions with added info
 system.time(makeDataReport(build, file = paste0(getwd(), '/output_data/dataMaid_',
                                     gsub('[[:punct:]]', '_', Sys.time()), '.Rmd')))

@@ -432,21 +432,21 @@ min_dest<- read_csv('data/Near_dest210922.csv') %>%  #distance to destroyed buil
                          dplyr::select(IN_FID,near_dest)
 
 
-
-min_exp<- read_csv('data/Near_exp210922.csv') %>%  #distance to exposed building
+# Jan 31 2022 - had to add in field with ID Build to csv -Buildings_ParcelID_DINS_ID_Build
+#need to troubleshoot this import 
+min_exp<- read_csv('data/Near_exp220131.csv') %>%  #distance to exposed building
   # if this is 0, it is distance to self,  value 2
   # processing to get to min distance to exposed
-  dplyr::select(c(IN_FID,Dist=NEAR_DIST,Rank=NEAR_RANK)) %>%
+  dplyr::select(c(Buildings_ParcelID_DINS_ID_Build,Dist=NEAR_DIST,Rank=NEAR_RANK)) %>%
     tidyr::pivot_wider(names_from = "Rank", names_prefix = "exp_", values_from = "Dist") %>%
         mutate(near_exp =
            case_when(exp_1==0 ~exp_2,
-                     exp_1>0~exp_1)) %>% 
-                         dplyr::select(IN_FID,near_exp)
+                     exp_1>0~exp_1)) %>%                          dplyr::select(Buildings_ParcelID_DINS_ID_Build,near_exp)
 
 
 build %<>% 
   left_join(., min_dest, by = c('ID_Build' = 'IN_FID')) %>% 
-  left_join(., min_exp, by = c('ID_Build' = 'IN_FID')) %>% 
+  left_join(., min_exp, by = c('ID_Build' = 'Buildings_ParcelID_DINS_ID_Build')) %>% 
   rename(build_near_dest = near_dest,
          build_near_exp = near_exp)
 

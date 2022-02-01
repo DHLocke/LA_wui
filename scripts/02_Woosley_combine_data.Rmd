@@ -413,125 +413,6 @@ build %<>%
 ```
 
 
-### e adding in building distance to destroyed and exposed by fire
-```{r} 
-
-# rather than re-run all of the above building dataset, importing april csv and adding just distance to building
-# # destroyed and building exposed, 11,134 observations
-build <- read_csv(paste0(getwd(), '/output_data/building_2021-04-26.csv')) %>% glimpse
-
-# processing to get to min distance to destroyed, has repeats and 5 dists, remove dupes
-min_dest2 <- read_csv('data/Near_dest220131_2.csv') %>%  #distance to destroyed building;
-  # if this is 0, it is distance to self, value 2
-  dplyr::select(c(ID_Build=Buildings_ParcelID_DINS_ID_Build
-                  , near_dest=NEAR_DIST
-                  , Rank=NEAR_RANK)) %>%
-  filter(near_dest != 0) %>% #removes zeroes bc that is measuring distance to self
-  group_by(ID_Build) %>%
-  filter(near_dest == min(near_dest)) %>% #keeps smallest distance to building
-  # filter(near_dest == near_dest[which.min(near_dest)]) %>% #keeps smallest distance to building
-  ungroup() %>% 
-  dplyr::select(ID_Build, near_dest) %>% 
-  distinct()
-  
-# # older processing on min_dest2 to check number of duplicates
-# min_dest2 %>% duplicated() %>% tabyl() # 011140 are not duplicates
-# min_dest2 %>% distinct() %>% glimpse() # keeps only the 11140 that are unique
-
-
-# processing to get to min distance to exposed, has repeats and 5 dists, remove dupes
-min_exp2 <- read_csv('data/Near_exp220131_2.csv') %>%  #distance to exposed building;
-  # if this is 0, it is distance to self, delete
-  dplyr::select(c(  ID_Build = Buildings_ParcelID_DINS_ID_Build
-                  , near_exp = NEAR_DIST
-                  , Rank = NEAR_RANK)) %>%
-  filter(near_exp != 0) %>%
-  group_by(ID_Build) %>%
-  filter(near_exp == min(near_exp)) %>%
-  ungroup() %>% 
-  dplyr::select(ID_Build, near_exp)%>% 
-  distinct()
-
- 
-# older processing on min_exp2 to check number of duplicates
-# min_exp2 %>% duplicated() %>% tabyl() #11140 are not duplicates
-# min_exp2 %>% distinct()%>%glimpse()#keeps only the 11140 that are unique
-
-# processing to get to min distance to any building has repeats and 5 dists, remove dupes
-min_build <- read_csv('data/near_allbuild220131.csv') %>%  #distance to destroyed building;
-  # if this is 0, it is distance to self, delete
-  dplyr::select(c(  ID_Build = Buildings_ParcelID_DINS_ID_Build
-                  , dist_build = NEAR_DIST
-                  , Rank = NEAR_RANK)) %>%
-  filter(dist_build != 0) %>%
-  group_by(ID_Build) %>%
-  filter(dist_build == min(dist_build)) %>%
-  ungroup() %>% 
-  dplyr::select(ID_Build, dist_build) %>% 
-  distinct()
-
-# older processing on min_exp2 to check number of duplicates
-# min_build %>% duplicated() %>% tabyl() #11140 are not duplicates
-# min_build %>% distinct()%>%glimpse()#keeps only the 11140 that are unique
-
-
-build %<>% 
-  left_join(., min_dest2, by = c('ID_Build' = 'ID_Build')) %>% 
-  left_join(., min_exp2, by = c('ID_Build' = 'ID_Build')) %>% 
-  left_join(., min_build, by = c('ID_Build' = 'ID_Build')) %>% 
-  rename(build_near_dest  = near_dest,
-         build_near_exp   = near_exp,
-         build_near_build = dist_build)
-
-#testing to see if any NAs for near_dest or near_exp - are none
-# test <-
-#   build %>%
-#   filter_at(vars(starts_with("build_near")), any_vars(is.na(.)))
-
-table(build$build_near_exp>build$build_near_dest) #build_near_dest is always equal to or bigger than build_near_exp
-plot(build$build_near_exp,build$build_near_dest) #highly correlated 
-
-
-table(build$build_near_exp>=build$build_near_build)
-plot(build$build_near_build,build$build_near_exp) #does this seem right? #Dexter 
-
-build |> 
-  ggplot(aes(build_near_build, build_near_exp)) + 
-  geom_point() + 
-  geom_abline() + 
-  coord_fixed() + 
-  NULL
-
-# how can exposed be closer than any building at all?
-build |> 
-  filter(build_near_exp > build_near_build)
-
-#different building distance measures, #Dexter - talk next steps
-table(build$build_near_exp < build$build_dist_to_build_ft_jod) #Dexter - how can build_near_exp be smaller than distance to another building?
-table(build$build_near_build == build$build_dist_to_build_ft_jod)
-
-build |> 
-  ggplot(aes(build_near_build, build_dist_to_build_ft_jod)) + 
-  geom_point() + 
-  geom_abline() + 
-  coord_fixed() + 
-  NULL
-
-test <- build %>% 
-  filter(build$build_near_exp < build$build_dist_to_build_ft_jod) %>%
-    tidylog::select(ID_Build, build_dist_to_build_ft_jod, build_near_dest, build_near_exp)
-```
-
-### f read out/ read in
-```{r}
-# # exporting new build data set
-# build %>%
-#   write_csv(., paste0(getwd(), '/output_data/building_', Sys.Date(), '.csv'))
-
-(build <- read_csv(paste0(getwd(), '/output_data/building_2022-02-01.csv')))
-
-
-```
 
 
 ## 3 parcels
@@ -978,6 +859,123 @@ build_exp %>%
 ```
 
 
+
+## 6 CORRECT building distance to destroyed and exposed by fire, redone Feb 2022
+```{r} 
+
+# rather than re-run all of the above building dataset, importing latest (Dec 2021 data above) and 
+# deleting incorrect columns. will add correct ones below.
+
+# next to final build data, 11,181 observations, 82 cols
+build <- read_csv(paste0(getwd(), '/output_data/building_2021-12-22.csv')) %>% 
+select(!c(build_dist_to_build_ft_jod, build_near_dest, build_near_exp))%>%  glimpse()
+
+#are some duplicate building IDs, #Dexter what else to do about these duplicates??
+duplicated(build$ID_Build) %>% tabyl()
+test<-build[duplicated(build$ID_Build), ]
+View(test)
+
+#this is removing duplicates based on ID_Build, but I don't know if more thoughful approach is needed, #Dexter
+build<-build[!duplicated(build$ID_Build), ] #11,134 observations
+
+
+# processing to get to min distance to destroyed, has repeats and 5 dists, remove dupes
+min_dest2 <- read_csv('data/Near_dest220131_2.csv') %>%  #distance to destroyed building;
+  # if this is 0, it is distance to self, value 2
+  dplyr::select(c(ID_Build=Buildings_ParcelID_DINS_ID_Build
+                  , near_dest=NEAR_DIST
+                  , Rank=NEAR_RANK)) %>%
+  filter(near_dest != 0) %>% #removes zeroes bc that is measuring distance to self
+  group_by(ID_Build) %>%
+  filter(near_dest == min(near_dest)) %>% #keeps smallest distance to building
+  # filter(near_dest == near_dest[which.min(near_dest)]) %>% #keeps smallest distance to building
+  ungroup() %>% 
+  dplyr::select(ID_Build, near_dest) %>% 
+  distinct()
+  
+# # older processing on min_dest2 to check number of duplicates
+# min_dest2 %>% duplicated() %>% tabyl() # 011140 are not duplicates
+# min_dest2 %>% distinct() %>% glimpse() # keeps only the 11140 that are unique
+
+
+# processing to get to min distance to exposed, has repeats and 5 dists, remove dupes
+min_exp2 <- read_csv('data/Near_exp220131_2.csv') %>%  #distance to exposed building;
+  # if this is 0, it is distance to self, delete
+  dplyr::select(c(  ID_Build = Buildings_ParcelID_DINS_ID_Build
+                  , near_exp = NEAR_DIST
+                  , Rank = NEAR_RANK)) %>%
+  filter(near_exp != 0) %>%
+  group_by(ID_Build) %>%
+  filter(near_exp == min(near_exp)) %>%
+  ungroup() %>% 
+  dplyr::select(ID_Build, near_exp)%>% 
+  distinct()
+
+ 
+# older processing on min_exp2 to check number of duplicates
+# min_exp2 %>% duplicated() %>% tabyl() #11140 are not duplicates
+# min_exp2 %>% distinct()%>%glimpse()#keeps only the 11140 that are unique
+
+# processing to get to min distance to any building has repeats and 5 dists, remove dupes
+min_build <- read_csv('data/near_allbuild220131.csv') %>%  #distance to destroyed building;
+  # if this is 0, it is distance to self, delete
+  dplyr::select(c(  ID_Build = Buildings_ParcelID_DINS_ID_Build
+                  , dist_build = NEAR_DIST
+                  , Rank = NEAR_RANK)) %>%
+  filter(dist_build != 0) %>%
+  group_by(ID_Build) %>%
+  filter(dist_build == min(dist_build)) %>%
+  ungroup() %>% 
+  dplyr::select(ID_Build, dist_build) %>% 
+  distinct()
+
+# older processing on min_exp2 to check number of duplicates
+# min_build %>% duplicated() %>% tabyl() #11140 are not duplicates
+# min_build %>% distinct()%>%glimpse()#keeps only the 11140 that are unique
+
+
+build %<>% 
+  left_join(., min_dest2, by = c('ID_Build' = 'ID_Build')) %>% 
+  left_join(., min_exp2, by = c('ID_Build' = 'ID_Build')) %>% 
+  left_join(., min_build, by = c('ID_Build' = 'ID_Build')) %>% 
+  rename(build_near_dest  = near_dest, #nearest distance to destroyed building in feet
+         build_near_exp   = near_exp, #nearest distance to exposed building in feet
+         build_near_build = dist_build) #nearest distance to any building in feet
+
+#testing to see if any NAs for near_dest or near_exp - are none
+# test <-
+#   build %>%
+#   filter_at(vars(starts_with("build_near")), any_vars(is.na(.)))
+
+#tables and figures to explore different building distance measures
+table(build$build_near_exp>build$build_near_dest) #build_near_dest is always equal to or bigger than build_near_exp
+plot(build$build_near_exp,build$build_near_dest) #highly correlated 
+ 
+plot(build$build_near_build,build$build_near_exp)  
+build |> 
+  ggplot(aes(build_near_build, build_near_exp)) + 
+  geom_point() + 
+  geom_abline() + 
+  coord_fixed() + 
+  NULL
+
+# Phew, there are no exposed buildings closer than near_build 
+test<-build %>% 
+  filter(build_near_exp < build_near_build)
+
+ 
+```
+
+### a read out/ read in
+```{r}
+# # exporting new build data set 11,134 obs, Columns: 85
+build %>% glimpse()
+ build %>%
+   write_csv(., paste0(getwd(), '/output_data/building_', Sys.Date(), '.csv')) #output_data/building_2022-02-01.csv
+
+
+
+```
 
 
 ```{r, citations}

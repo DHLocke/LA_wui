@@ -70,7 +70,7 @@ set.seed(19870630)
 # build <- read_csv(paste0(getwd(), '/output_data/building_2021-11-03.csv')) %>% glimpse
 #build <- read_csv(paste0(getwd(), '/output_data/building_2021-12-02.csv')) %>% glimpse
 
-build <- read_csv(paste0(getwd(), '/output_data/building_2021-12-22.csv')) %>%
+build <- read_csv(paste0(getwd(), '/output_data/building_2022-02-01.csv')) %>%
   mutate_if(is.character, as.factor) %>% # need factors for analyses to come
   glimpse()
 
@@ -84,7 +84,7 @@ build <- read_csv(paste0(getwd(), '/output_data/building_2021-12-22.csv')) %>%
 
 tic(); uni_log_mods <- build %>%
   filter(parcel_UseType == 'Residential') %>% 
-  nest(data=everything()) %>%
+  nest(data=everything()) %>% #Dexter - this doesn't work for me, 2/2/22
   # nest()%>%
   mutate(
     # ~landscape position
@@ -142,7 +142,7 @@ tic(); uni_log_mods <- build %>%
     log_build_near_dist_dest= map(., ~glm(damage_binary ~ build_near_dest,family = binomial, data = data.frame(.))),
     
     # nearest distance to any building
-    log_build_near_dist_build = map(., ~glm(damage_binary ~ build_dist_to_build_ft_jod,family = binomial, data = data.frame(.)))
+    log_build_near_dist_build = map(., ~glm(damage_binary ~ build_near_build,family = binomial, data = data.frame(.)))
     ) %>%
   dplyr::select(-data) %>% 
   rowid_to_column() %>% 
@@ -169,7 +169,7 @@ tic(); uni_log_mods <- build %>%
 
 
 # which distance provides the best fit per variable?
-# in the case of build_near_dest and build_dist_to_build_ft_jod, pick between destroyed or not
+# in the case of build_near_dest and build_near_build, pick between destroyed or not
 (
   best_dist <- gof %>% 
     group_by(var) %>% 
@@ -222,7 +222,7 @@ tic(); uni_log_mods <- build %>%
     
     anova(log_near_dest, log_near_exp)
 
-# destroyed is better, *JUST* like Miranda said it was
+# destroyed is STILL better,Feb 2022
 compare_performance(log_near_dest, log_near_exp, rank = TRUE)
 
 
@@ -253,7 +253,7 @@ build_a <- build %>% #retain only the 71 predictors of interest for final analys
            build_VENTSCREEN    ,
            build_WINDOWPANE    ,
           parcel_year_built    ,
- build_dist_to_build_ft_jod    ,
+ build_near_build    ,
     build_has_tree_overhang    ,
        build_min_dist_shrub    ,
         build_min_dist_tree    ,
@@ -319,7 +319,7 @@ build_a <- build %>% #retain only the 71 predictors of interest for final analys
 
 
 ####Univariate models and deviance calcs
-#commented out this work and read in table of deviance below
+# WORKING ON commented out this work and read in table of deviance below
 # # for building materials we used a logit link and specified a binomial response, then calculated and compared the
 # # deviance explained (D2), which is analogous to R-squared in linear regression for each variable.
 # # table1 contains a list of predictor variables for analysis and vectors to store the results for each variable 
@@ -331,8 +331,8 @@ build_a <- build %>% #retain only the 71 predictors of interest for final analys
 #   mutate(dev2 = 0, n2 = 0) %>%
 #   rename(upvar = c..damage_binary....build_area....build_DECKPORCHO....build_EAVES...) %>%
 #   data.frame())
-# # 
-# # # repurposed from Owne Price
+# #
+# # repurposed from Owne Price
 # dat.model <- data.frame(y = build_a$damage_binary, x = 0)
 # 
 # i<-0
@@ -351,11 +351,11 @@ build_a <- build %>% #retain only the 71 predictors of interest for final analys
 #     table1$dev2[i] <- 100 * (mod$null.deviance - mod$deviance) / mod$null.deviance
 #   }
 # }
-
-# # TODO drop 'parcel_Perv_P' here or above; same with build_DINS
-# #read in variable descriptions
+# 
+# # # TODO drop 'parcel_Perv_P' here or above; same with build_DINS
+# # #read in variable descriptions
 # (tab_labs <- readxl::read_xlsx('data/Data LA Study 20211208.xlsx') %>%
-#   mutate(Type = 
+#   mutate(Type =
 #            case_when(
 #                Type == 'CON' ~ 'Construction'
 #              , Type == 'DEF' ~ 'Defensible Space'
@@ -374,15 +374,16 @@ build_a <- build %>% #retain only the 71 predictors of interest for final analys
 #                   , Scale
 #                   , Source
 #                   ) %>%
-#   arrange(Type, desc(Deviance)) %>%
+#   arrange(Type, desc(Deviance)) %>% 
 #   mutate_if(is.double, round, 3))
-
+# 
 # tab_labs %>%
 #    drop_na()%>%
 #   write_csv(paste0(getwd(), '/data/Table_XX_Deviance_Explained.csv'))
 
 
 # reading in table of deviance explained, work done and commented out above
+# redone in Feb 2022
 (tab_labs <- 
   read_csv(paste0(getwd(), '/data/Table_XX_Deviance_Explained.csv')))
 
@@ -390,9 +391,9 @@ build_a <- build %>% #retain only the 71 predictors of interest for final analys
 
 
 
-#output
- # tab_labs %>% 
- #   write_csv('data/high_deviance_explained_bivariates.csv')
+# output in Feb 2022
+#  tab_labs %>%
+#    write_csv('data/high_deviance_explained_bivariates.csv')
 
 # ended __________
 
@@ -410,8 +411,8 @@ suggested organization (put one full model in a chunk then repeat with second mo
 # binary outcome random forest for all obs, drop DINS columns
 
 # # code from Owen, this time using party
-# n_tree <- 2000 #use this for final analyses
-# n_tree <- 100 #testing number of trees
+#  n_tree <- 2000 #use this for final analyses
+# # n_tree <- 100 #testing number of trees
 # tic(); binary_without_dins_cols <-cforest(damage_binary ~ .,
 #                                   data = build_a %>%
 #                                     tidylog::select( # dropping columns containing specific DINS data
@@ -426,54 +427,41 @@ suggested organization (put one full model in a chunk then repeat with second mo
 #                                          , build_VEGCLEARAN
 #                                          , build_VENTSCREEN
 #                                          , build_WINDOWPANE
+#                                          , build_DINS
 #                                     ))
-#                                   ,controls=cforest_control(mtry=5, ntree = n_tree, mincriterion=0)); toc() #takes 12 min with full data set, settings here from Owen (DHL 7 mins with n_tree = 2000 )
+#                                   ,controls=cforest_control(mtry=5, ntree = n_tree, mincriterion=0)); toc() #takes 8 min with full data set, settings here from Owen (DHL 7 mins with n_tree = 2000 )
+# 
+# # #use this to save this Random Forest 
+# # tic(); save(binary_without_dins_cols, file="../Massive_forests/binary_without_dins_cols.Rdata"); toc()
 
-# #use this to save this Random Forest 
-# tic(); save(binary_without_dins_cols, file="../Massive_forests/binary_without_dins_cols.Rdata"); toc()
-
-tic(); load(file="../Massive_forests/binary_without_dins_cols.Rdata"); toc() # ~40 seconds
+tic(); load(file="../Massive_forests/binary_without_dins_cols.Rdata"); toc() # ~100 seconds
 
 # from owen
 forest<-binary_without_dins_cols; rm(binary_without_dins_cols) # keeping Owen's naming conventions
 
-# tic();preds <- predict(forest, OOB = TRUE);toc() #with 100 trees, time is 180 sec, ~20 mins with 2000 trees
+ tic();preds <- predict(forest, OOB = TRUE);toc() #with 100 trees, time is 180 sec, ~49 mins with 2000 trees
 
-# # type change..
-# build_a_df <- build_a |> data.frame()
-# tic(); build_a_df$predfor = predict(forest, OOB = TRUE); toc() 
+ # type change..
+ build_a_df <- build_a  %>% data.frame()
+ tic(); build_a_df$predfor = predict(forest, OOB = TRUE); toc() #41 min
+ build_a_df$predtrue <- build_a_df$predfor>0.1170289 #TODO Add in work to get 0.117 
 
-# tic(); save(build_a_df, file="../Massive_forests/build_a_df.Rdata"); toc()
-
+tic(); save(build_a_df, file="../Massive_forests/build_a_df.Rdata"); toc()
 tic(); load(file="../Massive_forests/build_a_df.Rdata"); toc() # ~40 seconds
+ 
+ preds %>% hist()
+ preds %>% summary()
 
 
-
-# combdat$predfor <- predict(forest, OOB = TRUE)
-# combdat$predtrue <- combdat$predfor>0.340
-
-# # trying to figure out a binary (0,1) prediction
-# tic();build_a$predfor <- predict(forest, type='prob', OOB = TRUE);toc() #with 100 trees, time is 180 sec
-
-# preds |> hist()
-# preds |> summary()
-
-# build_a$predtrue <- test > .34 # TODO figureout where this threshold comes from
-# build_a$predtrue <- build_a$predfor>0.34 # TODO figureout where this threshold comes from
-#Dexter, I'm not having much luck finding this threshold. Is it just going from continuous predictor to binary outcome?
-#some potential relevant information online -  
-#https://cran.r-project.org/web/packages/party/party.pdf (pages 5 -7)
-#https://stats.stackexchange.com/questions/77290/does-party-package-in-r-provide-out-of-bag-estimates-of-error-for-random-forest
-#https://stackoverflow.com/questions/49893104/issue-with-caseweights-and-oob-prediction-using-cforest-from-the-party-package
 blob<-with(build_a_df, table(damage_binary, predtrue))
 blob
 round(100*(blob[1]+blob[4])/sum(blob),1) #overall accuracy
 round(100*(blob[3]/sum(blob)),1) #false negative rate
 round(100*(blob[2]/sum(blob)),1) #false pos rate
-# with 100 trees,the model had 89.9% accuracy with 2.5% false negative and 7.6% false positive rate - just checking is it ok that dataset unbalanced?
+# with 2000 trees,the model had 76% accuracy with 23.1% false negative and 0.9% false positive rate - just checking is it ok that dataset unbalanced?
 
 # DHL 23 mins 
-# tic();varimp(forest);toc() # ~90 seconds with 100 trees, takes 84 min with 2000 trees! 
+ tic();varimp(forest);toc() # ~90 seconds with 100 trees, takes 84 min with 2000 trees! 
 
 #plot important variables
 #from Owen and ?https://favorableoutcomes.wordpress.com/2014/12/19/r-function-for-plotting-variable-importance-results-from-cforest-imlementation-of-random-forest-model/ ?
@@ -482,36 +470,36 @@ cforestImpPlot <- function(x) {
   dotchart(v[order(v)])
 } 
 
-
-# tic(); cforest_importance <- cforestImpPlot(forest);toc() # ~165 seconds with 100 trees, takes 50 min with 2000 trees, DHL: 30 mins with 2000
-# 
-# tic(); save(cforest_importance, file="../Massive_forests/cforest_importance"); toc()
+#Dexter this isn't saving for me :((((, why?! I can run the code and generate hte figure but cforest_importance is empty
+ tic(); cforest_importance <- cforestImpPlot(forest);toc() # ~165 seconds with 100 trees, takes 50 min with 2000 trees, DHL: 30 mins with 2000
+ 
+#tic(); save(cforest_importance, file="../Massive_forests/cforest_importance"); toc()
 
 tic(); load(file="../Massive_forests/cforest_importance.Rdata"); toc()
 
 # graph importance
 cforest_importance
 (
-  cforest_importance |> 
-    data.frame() |> 
-    rownames_to_column(var = 'Variable name') |> 
-    tibble() |> 
-    rename('Variable Importance' = cforest_importance) |> 
+  cforest_importance %>% 
+    data.frame() %>% 
+    rownames_to_column(var = 'Variable name') %>% 
+    tibble() %>% 
+    rename('Variable Importance' = cforest_importance) %>% 
     left_join(
-      tab_labs |> 
-        tidylog::select(`Variable name`, Alias, Type, Scale)) |> 
+      tab_labs %>% 
+        tidylog::select(`Variable name`, Alias, Type, Scale)) %>% 
     arrange(desc('Variable Importance')) -> cforest_importance_to_graph)
 
-cforest_importance_to_graph |> tail()
+cforest_importance_to_graph %>% tail()
 
 # # graph importance by type and scale
-# (cforest_importance_to_graph |> 
-#   ggplot(aes(  x = `Variable Importance`
-#              , y = reorder(Alias, `Variable Importance`)
-#              , color  = Scale)) + 
-#   geom_point(aes(shape = Type)) + 
-#   theme_bw() +
-#   NULL -> importance_graph)
+(cforest_importance_to_graph %>%
+  ggplot(aes(  x = `Variable Importance`
+             , y = reorder(Alias, `Variable Importance`)
+             , color  = Scale)) +
+  geom_point(aes(shape = Type)) +
+  theme_bw() +
+  NULL -> importance_graph)
 # 
 # ggsave(file = paste0(getwd(),
 #                      '/figures/rf_importance_',
@@ -522,7 +510,7 @@ cforest_importance_to_graph |> tail()
 
 
 # # graph importance by type and scale - faceted
-(cforest_importance_to_graph |>
+(cforest_importance_to_graph %>%
   ggplot(aes(  x = `Variable Importance`
              , y = reorder(Alias, `Variable Importance`)
              , color  = Type)) +
@@ -543,8 +531,8 @@ cforest_importance_to_graph |> tail()
 # color for type and symbol for scale
 top_n <- 20
 (
-  cforest_importance_to_graph |> 
-    slice(1:top_n) |> 
+  cforest_importance_to_graph %>% 
+    slice(1:top_n) %>% 
     ggplot(aes(  x = `Variable Importance`
                , y = reorder(Alias, `Variable Importance`)
                , color  = Type)) + 
@@ -594,19 +582,17 @@ tic(); forest %>%
 # dev.off()
 ```
  
-#### ii binary outcome for just DINS-surveyed 
+#### ii binary outcome for DINS data 
 ```{r} 
 
 
 # code from Owen, this time using party
 n_tree <- 2000 #use this for final analyses
-# n_tree <- 100 #testing number of trees
-#NOTE DHL - i need to remove build_DINS from the build_a dataset.
-# DHL: I don't understand what is meant?
+n_tree <- 100 #testing number of trees
 tic(); binary_with_dins_cols <-cforest(damage_binary ~ .,
                                   data = build_a %>% tidylog::select(!build_DINS)
                                   , controls = cforest_control(mtry = 5, ntree = n_tree, mincriterion = 0)); toc() 
-# MHM takes 2 min with 100 trees, settings here from Owen
+# MHM takes 3 min with 100 trees, settings here from Owen
 # DHL takes 14 mins with 2000 trees
 
 # #when finalized use this to save this Random Forest 
@@ -623,26 +609,19 @@ forest<-binary_with_dins_cols; rm(binary_with_dins_cols) # keeping Owen's naming
 # # type change..
 build_a_df <- build_a  %>%  data.frame()
 tic(); build_a_df$predfor = predict(forest, OOB = TRUE); toc() # ~20 mins
-build_a_df$predtrue<-build_a_df$predfor>0.340
+build_a_df$predtrue<-build_a_df$predfor>0.1170289
 # #change names tic(); save(build_a_df, file="../Massive_forests/build_a_df.Rdata"); toc()
 #change names #tic(); load(file="../Massive_forests/build_a_df.Rdata"); toc() # ~40 seconds
  
-# preds |> hist()
-# preds |> summary()
-
-# build_a$predtrue <- test > .34 # TODO figureout where this threshold comes from
-# build_a$predtrue <- build_a$predfor>0.34 # TODO figureout where this threshold comes from
-#Dexter, I'm not having much luck finding this threshold. Is it just going from continuous predictor to binary outcome?
-#some potential relevant information online -  
-#https://cran.r-project.org/web/packages/party/party.pdf (pages 5 -7)
-#https://stats.stackexchange.com/questions/77290/does-party-package-in-r-provide-out-of-bag-estimates-of-error-for-random-forest
-#https://stackoverflow.com/questions/49893104/issue-with-caseweights-and-oob-prediction-using-cforest-from-the-party-package
+preds %>% hist()
+preds %>% summary()
+ 
 blob<-with(build_a_df, table(damage_binary, predtrue))
 blob
 round(100*(blob[1]+blob[4])/sum(blob),1) #overall accuracy
 round(100*(blob[3]/sum(blob)),1) #false negative rate
 round(100*(blob[2]/sum(blob)),1) #false pos rate
-# with 100 trees,the model had 91.8% accuracy with 2% false negative and 6% false positive rate - just checking is it ok that dataset unbalanced?
+# with 100 trees,the model had 77.4% accuracy with 22.2% false negative and 0.4% false positive rate - just checking is it ok that dataset unbalanced?
 
 # 
 tic();varimp(forest);toc() # ~53 mins
@@ -655,7 +634,8 @@ cforestImpPlot <- function(x) {
 } 
 
 
- tic(); plotsave <- cforestImpPlot(forest);toc() # ~362 seconds with 100 trees, takes XX min with 2000 trees 
+ 
+tic(); plotsave <- cforestImpPlot(forest);toc() # ~362 seconds with 100 trees, takes XX min with 2000 trees 
 # 
 # #need to change name tic(); save(cforest_importance, file="../Massive_forests/cforest_importance"); toc()
 
@@ -1104,7 +1084,7 @@ log_build_reg_data <- build %>%
                   , build_perc_overhang
                 
                   # , build_dist_angle
-                   , build_dist_to_build_ft_jod
+                   , build_near_build
                   # , build_dist_to_build_ft 
                   , build_near_dest
                   
@@ -1158,7 +1138,7 @@ log_build_reg_data_lc <- build %>% #some of these variable names need to be clea
                 
                   # , build_dist_angle
                   # , build_dist_to_burned_build_ft
-                  , build_dist_to_build_ft_jod
+                  , build_near_build
                   , build_near_dest
                   
                   # , build_p_tree_100
@@ -1307,7 +1287,7 @@ log_build_reg_data_consitent_dists <- build %>%
                   , build_perc_overhang
                   
                   , build_dist_angle
-                  , build_dist_to_build_ft_jod
+                  , build_near_build
                   
                   , build_p_tree_300 
                   , build_p_grass_300 

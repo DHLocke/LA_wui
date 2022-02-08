@@ -484,7 +484,7 @@ cforestImpPlot <- function(x) {
   dotchart(v[order(v)])
 } 
 
-#Dexter when I run like 488 it creates a plot I can view but cforest_importance is null ?
+#Dexter when I run line 489 it creates a plot I can view but cforest_importance is null ?
 #MHM stopped here on 2/8/22
 tic(); cforest_importance <- cforestImpPlot(forest);toc() # ~165 seconds with 100 trees, takes  DHL: 30 mins with 2000
 tic(); save(cforest_importance, file="../Massive_forests/cforest_importance"); toc()

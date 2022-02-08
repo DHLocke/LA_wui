@@ -84,7 +84,7 @@ build <- read_csv(paste0(getwd(), '/output_data/building_2022-02-01.csv')) %>%
 
 tic(); uni_log_mods <- build %>%
   filter(parcel_UseType == 'Residential') %>% 
-  nest(data=everything()) %>% #Dexter - this doesn't work for me, 2/2/22
+  nest(data=everything()) %>% 
   # nest()%>%
   mutate(
     # ~landscape position
@@ -155,6 +155,10 @@ tic(); uni_log_mods <- build %>%
          AIC = map(model, AIC),
          r2 = map(model, performance::r2),
          rmse = map(model, performance::rmse)); toc()
+
+#checking out near_dist_dest
+log_build_near_dist_dest<- glm(damage_binary ~ build_near_dest,family = binomial, data=build)
+build %>% ggplot(aes(y=build_near_dest,x=as.factor(damage_binary))) + geom_boxplot()
 
 
 # extract goodness of fit measures
@@ -435,46 +439,55 @@ suggested organization (put one full model in a chunk then repeat with second mo
 # # tic(); save(binary_without_dins_cols, file="../Massive_forests/binary_without_dins_cols.Rdata"); toc()
 
 tic(); load(file="../Massive_forests/binary_without_dins_cols.Rdata"); toc() # ~100 seconds
-
-# from owen
 forest<-binary_without_dins_cols; rm(binary_without_dins_cols) # keeping Owen's naming conventions
 
- tic();preds <- predict(forest, OOB = TRUE);toc() #with 100 trees, time is 180 sec, ~49 mins with 2000 trees
+#generating predicted values and saving output
+#can comment off once done
+# tic();preds <- predict(forest, OOB = TRUE);toc() #with 100 trees, time is 180 sec, ~45 mins with 2000 trees
+# tic(); save(preds, file="../Massive_forests/preds_binary_without_dins_cols.Rdata"); toc()
+# tic(); load(file="../Massive_forests/preds_binary_without_dins_cols.Rdata"); toc() #this writes back in as 'preds'
+# preds %>% hist()
+# preds %>% summary()
 
- # type change..
- build_a_df <- build_a  %>% data.frame()
- tic(); build_a_df$predfor = predict(forest, OOB = TRUE); toc() #41 min
- build_a_df$predtrue <- build_a_df$predfor>0.1170289 #TODO Add in work to get 0.117 
+#OOB accuracy assessment.
+#
+build_a_df <- build_a  %>% data.frame()
+build_a_df$predfor<-preds #save predicted values in whole data frame
+#what proportion of buildings destroyed?
+test<-table(build_a_df$damage_binary)
+cutoff<-(test[2]/(test[1]+test[2])) #0.1170289 prop destroyed
+build_a_df$predtrue <- build_a_df$predfor>cutoff 
 
-tic(); save(build_a_df, file="../Massive_forests/build_a_df.Rdata"); toc()
-tic(); load(file="../Massive_forests/build_a_df.Rdata"); toc() # ~40 seconds
- 
- preds %>% hist()
- preds %>% summary()
-
+#save whole data file
+tic(); save(build_a_df, file="../Massive_forests/build_a_df_withoutdins.Rdata"); toc()
+tic(); load(file="../Massive_forests/build_a_df_withoutdins.Rdata"); toc() # ~40 seconds
 
 blob<-with(build_a_df, table(damage_binary, predtrue))
 blob
 round(100*(blob[1]+blob[4])/sum(blob),1) #overall accuracy
 round(100*(blob[3]/sum(blob)),1) #false negative rate
 round(100*(blob[2]/sum(blob)),1) #false pos rate
-# with 2000 trees,the model had 76% accuracy with 23.1% false negative and 0.9% false positive rate - just checking is it ok that dataset unbalanced?
+# with 2000 trees,the model had 76% accuracy with 23.1% false negative and 0.8% false positive rate - just checking is it ok that dataset unbalanced?
 
-# DHL 23 mins 
- tic();varimp(forest);toc() # ~90 seconds with 100 trees, takes 84 min with 2000 trees! 
 
-#plot important variables
-#from Owen and ?https://favorableoutcomes.wordpress.com/2014/12/19/r-function-for-plotting-variable-importance-results-from-cforest-imlementation-of-random-forest-model/ ?
+#Variable importance plots
+#
+tic();varimp_withoutdins<-varimp(forest);toc() # ~90 seconds with 100 trees, takes 52 min with 2000 trees 
+#save
+tic(); save(varimp_withoutdins, file="../Massive_forests/varimp_withoutdins.Rdata"); toc()
+tic(); load(file="../Massive_forests/varimp_withoutdins.Rdata"); toc() # ~40 seconds
+
+#from Owen and ?https://favorableoutcomes.wordpress.com/2014/12/19/r-function-for-plotting-variable-importance-results-from-cforest-imlementatio
+#n-of-random-forest-model/ ?
 cforestImpPlot <- function(x) {
   cforest_importance <<- v <- varimp(x)
   dotchart(v[order(v)])
 } 
 
-#Dexter this isn't saving for me :((((, why?! I can run the code and generate hte figure but cforest_importance is empty
- tic(); cforest_importance <- cforestImpPlot(forest);toc() # ~165 seconds with 100 trees, takes 50 min with 2000 trees, DHL: 30 mins with 2000
- 
-#tic(); save(cforest_importance, file="../Massive_forests/cforest_importance"); toc()
-
+#Dexter when I run like 488 it creates a plot I can view but cforest_importance is null ?
+#MHM stopped here on 2/8/22
+tic(); cforest_importance <- cforestImpPlot(forest);toc() # ~165 seconds with 100 trees, takes  DHL: 30 mins with 2000
+tic(); save(cforest_importance, file="../Massive_forests/cforest_importance"); toc()
 tic(); load(file="../Massive_forests/cforest_importance.Rdata"); toc()
 
 # graph importance

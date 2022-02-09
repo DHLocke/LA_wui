@@ -138,11 +138,11 @@ tic(); uni_log_mods <- build %>%
     log_build_p_shrub_200= map(., ~glm(damage_binary ~ build_p_shrub_200,family = binomial, data = data.frame(.))),
     log_build_p_shrub_300= map(., ~glm(damage_binary ~ build_p_shrub_300,family = binomial, data = data.frame(.))),
 
-    # nearest distance to destroyed building 
-    log_build_near_dist_dest= map(., ~glm(damage_binary ~ build_near_dest,family = binomial, data = data.frame(.))),
-    
-    # nearest distance to any building
-    log_build_near_dist_build = map(., ~glm(damage_binary ~ build_near_build,family = binomial, data = data.frame(.)))
+    # # nearest distance to destroyed building 
+    # log_build_near_dist_dest= map(., ~glm(damage_binary ~ build_near_dest,family = binomial, data = data.frame(.))),
+    # 
+    # # nearest distance to any building
+    # log_build_near_dist_build = map(., ~glm(damage_binary ~ build_near_build,family = binomial, data = data.frame(.)))
     ) %>%
   dplyr::select(-data) %>% 
   rowid_to_column() %>% 
@@ -156,9 +156,9 @@ tic(); uni_log_mods <- build %>%
          r2 = map(model, performance::r2),
          rmse = map(model, performance::rmse)); toc()
 
-#checking out near_dist_dest
-log_build_near_dist_dest<- glm(damage_binary ~ build_near_dest,family = binomial, data=build)
-build %>% ggplot(aes(y=build_near_dest,x=as.factor(damage_binary))) + geom_boxplot()
+# # checking out near_dist_dest
+# log_build_near_dist_dest<- glm(damage_binary ~ build_near_dest,family = binomial, data=build)
+# build %>% ggplot(aes(y=build_near_dest,x=as.factor(damage_binary))) + geom_boxplot()
 
 
 # extract goodness of fit measures
@@ -220,6 +220,8 @@ build %>% ggplot(aes(y=build_near_dest,x=as.factor(damage_binary))) + geom_boxpl
 # that is, exposed
 # we have the work showing that destroyed is better. they are also highly correlated in script 03. I think we can just use near_dest
 # near_dest - better predictor than near_exposure. 
+
+# NEITHER OF THESE WORK, so pick whichever you like
     log_near_dest <- glm(damage_binary ~ build_near_dest, 
                          family = binomial, data = build)
     log_near_exp <- glm(damage_binary ~ build_near_exp, family = binomial, data = build)
@@ -320,7 +322,7 @@ build_a <- build %>% #retain only the 71 predictors of interest for final analys
   data.frame() %>%
   mutate_if(is.character, as.factor) 
 
-
+# Miranda does this need to be re-run?
 
 ####Univariate models and deviance calcs
 # WORKING ON commented out this work and read in table of deviance below
@@ -388,6 +390,7 @@ build_a <- build %>% #retain only the 71 predictors of interest for final analys
 
 # reading in table of deviance explained, work done and commented out above
 # redone in Feb 2022
+# MIRANDA - why not put the date in the file name?
 (tab_labs <- 
   read_csv(paste0(getwd(), '/data/Table_XX_Deviance_Explained.csv')))
 
@@ -439,43 +442,40 @@ suggested organization (put one full model in a chunk then repeat with second mo
 # # tic(); save(binary_without_dins_cols, file="../Massive_forests/binary_without_dins_cols.Rdata"); toc()
 
 tic(); load(file="../Massive_forests/binary_without_dins_cols.Rdata"); toc() # ~100 seconds
-forest<-binary_without_dins_cols; rm(binary_without_dins_cols) # keeping Owen's naming conventions
+forest <- binary_without_dins_cols; rm(binary_without_dins_cols) # keeping Owen's naming conventions
 
-#generating predicted values and saving output
-#can comment off once done
-# tic();preds <- predict(forest, OOB = TRUE);toc() #with 100 trees, time is 180 sec, ~45 mins with 2000 trees
+# # generating predicted values and saving output
+# tic(); preds <- predict(forest, OOB = TRUE); toc() #with 100 trees, time is 180 sec, ~20mins with 2000 trees
 # tic(); save(preds, file="../Massive_forests/preds_binary_without_dins_cols.Rdata"); toc()
-# tic(); load(file="../Massive_forests/preds_binary_without_dins_cols.Rdata"); toc() #this writes back in as 'preds'
-# preds %>% hist()
-# preds %>% summary()
+tic(); load(file="../Massive_forests/preds_binary_without_dins_cols.Rdata"); toc() #this writes back in as 'preds'
+preds %>% hist()
+preds %>% summary()
 
-#OOB accuracy assessment.
-#
-build_a_df <- build_a  %>% data.frame()
-build_a_df$predfor<-preds #save predicted values in whole data frame
-#what proportion of buildings destroyed?
-test<-table(build_a_df$damage_binary)
-cutoff<-(test[2]/(test[1]+test[2])) #0.1170289 prop destroyed
-build_a_df$predtrue <- build_a_df$predfor>cutoff 
+# # OOB accuracy assessment.
+# build_a_df <- build_a  %>% data.frame()
+# build_a_df$predfor <- preds #save predicted values in whole data frame
+# # what proportion of buildings destroyed?
+# test <- table(build_a_df$damage_binary)
+# (cutoff <- (test[2]/(test[1]+test[2]))) #0.1170289 prop destroyed
+# build_a_df$predtrue <- build_a_df$predfor > cutoff 
 
-#save whole data file
-tic(); save(build_a_df, file="../Massive_forests/build_a_df_withoutdins.Rdata"); toc()
-tic(); load(file="../Massive_forests/build_a_df_withoutdins.Rdata"); toc() # ~40 seconds
+# save whole data file
+# tic(); save(build_a_df, file = "../Massive_forests/build_a_df_withoutdins.Rdata"); toc() # FYI could have saved as csv
+tic(); load(file = "../Massive_forests/build_a_df_withoutdins.Rdata"); toc() # ~40 seconds (DHL: 0.034 seconds something not right)
 
-blob<-with(build_a_df, table(damage_binary, predtrue))
+blob <- with(build_a_df, table(damage_binary, predtrue))
 blob
 round(100*(blob[1]+blob[4])/sum(blob),1) #overall accuracy
-round(100*(blob[3]/sum(blob)),1) #false negative rate
-round(100*(blob[2]/sum(blob)),1) #false pos rate
+round(100*(blob[3]/sum(blob)),1) # false negative rate
+round(100*(blob[2]/sum(blob)),1) # false pos rate
 # with 2000 trees,the model had 76% accuracy with 23.1% false negative and 0.8% false positive rate - just checking is it ok that dataset unbalanced?
 
 
-#Variable importance plots
-#
-tic();varimp_withoutdins<-varimp(forest);toc() # ~90 seconds with 100 trees, takes 52 min with 2000 trees 
-#save
-tic(); save(varimp_withoutdins, file="../Massive_forests/varimp_withoutdins.Rdata"); toc()
-tic(); load(file="../Massive_forests/varimp_withoutdins.Rdata"); toc() # ~40 seconds
+# # Variable importance plots
+# tic(); varimp_withoutdins <- varimp(forest);toc() # ~90 seconds with 100 trees, takes 52 min with 2000 trees (DHL 22 mins)
+# # save 
+# tic(); save(varimp_withoutdins, file = "../Massive_forests/varimp_withoutdins.Rdata"); toc() # consider csv
+tic(); load(file = "../Massive_forests/varimp_withoutdins.Rdata"); toc() # ~40 seconds (DHL '0.001 sec elapsed')
 
 #from Owen and ?https://favorableoutcomes.wordpress.com/2014/12/19/r-function-for-plotting-variable-importance-results-from-cforest-imlementatio
 #n-of-random-forest-model/ ?
@@ -484,28 +484,32 @@ cforestImpPlot <- function(x) {
   dotchart(v[order(v)])
 } 
 
-#Dexter when I run line 489 it creates a plot I can view but cforest_importance is null ?
-#MHM stopped here on 2/8/22
-tic(); cforest_importance <- cforestImpPlot(forest);toc() # ~165 seconds with 100 trees, takes  DHL: 30 mins with 2000
-tic(); save(cforest_importance, file="../Massive_forests/cforest_importance"); toc()
-tic(); load(file="../Massive_forests/cforest_importance.Rdata"); toc()
+# SUGGEST DELETGIN THIS. What is now lines 494 is faster and prettier.
+# #Dexter when I run line 489 it creates a plot I can view but cforest_importance is null ?
+# #MHM stopped here on 2/8/22
+# tic(); cforest_importance <- cforestImpPlot(forest);toc() # ~165 seconds with 100 trees, takes  DHL: 26 mins with 2000
+# tic(); save(cforest_importance, file="../Massive_forests/cforest_importance"); toc()
+# tic(); load(file="../Massive_forests/cforest_importance.Rdata"); toc()
 
 # graph importance
+# cforest_importance <- varimp_withoutdins; rm(varimp_withoutdins)
+
 cforest_importance
 (
   cforest_importance %>% 
     data.frame() %>% 
     rownames_to_column(var = 'Variable name') %>% 
     tibble() %>% 
-    rename('Variable Importance' = cforest_importance) %>% 
+    # rename('Variable Importance' = cforest_importance) %>% 
+    rename('Variable Importance' = '.') %>% 
     left_join(
-      tab_labs %>% 
+      tab_labs %>% # Miranda: it looks like with the new distance field names from Arc, the tab_labs needs to be comparably updated
         tidylog::select(`Variable name`, Alias, Type, Scale)) %>% 
     arrange(desc('Variable Importance')) -> cforest_importance_to_graph)
 
 cforest_importance_to_graph %>% tail()
 
-# # graph importance by type and scale
+# graph importance by type and scale
 (cforest_importance_to_graph %>%
   ggplot(aes(  x = `Variable Importance`
              , y = reorder(Alias, `Variable Importance`)

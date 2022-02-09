@@ -384,26 +384,21 @@ for (varname in table1$upvar) {
 #     arrange(desc(Deviance))%>%
   arrange(Type, desc(Deviance)) %>%
   mutate_if(is.double, round, 3))
-# 
- tab_labs %>%
+#  
+# export
+# redone Feb  9 2022
+  tab_labs %>%
     drop_na()%>%
-   write_csv(paste0(getwd(), '/data/Table_XX_Deviance_Explained.csv'))
-
-
-# reading in table of deviance explained, work done and commented out above
-# redone in Feb 2022
-# MIRANDA - why not put the date in the file name?
+   write_csv(., paste0(getwd(), '/data/Table_Deviance_Explained_', Sys.Date(), '.csv')) 
+   
+   
+#reading back in deviance explained
 (tab_labs <- 
-  read_csv(paste0(getwd(), '/data/Table_XX_Deviance_Explained.csv')))
+  read_csv(paste0(getwd(), '/data/Table_Deviance_Explained_2022-02-09.csv'))) 
 
 # next steps for getting table to look nice  type look up table ??
 
-
-
-# output in Feb 2022
-#  tab_labs %>%
-#    write_csv('data/high_deviance_explained_bivariates.csv')
-
+ 
 # ended __________
 
 

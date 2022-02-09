@@ -601,88 +601,88 @@ tic(); forest %>%
 
 # code from Owen, this time using party
 n_tree <- 2000 #use this for final analyses
-n_tree <- 100 #testing number of trees
+#n_tree <- 100 #testing number of trees
 tic(); binary_with_dins_cols <-cforest(damage_binary ~ .,
                                   data = build_a %>% tidylog::select(!build_DINS)
-                                  , controls = cforest_control(mtry = 5, ntree = n_tree, mincriterion = 0)); toc() 
-# MHM takes 3 min with 100 trees, settings here from Owen
-# DHL takes 14 mins with 2000 trees
+                                  , controls = cforest_control(mtry = 5, ntree = n_tree, mincriterion = 0)); toc() #15 min
 
 # #when finalized use this to save this Random Forest 
 # # ~3.6 Gb - yikes
-# tic(); save(binary_with_dins_cols, file="../Massive_forests/binary_with_dins_cols.Rdata"); toc() # ~ 75 seconds
+ tic(); save(binary_with_dins_cols, file="../Massive_forests/binary_with_dins_cols.Rdata"); toc() # ~ 75 seconds
 
 # #when finalized use this to load Random Forest
 # tic(); load(file="../Massive_forests/binary_with_dins_cols.Rdata"); toc() # ~ 30 seconds
 
-
-# from owen
 forest<-binary_with_dins_cols; rm(binary_with_dins_cols) # keeping Owen's naming conventions
 
-# # type change..
-build_a_df <- build_a  %>%  data.frame()
-tic(); build_a_df$predfor = predict(forest, OOB = TRUE); toc() # ~20 mins
-build_a_df$predtrue<-build_a_df$predfor>0.1170289
-# #change names tic(); save(build_a_df, file="../Massive_forests/build_a_df.Rdata"); toc()
-#change names #tic(); load(file="../Massive_forests/build_a_df.Rdata"); toc() # ~40 seconds
- 
-preds %>% hist()
-preds %>% summary()
- 
-blob<-with(build_a_df, table(damage_binary, predtrue))
+#generating predicted values and saving output
+#can comment off once done
+ tic();preds <- predict(forest, OOB = TRUE);toc() #with 100 trees, time is 180 sec, ~45 mins with 2000 trees
+ tic(); save(preds, file="../Massive_forests/preds_binary_with_dins_cols.Rdata"); toc()
+# tic(); load(file="../Massive_forests/preds_binary_with_dins_cols.Rdata"); toc() #this writes back in as 'preds'
+ preds %>% hist()
+ preds %>% summary()
+
+#OOB accuracy assessment.
+#
+build_a_df_dins <- build_a  %>% data.frame()
+build_a_df_dins$predfor<-preds #save predicted values in whole data frame
+#what proportion of buildings destroyed?
+test<-table(build_a_df_dins$damage_binary)
+cutoff<-(test[2]/(test[1]+test[2])) #0.1170289 prop destroyed
+build_a_df_dins$predtrue <- build_a_df_dins$predfor>cutoff 
+
+#save whole data file
+tic(); save(build_a_df_dins, file="../Massive_forests/build_a_df_dins.Rdata"); toc()
+tic(); load(file="../Massive_forests/build_a_df_dins.Rdata"); toc() # ~40 seconds
+
+blob<-with(build_a_df_dins, table(damage_binary, predtrue))
 blob
 round(100*(blob[1]+blob[4])/sum(blob),1) #overall accuracy
 round(100*(blob[3]/sum(blob)),1) #false negative rate
 round(100*(blob[2]/sum(blob)),1) #false pos rate
-# with 100 trees,the model had 77.4% accuracy with 22.2% false negative and 0.4% false positive rate - just checking is it ok that dataset unbalanced?
+# with 2000 trees,the model had XX% accuracy with XX% false negative and XX% false positive rate - just checking is it ok that dataset unbalanced?
 
-# 
-tic();varimp(forest);toc() # ~53 mins
 
-#plot important variables
-#from Owen and ?https://favorableoutcomes.wordpress.com/2014/12/19/r-function-for-plotting-variable-importance-results-from-cforest-imlementation-of-random-forest-model/ ?
+#Variable importance plots
+#
+tic();varimp_withdins<-varimp(forest);toc() # ~90 seconds with 100 trees, takes 52 min with 2000 trees 
+#save
+tic(); save(varimp_withdins, file="../Massive_forests/varimp_withdins.Rdata"); toc()
+#tic(); load(file="../Massive_forests/varimp_withdins.Rdata"); toc() # ~40 seconds
+
+#from Owen and ?https://favorableoutcomes.wordpress.com/2014/12/19/r-function-for-plotting-variable-importance-results-from-cforest-imlementatio
+#n-of-random-forest-model/ ?
 cforestImpPlot <- function(x) {
   cforest_importance <<- v <- varimp(x)
   dotchart(v[order(v)])
 } 
 
 
- 
-tic(); plotsave <- cforestImpPlot(forest);toc() # ~362 seconds with 100 trees, takes XX min with 2000 trees 
-# 
-# #need to change name tic(); save(cforest_importance, file="../Massive_forests/cforest_importance"); toc()
+tic(); cforest_importance <- cforestImpPlot(forest);toc() # ~165 seconds with 100 trees, takes  DHL: 30 mins with 2000
+tic(); save(cforest_importance, file="../Massive_forests/cforest_importance_dins"); toc()
+#tic(); load(file="../Massive_forests/cforest_importance_dins.Rdata"); toc()
 
-#ned to change name tic(); load(file="../Massive_forests/cforest_importance.Rdata"); toc()
+# graph importance
+cforest_importance
+(
+  cforest_importance %>% 
+    data.frame() %>% 
+    rownames_to_column(var = 'Variable name') %>% 
+    tibble() %>% 
+    rename('Variable Importance' = cforest_importance) %>% 
+    left_join(
+      tab_labs %>% 
+        tidylog::select(`Variable name`, Alias, Type, Scale)) %>% 
+    arrange(desc('Variable Importance')) -> cforest_importance_to_graph)
 
+cforest_importance_to_graph %>% tail()
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+## NEED TO INSERT OTHER GRAPHICS
 
 
-
-
-#here here here
-
-
-
-
-
-
-
-
-
+## OLDER
+#older classification tree
 tic()
 binary_with_dins_cols <- rpart(damage_binary ~ .
                                , data = build %>% 

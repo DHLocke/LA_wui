@@ -474,6 +474,8 @@ round(100*(blob[2]/sum(blob)),1) # false pos rate
 # tic(); save(varimp_withoutdins, file = "../Massive_forests/varimp_withoutdins.Rdata"); toc() # consider csv
 tic(); load(file = "../Massive_forests/varimp_withoutdins.Rdata"); toc() # ~40 seconds (DHL '0.001 sec elapsed')
 
+#Dexter - does line 482 need to be taking in my varimp work above?? Lines 477-502 don't seem to be working for me as intended.
+
 #from Owen and ?https://favorableoutcomes.wordpress.com/2014/12/19/r-function-for-plotting-variable-importance-results-from-cforest-imlementatio
 #n-of-random-forest-model/ ?
 cforestImpPlot <- function(x) {
@@ -481,15 +483,8 @@ cforestImpPlot <- function(x) {
   dotchart(v[order(v)])
 } 
 
-# SUGGEST DELETGIN THIS. What is now lines 494 is faster and prettier.
-# #Dexter when I run line 489 it creates a plot I can view but cforest_importance is null ?
-# #MHM stopped here on 2/8/22
-# tic(); cforest_importance <- cforestImpPlot(forest);toc() # ~165 seconds with 100 trees, takes  DHL: 26 mins with 2000
-# tic(); save(cforest_importance, file="../Massive_forests/cforest_importance"); toc()
-# tic(); load(file="../Massive_forests/cforest_importance.Rdata"); toc()
-
-# graph importance
-# cforest_importance <- varimp_withoutdins; rm(varimp_withoutdins)
+#Dexter - I still can't get the below to run so I make a graph. I need something created for cforest_imporatnce, and line 487 makes a figure but saves nothing in cforest_importance for me
+tic();cforest_importance <- cforestImpPlot(forest);toc() 
 
 cforest_importance
 (
@@ -585,6 +580,16 @@ tic(); forest %>%
 # https://www.r-bloggers.com/2019/08/in-search-of-the-perfect-partial-plot/
 
 # doesn't work to save # Dexter, stopped here
+# SUGGEST DELETGIN THIS. What is now lines 494 is faster and prettier.
+# #Dexter when I run line 489 it creates a plot I can view but cforest_importance is null ?
+# #MHM stopped here on 2/8/22
+# tic(); cforest_importance <- cforestImpPlot(forest);toc() # ~165 seconds with 100 trees, takes  DHL: 26 mins with 2000
+# tic(); save(cforest_importance, file="../Massive_forests/cforest_importance"); toc()
+# tic(); load(file="../Massive_forests/cforest_importance.Rdata"); toc()
+
+# graph importance
+# cforest_importance <- varimp_withoutdins; rm(varimp_withoutdins)
+
 # 
 # # 1. Open jpeg file
 # jpeg("rplot.jpg", width = 350, height = "350")

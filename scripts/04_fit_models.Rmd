@@ -475,25 +475,26 @@ round(100*(blob[2]/sum(blob)),1) # false pos rate
 tic(); load(file = "../Massive_forests/varimp_withoutdins.Rdata"); toc() # ~40 seconds (DHL '0.001 sec elapsed')
 
 #Dexter - does line 482 need to be taking in my varimp work above?? Lines 477-502 don't seem to be working for me as intended.
-
+# Miranda, I dont understand. On 472 we calculated variable importance, we don't need to re-calculate it in 481. 
 #from Owen and ?https://favorableoutcomes.wordpress.com/2014/12/19/r-function-for-plotting-variable-importance-results-from-cforest-imlementatio
 #n-of-random-forest-model/ ?
-cforestImpPlot <- function(x) {
-  cforest_importance <<- v <- varimp(x)
-  dotchart(v[order(v)])
-} 
-
-#Dexter - I still can't get the below to run so I make a graph. I need something created for cforest_imporatnce, and line 487 makes a figure but saves nothing in cforest_importance for me
-tic();cforest_importance <- cforestImpPlot(forest);toc() 
-
-cforest_importance
+# cforestImpPlot <- function(x) {
+#   cforest_importance <<- v <- varimp(x)
+#   dotchart(v[order(v)])
+# } 
+# 
+# #Dexter - I still can't get the below to run so I make a graph. I need something created for cforest_imporatnce, and line 487 makes a figure but saves nothing in cforest_importance for me
+# tic();cforest_importance <- cforestImpPlot(forest);toc() 
+# 
+# cforest_importance
 (
-  cforest_importance %>% 
+  # cforest_importance %>% 
+  varimp_withoutdins |> 
     data.frame() %>% 
     rownames_to_column(var = 'Variable name') %>% 
     tibble() %>% 
     # rename('Variable Importance' = cforest_importance) %>% 
-    rename('Variable Importance' = '.') %>% 
+    rename('Variable Importance' = varimp_withoutdins) %>% 
     left_join(
       tab_labs %>% # Miranda: it looks like with the new distance field names from Arc, the tab_labs needs to be comparably updated
         tidylog::select(`Variable name`, Alias, Type, Scale)) %>% 
@@ -566,7 +567,7 @@ top_n <- 20
 #        , height = 6.5*1.5)
 
 
-
+# I (DHL) think this is done above. 
 # TODO--getinto ggplot with colors or other symbols corrisponding to framework categories.
 #key variables: build_near_dest, build_Mean_distroad, build_p_building_300, build_Mean_elev_30m, build_Mean_elev_100m, build_area
 

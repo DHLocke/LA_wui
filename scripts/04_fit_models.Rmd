@@ -467,12 +467,25 @@ round(100*(blob[3]/sum(blob)),1) # false negative rate
 round(100*(blob[2]/sum(blob)),1) # false pos rate
 # with 2000 trees,the model had 76% accuracy with 23.1% false negative and 0.8% false positive rate - just checking is it ok that dataset unbalanced?
 
+# https://www.r-bloggers.com/2019/08/in-search-of-the-perfect-partial-plot/
+# # Add predicted values to data frame
+# df_rf <- df_rf %>% 
+#   mutate(predicted = predict(fit_rf))
+# # Get performance measures
+# confusionMatrix(df_rf$predicted, df_rf$Class, positive = "R")
+
+build_a_df |> glimpse()
+build_a_df |> names()
+caret::confusionMatrix(build_a_df$predtrue, build_a_df$damage_binary)
+
 
 # # Variable importance plots
 # tic(); varimp_withoutdins <- varimp(forest);toc() # ~90 seconds with 100 trees, takes 52 min with 2000 trees (DHL 22 mins)
 # # save 
 # tic(); save(varimp_withoutdins, file = "../Massive_forests/varimp_withoutdins.Rdata"); toc() # consider csv
 tic(); load(file = "../Massive_forests/varimp_withoutdins.Rdata"); toc() # ~40 seconds (DHL '0.001 sec elapsed')
+
+
 
 #Dexter - does line 482 need to be taking in my varimp work above?? Lines 477-502 don't seem to be working for me as intended.
 # Miranda, I dont understand. On 472 we calculated variable importance, we don't need to re-calculate it in 481. 
@@ -578,7 +591,15 @@ tic(); forest %>%
   partial(pred.var = "build_near_dest") %>%
   plotPartial(smooth = FALSE, lwd = 2, ylab = "Prob. of Destruction", xlim=c(0,150),ylim=c(0,0.5), xlab="Axis label"); toc()
 
-# https://www.r-bloggers.com/2019/08/in-search-of-the-perfect-partial-plot/
+# # https://www.r-bloggers.com/2019/08/in-search-of-the-perfect-partial-plot/
+# pd_df <- partial_dependence(fit = fit_rf,
+#                          vars = nm,
+#                          data = df_rf,
+#                          n = c(100, 200))
+
+# MIRANDA: edarf isn't available for my version of R, does it work for you?
+# you'll need "install.packages('edarf')" first, and "library(edarf)"
+test <- edarf::partial_dependence(fit = forest)
 
 # doesn't work to save # Dexter, stopped here
 # SUGGEST DELETGIN THIS. What is now lines 494 is faster and prettier.

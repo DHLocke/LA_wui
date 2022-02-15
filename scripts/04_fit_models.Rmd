@@ -41,6 +41,7 @@ packs <- c('tidyverse'        # a must have!
            , 'rpart'          # for random forests
            # , pROC           # for AUC calculation
            , 'pdp'            # partial dep plots
+           , 'caret'          #random forest work
            , 'party'          # for random forests using cforest
            )        
 
@@ -331,67 +332,67 @@ build_a <- build %>% #retain only the 71 predictors of interest for final analys
 # # table1 contains a list of predictor variables for analysis and vectors to store the results for each variable 
 # 
 # 
-
-(table1 <- list(names(build_a)) %>% #created a list of predictors
-  data.frame() %>%
-  mutate(dev2 = 0, n2 = 0) %>%
-  rename(upvar = c..damage_binary....build_area....build_DECKPORCHO....build_EAVES...) %>%
-  data.frame())
-
-# # repurposed from Owne Price
- dat.model <- data.frame(y = build_a$damage_binary, x = 0)
 # 
-i<-0
-for (varname in table1$upvar) {
-  i<-i+1
-  if (varname %in% colnames(build_a)) {
-    dat.model$x <- build_a[, varname]
-    mod <- glm(y ~ x, data = dat.model, family = binomial())
-  } else {
-    warning(varname, " not found in build_a", immediate. = TRUE)
-    mod <- NULL
-  }
-
-  if (!is.null(mod)) {
-    table1$n2[i] <- nrow(build_a) - sum(is.na(dat.model$x))
-    table1$dev2[i] <- 100 * (mod$null.deviance - mod$deviance) / mod$null.deviance
-  }
-}
+# (table1 <- list(names(build_a)) %>% #created a list of predictors
+#   data.frame() %>%
+#   mutate(dev2 = 0, n2 = 0) %>%
+#   rename(upvar = c..damage_binary....build_area....build_DECKPORCHO....build_EAVES...) %>%
+#   data.frame())
 # 
-
- 
-# read in variable descriptions
-(tab_labs <- readxl::read_xlsx('data/Data LA Study 20220209.xlsx') %>%
-  mutate(Type =
-           case_when(
-               Type == 'CON' ~ 'Construction'
-             , Type == 'DEF' ~ 'Defensible Space'
-             , Type == 'LAND'~ 'Landscape Attributes'
-             , Type == 'TOPO'~ 'Topography'
-             , Type == 'EXP' ~ 'Exposure'
-             , TRUE ~ 'na')) %>% # Miranda to add last category, something meaningful
-  left_join(.
-            , table1 %>% filter(upvar != 'damage_binary' & upvar!= 'build_DINS')
-            , by = c(`Variable name` = 'upvar')) %>%
-  tidylog::select(Type
-                  , `Variable name`
-                  , Alias # added this
-                  , Deviance = dev2
-                  , n = n2
-                  , Scale
-                  , Source
-                  ) %>%
-#     arrange(desc(Deviance))%>%
-  arrange(Type, desc(Deviance)) %>%
-  mutate_if(is.double, round, 3))
+# # # repurposed from Owne Price
+#  dat.model <- data.frame(y = build_a$damage_binary, x = 0)
+# # 
+# i<-0
+# for (varname in table1$upvar) {
+#   i<-i+1
+#   if (varname %in% colnames(build_a)) {
+#     dat.model$x <- build_a[, varname]
+#     mod <- glm(y ~ x, data = dat.model, family = binomial())
+#   } else {
+#     warning(varname, " not found in build_a", immediate. = TRUE)
+#     mod <- NULL
+#   }
+# 
+#   if (!is.null(mod)) {
+#     table1$n2[i] <- nrow(build_a) - sum(is.na(dat.model$x))
+#     table1$dev2[i] <- 100 * (mod$null.deviance - mod$deviance) / mod$null.deviance
+#   }
+# }
+# # 
+# 
 #  
-# export
-# redone Feb  9 2022
-  tab_labs %>%
-    drop_na()%>%
-   write_csv(., paste0(getwd(), '/data/Table_Deviance_Explained_', Sys.Date(), '.csv')) 
-   
-   
+# # read in variable descriptions
+# (tab_labs <- readxl::read_xlsx('data/Data LA Study 20220209.xlsx') %>%
+#   mutate(Type =
+#            case_when(
+#                Type == 'CON' ~ 'Construction'
+#              , Type == 'DEF' ~ 'Defensible Space'
+#              , Type == 'LAND'~ 'Landscape Attributes'
+#              , Type == 'TOPO'~ 'Topography'
+#              , Type == 'EXP' ~ 'Exposure'
+#              , TRUE ~ 'na')) %>% # Miranda to add last category, something meaningful
+#   left_join(.
+#             , table1 %>% filter(upvar != 'damage_binary' & upvar!= 'build_DINS')
+#             , by = c(`Variable name` = 'upvar')) %>%
+#   tidylog::select(Type
+#                   , `Variable name`
+#                   , Alias # added this
+#                   , Deviance = dev2
+#                   , n = n2
+#                   , Scale
+#                   , Source
+#                   ) %>%
+# #     arrange(desc(Deviance))%>%
+#   arrange(Type, desc(Deviance)) %>%
+#   mutate_if(is.double, round, 3))
+# #  
+# # export
+# # redone Feb  9 2022
+#   tab_labs %>%
+#     drop_na()%>%
+#    write_csv(., paste0(getwd(), '/data/Table_Deviance_Explained_', Sys.Date(), '.csv')) 
+#    
+#    
 #reading back in deviance explained
 (tab_labs <- 
   read_csv(paste0(getwd(), '/data/Table_Deviance_Explained_2022-02-09.csv'))) 

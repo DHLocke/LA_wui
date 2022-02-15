@@ -455,7 +455,7 @@ preds %>% summary()
 # # what proportion of buildings destroyed?
 # test <- table(build_a_df$damage_binary)
 # (cutoff <- (test[2]/(test[1]+test[2]))) #0.1170289 prop destroyed
-# build_a_df$predtrue <- build_a_df$predfor > cutoff 
+# build_a_df$predtrue <- build_a_df$predfor > cutoff
 
 # save whole data file
 # tic(); save(build_a_df, file = "../Massive_forests/build_a_df_withoutdins.Rdata"); toc() # FYI could have saved as csv
@@ -475,9 +475,10 @@ round(100*(blob[2]/sum(blob)),1) # false pos rate
 # # Get performance measures
 # confusionMatrix(df_rf$predicted, df_rf$Class, positive = "R")
 
-build_a_df |> glimpse()
-build_a_df |> names()
-caret::confusionMatrix(build_a_df$predtrue, build_a_df$damage_binary)
+build_a_df  %>%  glimpse()
+build_a_df %>%  names()
+#Dexter check on this? 2/15/2022
+caret::confusionMatrix(build_a_df$predtrue, build_a_df$damage_binary) 
 
 
 # # Variable importance plots
@@ -488,29 +489,24 @@ tic(); load(file = "../Massive_forests/varimp_withoutdins.Rdata"); toc() # ~40 s
 
 
 
-#Dexter - does line 482 need to be taking in my varimp work above?? Lines 477-502 don't seem to be working for me as intended.
-# Miranda, I dont understand. On 472 we calculated variable importance, we don't need to re-calculate it in 481. 
+# Turned code below off - variable importance run above
 #from Owen and ?https://favorableoutcomes.wordpress.com/2014/12/19/r-function-for-plotting-variable-importance-results-from-cforest-imlementatio
 #n-of-random-forest-model/ ?
 # cforestImpPlot <- function(x) {
 #   cforest_importance <<- v <- varimp(x)
 #   dotchart(v[order(v)])
 # } 
+# also don't need this if using ggplot
+#tic();cforest_importance <- cforestImpPlot(forest);toc() 
 # 
-# #Dexter - I still can't get the below to run so I make a graph. I need something created for cforest_imporatnce, and line 487 makes a figure but saves nothing in cforest_importance for me
-# tic();cforest_importance <- cforestImpPlot(forest);toc() 
-# 
-# cforest_importance
 (
-  # cforest_importance %>% 
-  varimp_withoutdins |> 
+   varimp_withoutdins %>% 
     data.frame() %>% 
     rownames_to_column(var = 'Variable name') %>% 
     tibble() %>% 
-    # rename('Variable Importance' = cforest_importance) %>% 
-    rename('Variable Importance' = varimp_withoutdins) %>% 
+    rename('Variable Importance' = ".") %>% 
     left_join(
-      tab_labs %>% # Miranda: it looks like with the new distance field names from Arc, the tab_labs needs to be comparably updated
+      tab_labs %>% 
         tidylog::select(`Variable name`, Alias, Type, Scale)) %>% 
     arrange(desc('Variable Importance')) -> cforest_importance_to_graph)
 
@@ -581,11 +577,7 @@ top_n <- 20
 #        , height = 6.5*1.5)
 
 
-# I (DHL) think this is done above. 
-# TODO--getinto ggplot with colors or other symbols corrisponding to framework categories.
 #key variables: build_near_dest, build_Mean_distroad, build_p_building_300, build_Mean_elev_30m, build_Mean_elev_100m, build_area
-
-# TODO DHL - match colors 
 # how Owen codes partial plots
 # hung for me
 tic(); forest %>% 
@@ -593,12 +585,12 @@ tic(); forest %>%
   plotPartial(smooth = FALSE, lwd = 2, ylab = "Prob. of Destruction", xlim=c(0,150),ylim=c(0,0.5), xlab="Axis label"); toc()
 
 # # https://www.r-bloggers.com/2019/08/in-search-of-the-perfect-partial-plot/
-# pd_df <- partial_dependence(fit = fit_rf,
-#                          vars = nm,
-#                          data = df_rf,
-#                          n = c(100, 200))
+pd_df <- partial_dependence(fit = fit_rf,
+                         vars = nm,
+                         data = df_rf,
+                         n = c(100, 200))
 
-# MIRANDA: edarf isn't available for my version of R, does it work for you?
+# edarf doesn't work for either of our versions of R
 # you'll need "install.packages('edarf')" first, and "library(edarf)"
 test <- edarf::partial_dependence(fit = forest)
 

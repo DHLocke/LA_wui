@@ -459,7 +459,7 @@ preds %>% summary()
 
 # save whole data file
 # tic(); save(build_a_df, file = "../Massive_forests/build_a_df_withoutdins.Rdata"); toc() # FYI could have saved as csv
-tic(); load(file = "../Massive_forests/build_a_df_withoutdins.Rdata"); toc() # ~40 seconds (DHL: 0.034 seconds something not right)
+tic(); load(file = "../Massive_forests/build_a_df_withoutdins.Rdata"); toc() # ~2 seconds (DHL: 0.034 seconds something not right)
 
 blob <- with(build_a_df, table(damage_binary, predtrue))
 blob
@@ -579,10 +579,16 @@ top_n <- 20
 
 #key variables: build_near_dest, build_Mean_distroad, build_p_building_300, build_Mean_elev_30m, build_Mean_elev_100m, build_area
 # how Owen codes partial plots
-# hung for me
+# hung for both of us, 
 tic(); forest %>% 
   partial(pred.var = "build_near_dest") %>%
   plotPartial(smooth = FALSE, lwd = 2, ylab = "Prob. of Destruction", xlim=c(0,150),ylim=c(0,0.5), xlab="Axis label"); toc()
+
+
+#pdp attempt from Miranda on 2/16/2022- I don't think this likes forest
+library(pdp)
+partialPlot(forest, pred.data = build_a_df$predfor, x.var = "build_near_dest")  # Figure 2
+
 
 # # https://www.r-bloggers.com/2019/08/in-search-of-the-perfect-partial-plot/
 pd_df <- partial_dependence(fit = fit_rf,
@@ -593,6 +599,35 @@ pd_df <- partial_dependence(fit = fit_rf,
 # edarf doesn't work for either of our versions of R
 # you'll need "install.packages('edarf')" first, and "library(edarf)"
 test <- edarf::partial_dependence(fit = forest)
+
+
+library(moreparty)
+
+tic(); Fast_binary_without_dins_cols <-fastcforest(damage_binary ~ .,
+                                  data = build_a %>%
+                                    tidylog::select( # dropping columns containing specific DINS data
+                                            # very detailed but sparse (lots of NAs)
+                                      !c(  build_DECKPORCHO
+                                         , build_EAVES
+                                         , build_EXTERIORSI
+                                         , build_FENCEATTAC
+                                         , build_PATIOCOVER
+                                         , build_PROPANETAN
+                                         , build_ROOFCONSTR
+                                         , build_VEGCLEARAN
+                                         , build_VENTSCREEN
+                                         , build_WINDOWPANE
+                                         , build_DINS
+                                    ))
+                                  ,controls=cforest_control(mtry=5, ntree = n_tree, mincriterion=0)); toc() 
+#takes 8 min with full data set, settings here from Owen (DHL 7 mins with n_tree = 2000 )
+
+
+
+
+
+
+
 
 # doesn't work to save # Dexter, stopped here
 # SUGGEST DELETGIN THIS. What is now lines 494 is faster and prettier.

@@ -156,13 +156,14 @@ build <- read_csv(paste0(getwd(), '/output_data/building_2022-02-01.csv')) %>%
                # we change here so that the subsets are already formatted as data.frames
 
 # Miranda: do these NA's surprise you? OK to drop non-DINS-associated NA's?
+#  2/23/22 Dexter: As long as it does not also discard DINS observations. I don't see the harm in keeping them, given that we do have many NAs in DINS.
 # where are the NA's
 build %>% 
   map(~sum(is.na(.))) %>% # map is like for loop but vectorized, meaning its faster uses dif. syntax help(purrr::map)
   bind_rows() %>%         # the output of purrr::map is a list, this makes a tibble
   t() # %>% View() # check for NA's ("t" is for Transpose, just makes it easier to read)
 
-# Miranda, are these NA's expected?
+# Miranda, are these NA's expected? #  2/23/22Dexter, see line 159 above.
 ```
 
 
@@ -191,6 +192,9 @@ build_no_dins <- build %>%
 
 # Miranda, are these NA's expected? Should we drop them or find a random forest model that can make use of missing
 # data?
+# 2/23/22 Dexter, these are expected. Please see Script 2, section ## 4 DINS data and subsection a, exploring DINS data
+# Dexter, we should keep the NAs in DINS data and find a random forest model that can make use of missing
+# data
 build_no_dins %>% 
   map(~sum(is.na(.))) %>% 
   bind_rows() %>% 
@@ -218,6 +222,7 @@ build_dins <- build %>%
 # Miranda, even after dropping the non-DINS data are there are a lot of NA's in the DINS columns
 # do we need all of them?
 # in other words, not even the DINS data are complete for DINS data
+#  2/23/22 Dexter, please see line 195 above - these are expected.
 build_dins %>% 
   map(~sum(is.na(.))) %>% 
   bind_rows() %>% 
@@ -226,6 +231,7 @@ build_dins %>%
 
 # when we keep only complete cases (so remove all NA's) the file is really short (n = 172)
 # is this a surprise?
+#  2/23/22 Dexter, please see line 195 above - this is not a surprise.
 dim(build_dins)
 build_dins %>% drop_na() %>% dim() # not going to be practical for randomForest::randomForest
 
@@ -245,6 +251,7 @@ build_dins %>% tabyl(damage_severity)
 n_tree <- 10 # used for setting number of trees
 n_tree <- 500 
 
+#  2/23/22 Dexter, since I would like to use party::cforest for DINS analyses below, due to NAs, should we use keep NAs here and use party::cforest as well? You prefer to drop these and use the different forest?
 # random forest 
 tic(); rf_no_dins <- randomForest::randomForest(
   damage_cat ~ .
@@ -433,7 +440,7 @@ ggsave(file = paste0(getwd(), '/figures/cf_dins/', variable, '_', Sys.Date(), '.
 #### iii non-DINS CF
 ```{r}
 # TODO Miranda, we can look at all plots, but maybe we just want to look at the top 10 or 20 top predictors
-
+#2/23/22 Dexter I think top 10 seems fine, the Price MS only shows several in final MS.
 ## CF non-DINS
 # loop through predictors to get PDP
 # first get the iterator, here the variable names
@@ -484,7 +491,7 @@ for(variable in pdp_cf_no_dins_vars){   # start loop, iterating over pdp_cf_no_d
 #### iv DINS CF
 ```{r}
 # TODO Miranda, we can look at all plots, but maybe we just want to look at the top 10 or 20 top predictors
-
+#2/23/22 Dexter I think top 10 seems fine, the Price MS only shows several in final MS.
 
 ## CF DINS
 # loop through predictors to get PDP

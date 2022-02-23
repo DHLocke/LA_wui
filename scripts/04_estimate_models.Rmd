@@ -1,0 +1,423 @@
+---
+title: "04_fit_models.Rmd"
+author: "Dexter H. Locke, PhD"
+date: "`r format(Sys.time())`"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+This assumes "02_Woosley_combine_data.Rmd" was run
+
+
+
+## 0 set up: load libraries, custom functions, set defaults
+```{r}
+# load libraries
+# packages we'll be using
+packs <- c('tidyverse'        # a must have!
+           , 'tidylog'        # makes things very verbose for 2x checking 
+           , 'magrittr'       # all of the pipes
+           , 'janitor'        # cleans things up
+           # , 'sf'             # simple features
+           # , 'mapview'        # quick webmaps for zoom/pan viz
+           #'tidycensus',     # access to Census data in a tidy way
+           #'party',          # random forests
+           , 'modEvA'         # contains D-squared function
+           , 'randomForest'  #'rfUtilities', 'verification'
+           , 'tictoc'         # times things
+           , 'beepr'          # makes noises
+           # , 'broom'          # tidy up regression models
+           # , 'performance'    # nice regression diagnostics
+           # , 'psych'          # describe is very useful for descriptive statistics
+           # , 'sjPlot'         # useful plotting and regression support
+           # , 'rpart'          # for random forests
+           # # , pROC           # for AUC calculation
+           , 'pdp'            # partial dep plots
+           , 'vip'            # Variable Importance Plots (and extracting vip vals)
+           # , 'caret'          #random forest work
+           , 'party'          # for random forests using cforest
+           )        
+
+# check for all of the libraries
+if (length(setdiff(packs, rownames(installed.packages()))) > 0) {
+  install.packages(setdiff(packs, rownames(installed.packages())))  
+}
+
+# lapply(packs, library, character.only = TRUE)
+vapply(packs, library, character.only = TRUE, logical(1),
+       logical.return = TRUE, quietly = TRUE)
+
+
+# custom function for "Not In"
+`%nin%` <- Negate(`%in%`)
+
+
+set.seed(19870630)
+```
+
+
+
+## 1 read in data
+### A main `build` file
+```{r}
+# one 'main' data frame
+build <- read_csv(paste0(getwd(), '/output_data/building_2022-02-01.csv')) %>%
+  tidylog::select(
+    # damage_binary
+      damage_cat
+    , build_area   
+    # build_DECKPORCHE    , #drop this on 12/20/21
+    , build_DECKPORCHO
+    , build_EAVES
+    , build_EXTERIORSI
+    , build_FENCEATTAC
+    , build_PATIOCOVER
+    , build_PROPANETAN
+    , build_ROOFCONSTR
+    , build_VEGCLEARAN 
+    , build_VENTSCREEN 
+    , build_WINDOWPANE 
+    , parcel_year_built 
+    , build_near_build 
+    , build_has_tree_overhang 
+    , build_min_dist_shrub 
+    , build_min_dist_tree 
+    , build_overhang_ht 
+    , build_perc_overhang 
+    , parcel_Build_P 
+    , parcel_Can_P 
+    , parcel_Grass_P 
+    , parcel_Imperv_P    #inverse of perv surface
+    , parcel_Paved_P    
+    #  parcel_Perv_P    ,#inverse of imp, just need one
+    , parcel_Road_P
+    , parcel_Shrub_P  
+    , parcel_Soil_P  
+    , parcel_Water_P  
+    , build_near_dest  
+    , build_p_building_10  
+    , build_p_building_100  
+    , build_p_building_200  
+    , build_p_building_300  
+    , build_p_grass_10  
+    , build_p_grass_100  
+    , build_p_grass_200  
+    , build_p_grass_300  
+    , build_p_otherpaved_10  
+    , build_p_otherpaved_100  
+    , build_p_otherpaved_200  
+    , build_p_otherpaved_300  
+    , build_p_road_10  
+    , build_p_road_100  
+    , build_p_road_200  
+    , build_p_road_300  
+    , build_p_shrub_10  
+    , build_p_shrub_100  
+    , build_p_shrub_200  
+    , build_p_shrub_300  
+    , build_p_soil_10  
+    , build_p_soil_100  
+    , build_p_soil_200  
+    , build_p_soil_300  
+    , build_p_tree_10  
+    , build_p_tree_100  
+    , build_p_tree_200  
+    , build_p_tree_300  
+    , build_p_water_10  
+    , build_p_water_100  
+    , build_p_water_200  
+    , build_p_water_300  
+    , parcel_area  
+    , build_Mean_builddens  
+    , build_Mean_distall_road  
+    , build_Mean_distroad  
+    , build_Mean_aspect_100m_DEM  
+    , build_Mean_aspect_30m_DEM  
+    , build_Mean_elev_100m  
+    , build_Mean_elev_30m  
+    , build_Mean_slope_100m_DEM  
+    , build_Mean_slope_30m_DEM
+    , build_DINS
+    ) %>%
+  mutate_if(is.character, as.factor) %>% # turns characters into factors
+  droplevels() %>% 
+  data.frame() # some of the random forest functions do not 'like' tibbles
+               # since the non-dins and dins data will be pulled from here
+               # we change here so that the subsets are already formatted as data.frames
+
+# Miranda: do these NA's surprise you? OK to drop non-DINS-associated NA's?
+# where are the NA's
+build %>% 
+  map(~sum(is.na(.))) %>% # map is like for loop but vectorized, meaning its faster uses dif. syntax help(purrr::map)
+  bind_rows() %>%         # the output of purrr::map is a list, this makes a tibble
+  t() # %>% View() # check for NA's ("t" is for Transpose, just makes it easier to read)
+
+# Miranda, are these NA's expected?
+```
+
+
+
+### B non-DINS data (larger dataset, fewer predictors)
+```{r}
+
+# a subset for non-DINS-associated data
+build_no_dins <- build %>% 
+  tidylog::select(# dropping columns containing specific DINS data
+                  # very detailed but sparse (lots of NAs)
+    !c(  build_DECKPORCHO
+       , build_EAVES
+       , build_EXTERIORSI
+       , build_FENCEATTAC
+       , build_PATIOCOVER
+       , build_PROPANETAN
+       , build_ROOFCONSTR
+       , build_VEGCLEARAN
+       , build_VENTSCREEN
+       , build_WINDOWPANE
+       , build_DINS)
+    )
+
+# Miranda, are these NA's expected? Should we drop them or find a random forest model that can make use of missing
+# data?
+build_no_dins %>% 
+  map(~sum(is.na(.))) %>% 
+  bind_rows() %>% 
+  t() # %>% View() # check for NA's
+
+# how is the outcome distributed?
+build         %>% tabyl(damage_cat) # good double check
+build_no_dins %>% tabyl(damage_cat)
+
+```
+
+
+
+### C DINS data (smaller dataset, more predictors)
+```{r}
+# get data for DINS analyses
+build %>% tabyl(build_DINS)
+
+# subset
+build_dins <- build %>% 
+  filter(build_DINS == 1) 
+
+# Miranda, even after dropping the non-DINS data are there are a lot of NA's in the DINS columns
+# do we need all of them?
+# in other words, not even the DINS data are complete for DINS data
+build_dins %>% 
+  map(~sum(is.na(.))) %>% 
+  bind_rows() %>% 
+  t() # %>% View() # check for NA's
+
+
+# when we keep only complete cases (so remove all NA's) the file is really short (n = 172)
+# is this a surprise?
+dim(build_dins)
+build_dins %>% drop_na() %>% dim() # not going to be practical for randomForest::randomForest
+
+
+```
+
+
+
+## 2 fit random forest models
+### A non-DINS analyses (larger dataset, fewer predictors)
+```{r}
+# fit random forest models
+# randomForest::randomForest is faster but requires full data
+# party::cforest is slower but can handle missing data
+
+n_tree <- 10 # used for setting number of trees
+n_tree <- 500 
+
+# random forest 
+tic(); rf_no_dins <- randomForest::randomForest(
+  damage_cat ~ .
+  # need full dataset, can't keep NA's
+  , data = build_no_dins %>% drop_na()
+  , type = 'classification' # not regression
+  , mtry = 5
+  , ntree = n_tree # 10 ~.5 seconds,100 ~5s, 200 ~7.5s, 3 ~12s, 
+                   # tested on a few smaller forests
+  ); toc()
+
+
+# # since this takes a long time to run, I've commented the code off and just read-in
+# # the completed model file in its "*.Rdata" format with the load() function.
+# # random forest via party::cforest which accepts missing data and is slower 
+# tic(); cf_no_dins <- party::cforest(
+#   damage_cat ~ .
+#   , data = build_no_dins # notice no drop_na here
+#   , controls = 
+#     cforest_control(  
+#         mtry = 5
+#       , ntree = n_tree # 10 ~2 seconds, 100 ~25s, 200 ~50s, 300 ~75s ... 500 ~130 seconds
+#       , mincriterion = 0
+#       )
+#   ); toc()
+# 
+# # save out since it is slow
+# tic(); save(cf_no_dins
+#             , file = paste0('../Massive_forests/cf_no_dins_', Sys.Date(), '.Rdata')); toc()
+
+# read back in
+tic(); load(file = '../Massive_forests/cf_no_dins_2022-02-22.Rdata'); toc()
+
+```
+
+
+### B DINS analyses (smaller dataset, more predictors)
+```{r}
+
+# # random forest via party::cforest which accepts missing data and is slower 
+# tic(); cf_dins <- party::cforest(
+#   damage_cat ~ .
+#   , data = build_dins # notice build_dins here, no "no" in the object name.
+#   , controls = 
+#     cforest_control(  
+#         mtry = 5
+#       , ntree = n_tree # 10 ~2 seconds, 100 ~25s, 200 ~50s, 300 ~75s
+#       , mincriterion = 0
+#       )
+#   ); toc()
+# 
+# # save out since it is slow
+# tic(); save(cf_dins
+#             , file = paste0('../Massive_forests/cf_dins_', Sys.Date(), '.Rdata')); toc()
+
+# read back in
+tic(); load(file = '../Massive_forests/cf_dins_2022-02-22.Rdata'); toc()
+
+
+```
+
+
+## 3 overall model accuracy
+under construction :-/ DHL todo
+"100_old_hold.Rmd" has good code to pull from
+
+also the ROC curves from "### v how did the model perform?" chunk in "Philly_Land_Cover_Change.Rmd"
+
+
+## 4 variable importance
+```{r}
+# # modified from first chunk here:
+# # https://bgreenwell.github.io/pdp/articles/pdp.html#other-vignettes
+# # Variable importance plot (compare to randomForest::varImpPlot(boston_rf))
+# vip(boston_rf, bar = FALSE, horizontal = FALSE, size = 1.5)  # Figure 1
+
+# variable importance plot with random forest; fast
+vip_rf_no_dins <- vip(rf_no_dins
+    # , bar = FALSE       # doesn't seem to work "help(vip)" showed that it changed to "geom"
+    # , geom = 'point'    # try "col" instead
+    , geom = 'col'      # try "point" instead
+    , horizontal = TRUE # vignette example had this as FALSE (label easier rotated)
+    # , size = 1.5        # plausibly pertains to point size
+    # see "num_features"
+    # "Integer specifying the number of variable importance scores to plot. Default is 10."
+    ) + 
+  theme_bw(16)          # added some flare (ok just bigger axis text and black/white theme)
+
+# check the plot
+vip_rf_no_dins
+
+
+
+# if we want to use color/shapes or facets to indicate the variable TYPE
+# like we did with the cforest object before, it looks like vip::vi can be used
+# to calculate the variable importance scores, then we can re-purpose the old
+# code to add the colors symbols, etc.. . 'help(vip)' has an example starting with 
+# "# Better yet, store the variable importance scores and then plot
+# # vi_scores <- vi(model, method = "firm")". That's how I learned to extract importance
+# from randomForest::randomForest models
+
+# not sure about this scaling. When scale is FALSE the values are on totally different scales
+# `rank = TRUE`
+tic(); vi_rf_no_dins <- vi(rf_no_dins, scale = TRUE) %>% mutate(Model = 'rf_no_dins', n_tree = n_tree); toc()
+tic(); vi_cf_no_dins <- vi(cf_no_dins, scale = TRUE) %>% mutate(Model = 'cf_no_dins', n_tree = n_tree); toc()
+tic(); vi_cf_dins    <- vi(cf_dins,    scale = TRUE) %>% mutate(Model =    'cf_dins', n_tree = n_tree); toc()
+
+
+bind_rows(vi_rf_no_dins, vi_cf_no_dins, vi_cf_dins) %>% # combines variable importance from each model
+  write_csv(paste0('../Massive_forests/variable_importance_', Sys.Date(), '.csv'))
+
+# TODO join in aliases and type, repurpose directly below.
+(
+  variable_importance <- read_csv('../Massive_forests/variable_importance_2022-02-22.csv') %>% 
+    group_by(Model) %>% 
+    mutate(rank = row_number(Model))
+  )
+
+# # get tab_lab
+# left_join(
+#       tab_labs %>% 
+#         tidylog::select(`Variable name`, Alias, Type, Scale)) 
+
+```
+
+
+## 5 partial dependence plots
+### A base-style graphs (example only)
+```{r}
+# single base-graphics partial dependency plot, modeled after Figure 2 here:
+# https://bgreenwell.github.io/pdp/articles/pdp.html#other-vignettes
+# partialPlot(boston_rf, pred.data = boston, x.var = "lstat")  # Figure 2
+randomForest::partialPlot(rf_no_dins
+                          , pred.data = build_no_dins
+                          , x.var = "build_near_dest"
+                          ) # ugly!
+
+# # building off of the third chunk from
+# # https://bgreenwell.github.io/pdp/articles/pdp.html#other-vignettes
+# # AND third chunk from this vignette
+# # https://bgreenwell.github.io/pdp/articles/pdp-computation.html
+# # Switch to ggplot2
+# p2 <- partial(boston_rf, pred.var = "lstat", plot = TRUE,
+#               plot.engine = "ggplot2")
+
+pdp::partial(rf_no_dins                      # random forest model
+             , pred.var = "build_near_dest"  # predictor variable
+             , plot = TRUE                   # if FALSE returns prediction data
+             , plot.engine = "ggplot2"       # plot with ggplot2 or not?
+             , rug = TRUE                    # adds the univariate y-axis summary (aka "rug")
+             , progress = "text"             # prints progress, sets users expectations
+             , quantiles = TRUE              # see help(pdp)
+             , probs = 0:20/20               # probabilities, "0:20/20" gives 5% increments
+             , ice = TRUE                    # Individual Conditional Expectations
+             , center = TRUE                 # for graphical layout, pertains to ice
+             , alpha = .1                    # line transparency
+             ) + 
+  theme_bw(16) +                             # ggplot adjustment for black/white & large text size 
+  # scale_y_continuous(expand = c(0, 0)) +
+  NULL -> test_pdp                           # makes the plot
+
+test_pdp # accesses plot
+
+
+# TODO loop through each predictor to create vip
+# Miranda, we can look at all plots, but maybe we just want to look at the top 10 or 20 top predictors
+```
+
+
+
+
+```{r, citations}
+lapply(packages, citation)
+```
+
+
+Last knit on `r format(Sys.time())`
+
+
+```{r}
+system.time(save.image(file = paste0('saved_sessions/wui_r_models_', gsub('[[:punct:]]', '-', Sys.time()), '.RData')))
+```
+

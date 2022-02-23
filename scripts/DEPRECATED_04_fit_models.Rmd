@@ -81,7 +81,7 @@ build <- read_csv(paste0(getwd(), '/output_data/building_2022-02-01.csv')) %>%
 
 ## 2 fit models
 ### A univariate-logistic regression 
-```{r}
+```{r eval=FALSE, include=FALSE}
 
 tic(); uni_log_mods <- build %>%
   filter(parcel_UseType == 'Residential') %>% 
@@ -410,13 +410,196 @@ build_a <- build %>% #retain only the 71 predictors of interest for final analys
 suggested organization (put one full model in a chunk then repeat with second model)
 
 ### C Random forest
+```{r eval=FALSE, include=FALSE}
+
+build <- read_csv(paste0(getwd(), '/output_data/building_2022-02-01.csv')) %>%
+  tidylog::select(damage_binary
+                  , build_area   
+                  # build_DECKPORCHE    , #drop this on 12/20/21
+                  , build_DECKPORCHO
+                  , build_EAVES
+                  , build_EXTERIORSI
+                  , build_FENCEATTAC
+                  , build_PATIOCOVER
+                  , build_PROPANETAN
+                  , build_ROOFCONSTR
+                  , build_VEGCLEARAN 
+                  , build_VENTSCREEN 
+                  , build_WINDOWPANE 
+                  , parcel_year_built 
+                  , build_near_build 
+                  , build_has_tree_overhang 
+                  , build_min_dist_shrub 
+                  , build_min_dist_tree 
+                  , build_overhang_ht 
+                  , build_perc_overhang 
+                  , parcel_Build_P 
+                  , parcel_Can_P 
+                  , parcel_Grass_P 
+                  , parcel_Imperv_P    #inverse of perv surface
+                  , parcel_Paved_P    
+                  #  parcel_Perv_P    ,#inverse of imp, just need one
+                  , parcel_Road_P
+                  , parcel_Shrub_P  
+                  , parcel_Soil_P  
+                  , parcel_Water_P  
+                  , build_near_dest  
+                  , build_p_building_10  
+                  , build_p_building_100  
+                  , build_p_building_200  
+                  , build_p_building_300  
+                  , build_p_grass_10  
+                  , build_p_grass_100  
+                  , build_p_grass_200  
+                  , build_p_grass_300  
+                  , build_p_otherpaved_10  
+                  , build_p_otherpaved_100  
+                  , build_p_otherpaved_200  
+                  , build_p_otherpaved_300  
+                  , build_p_road_10  
+                  , build_p_road_100  
+                  , build_p_road_200  
+                  , build_p_road_300  
+                  , build_p_shrub_10  
+                  , build_p_shrub_100  
+                  , build_p_shrub_200  
+                  , build_p_shrub_300  
+                  , build_p_soil_10  
+                  , build_p_soil_100  
+                  , build_p_soil_200  
+                  , build_p_soil_300  
+                  , build_p_tree_10  
+                  , build_p_tree_100  
+                  , build_p_tree_200  
+                  , build_p_tree_300  
+                  , build_p_water_10  
+                  , build_p_water_100  
+                  , build_p_water_200  
+                  , build_p_water_300  
+                  , parcel_area  
+                  , build_Mean_builddens  
+                  , build_Mean_distall_road  
+                  , build_Mean_distroad  
+                  , build_Mean_aspect_100m_DEM  
+                  , build_Mean_aspect_30m_DEM  
+                  , build_Mean_elev_100m  
+                  , build_Mean_elev_30m  
+                  , build_Mean_slope_100m_DEM  
+                  , build_Mean_slope_30m_DEM
+                  , build_DINS
+                  ) %>%
+  mutate_if(is.character, as.factor) %>% 
+  droplevels() %>% 
+  mutate(damage_binary = as.factor(damage_binary)) %>% # randomForest::randomForest
+  data.frame()
+
+# Miranda: do these NA's surprise you? OK to drop non-DINS-associated NA's?
+# where are the NA's
+build %>%  map(~sum(is.na(.))) %>% bind_rows() %>% t() %>% View() # check for NA's
+
+
+build_no_dins <- build %>% 
+  tidylog::select(# dropping columns containing specific DINS data
+                  # very detailed but sparse (lots of NAs)
+    !c(  build_DECKPORCHO
+         , build_EAVES
+         , build_EXTERIORSI
+         , build_FENCEATTAC
+         , build_PATIOCOVER
+         , build_PROPANETAN
+         , build_ROOFCONSTR
+         , build_VEGCLEARAN
+         , build_VENTSCREEN
+         , build_WINDOWPANE
+         , build_DINS)
+  ) #%>% drop_na()
+
+ 
+# fit random forest model
+n_tree <- 500 # ~20 seconds
+# n_tree <- 100 # (100 ~5 seconds, 200 ~7.5 sec, 300 ~12 sec)
+tic(); rf_no_dins <- randomForest::randomForest(  damage_binary ~ .
+                                                , data = build_no_dins
+                                                , type = 'classification'
+                                                , mtry = 5
+                                                , ntree = n_tree); toc()
+
+library(pdp)           # for partial dependence plots
+library(vip)           # for variable importance plots
+
+# # modified from first chunk here:
+# # https://bgreenwell.github.io/pdp/articles/pdp.html#other-vignettes
+# # Variable importance plot (compare to randomForest::varImpPlot(boston_rf))
+# vip(boston_rf, bar = FALSE, horizontal = FALSE, size = 1.5)  # Figure 1
+
+vip(rf_no_dins
+    # , bar = FALSE      # doesn't seem to work "help(vip)" showed that it changed to "geom"
+    # , geom = 'point'    # try "col" instead
+    , geom = 'col'     # try "point" instead
+    , horizontal = TRUE # vignette example had this as FALSE (label easier rotated)
+    , size = 1.5        # plausibly pertains to point size
+    # see "num_features"
+    # "Integer specifying the number of variable importance scores to plot. Default is 10."
+    ) + 
+  theme_bw(16)          # added some flare (ok just bigger axis text and black/white theme)
+
+
+# if we want to use color/shapes or facets to indicate the variable TYPE
+# like we did with the cforest object before, it looks like vip::vi can be used
+# to calculate the variable importance scores, then we can re-purpose the old
+# code to add the colors symbols, etc.. . 'help(vip)' has an example starting with 
+# "# Better yet, store the variable importance scores and then plot
+# # vi_scores <- vi(model, method = "firm")". That's how I learned to extract importance
+# from randomForest::randomForest models 
+
+# single base-graphics partial dependency plot, modeled after Figure 2 here:
+# https://bgreenwell.github.io/pdp/articles/pdp.html#other-vignettes
+# partialPlot(boston_rf, pred.data = boston, x.var = "lstat")  # Figure 2
+randomForest::partialPlot(rf_no_dins
+                          , pred.data = build_no_dins
+                          , x.var = "build_near_dest"
+                          ) # ugly!
+
+# # building off of the third chunk from
+# # https://bgreenwell.github.io/pdp/articles/pdp.html#other-vignettes
+# # AND third chunk from this vignette
+# # https://bgreenwell.github.io/pdp/articles/pdp-computation.html
+# # Switch to ggplot2
+# p2 <- partial(boston_rf, pred.var = "lstat", plot = TRUE,
+#               plot.engine = "ggplot2")
+
+pdp::partial(rf_no_dins                      # random forest model
+             , pred.var = "build_near_dest"  # predictor variable
+             , plot = TRUE                   # if FALSE returns prediction data
+             , plot.engine = "ggplot2"       # plot with ggplot2 or not?
+             , rug = TRUE                    # adds the univariate y-axis summary (aka "rug")
+             , progress = "text"             # prints progress, sets users expectations
+             , quantiles = TRUE              # see help(pdp)
+             , probs = 0:20/20               # probabilities, "0:20/20" gives 5% increments
+             , ice = TRUE                    # Individual Conditional Expectations
+             , center = TRUE                 # for graphical layout, pertains to ice
+             , alpha = .1                    # line transparency
+             ) + 
+  theme_bw(16) +                             # ggplot adjustment for black/white & large text size 
+  # scale_y_continuous(expand = c(0, 0)) +
+  NULL -> test_pdp                           # makes the plot
+
+test_pdp # accesses plot
+
+
+
+```
+
+
+
+
 #### i binary outcome-all obs, no DINS
 ```{r} 
 
 # binary outcome random forest for all obs, drop DINS columns
 
 # # code from Owen, this time using party
-#  n_tree <- 2000 #use this for final analyses
+# n_tree <- 2000 #use this for final analyses
 # # n_tree <- 100 #testing number of trees
 # tic(); binary_without_dins_cols <-cforest(damage_binary ~ .,
 #                                   data = build_a %>%
@@ -475,7 +658,7 @@ round(100*(blob[2]/sum(blob)),1) # false pos rate
 # # Get performance measures
 # confusionMatrix(df_rf$predicted, df_rf$Class, positive = "R")
 
-build_a_df  %>%  glimpse()
+build_a_df %>%  glimpse()
 build_a_df %>%  names()
 #Dexter check on this? 2/15/2022
 caret::confusionMatrix(build_a_df$predtrue, build_a_df$damage_binary) 
@@ -489,14 +672,14 @@ tic(); load(file = "../Massive_forests/varimp_withoutdins.Rdata"); toc() # ~40 s
 
 
 
-# Turned code below off - variable importance run above
-#from Owen and ?https://favorableoutcomes.wordpress.com/2014/12/19/r-function-for-plotting-variable-importance-results-from-cforest-imlementatio
+# Turned code below off - variable importance run above instead
+# from Owen and ?https://favorableoutcomes.wordpress.com/2014/12/19/r-function-for-plotting-variable-importance-results-from-cforest-imlementatio
 #n-of-random-forest-model/ ?
 # cforestImpPlot <- function(x) {
 #   cforest_importance <<- v <- varimp(x)
 #   dotchart(v[order(v)])
 # } 
-# also don't need this if using ggplot
+# also don't need this "cforestImpPlot" call  if using ggplot (below)
 #tic();cforest_importance <- cforestImpPlot(forest);toc() 
 # 
 (
@@ -519,7 +702,8 @@ cforest_importance_to_graph %>% tail()
              , color  = Scale)) +
   geom_point(aes(shape = Type)) +
   theme_bw() +
-  NULL -> importance_graph)
+  NULL -> importance_graph
+  )
 # 
 # ggsave(file = paste0(getwd(),
 #                      '/figures/rf_importance_',
@@ -577,17 +761,17 @@ top_n <- 20
 #        , height = 6.5*1.5)
 
 
-#key variables: build_near_dest, build_Mean_distroad, build_p_building_300, build_Mean_elev_30m, build_Mean_elev_100m, build_area
-# how Owen codes partial plots
-# hung for both of us, 
-tic(); forest %>% 
-  partial(pred.var = "build_near_dest") %>%
-  plotPartial(smooth = FALSE, lwd = 2, ylab = "Prob. of Destruction", xlim=c(0,150),ylim=c(0,0.5), xlab="Axis label"); toc()
+# # key variables: build_near_dest, build_Mean_distroad, build_p_building_300, build_Mean_elev_30m, build_Mean_elev_100m, build_area
+# # how Owen codes partial plots
+# # hung for both of us, 
+# tic(); forest %>% 
+#   partial(pred.var = "build_near_dest") %>%
+#   plotPartial(smooth = FALSE, lwd = 2, ylab = "Prob. of Destruction", xlim=c(0,150),ylim=c(0,0.5), xlab="Axis label"); toc()
 
 
 #pdp attempt from Miranda on 2/16/2022- I don't think this likes forest
 library(pdp)
-partialPlot(forest, pred.data = build_a_df$predfor, x.var = "build_near_dest")  # Figure 2
+partial(forest, pred.var = "build_near_dest")  # Figure 2
 
 
 # # https://www.r-bloggers.com/2019/08/in-search-of-the-perfect-partial-plot/

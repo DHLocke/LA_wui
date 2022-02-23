@@ -59,7 +59,7 @@ vapply(packs, library, character.only = TRUE, logical(1),
 # custom function for "Not In"
 `%nin%` <- Negate(`%in%`)
 
-
+# for reproducibility, we should have the same random draws. setting the seed ensures that is the case.
 set.seed(19870630)
 ```
 
@@ -68,11 +68,13 @@ set.seed(19870630)
 ## 1 read in data
 ### A main `build` file
 ```{r}
+
 # one 'main' data frame
 build <- read_csv(paste0(getwd(), '/output_data/building_2022-02-01.csv')) %>%
   tidylog::select(
     # damage_binary
-      damage_cat
+      damage_cat         # binary outcome encoded as categorical (Destroyed / Survived)
+    , damage_severity    # five levels
     , build_area   
     # build_DECKPORCHE    , #drop this on 12/20/21
     , build_DECKPORCHO
@@ -182,7 +184,9 @@ build_no_dins <- build %>%
        , build_VEGCLEARAN
        , build_VENTSCREEN
        , build_WINDOWPANE
-       , build_DINS)
+       , build_DINS
+       , damage_severity # dropping the DV for the smaller model
+       )
     )
 
 # Miranda, are these NA's expected? Should we drop them or find a random forest model that can make use of missing
@@ -207,7 +211,9 @@ build %>% tabyl(build_DINS)
 
 # subset
 build_dins <- build %>% 
-  filter(build_DINS == 1) 
+  filter(build_DINS == 1) %>% 
+  select(-build_DINS, -damage_cat)
+  # dropping the DV for the smaller model
 
 # Miranda, even after dropping the non-DINS data are there are a lot of NA's in the DINS columns
 # do we need all of them?
@@ -223,6 +229,7 @@ build_dins %>%
 dim(build_dins)
 build_dins %>% drop_na() %>% dim() # not going to be practical for randomForest::randomForest
 
+build_dins %>% tabyl(damage_severity)
 
 ```
 
@@ -245,7 +252,7 @@ tic(); rf_no_dins <- randomForest::randomForest(
   , data = build_no_dins %>% drop_na()
   , type = 'classification' # not regression
   , mtry = 5
-  , ntree = n_tree # 10 ~.5 seconds,100 ~5s, 200 ~7.5s, 3 ~12s, 
+  , ntree = n_tree # 10 ~.5 seconds,100 ~5s, 200 ~7.5s, 3 ~12s, ... 5 ~23s 
                    # tested on a few smaller forests
   ); toc()
 
@@ -256,8 +263,8 @@ tic(); rf_no_dins <- randomForest::randomForest(
 # tic(); cf_no_dins <- party::cforest(
 #   damage_cat ~ .
 #   , data = build_no_dins # notice no drop_na here
-#   , controls = 
-#     cforest_control(  
+#   , controls =
+#     cforest_control(
 #         mtry = 5
 #       , ntree = n_tree # 10 ~2 seconds, 100 ~25s, 200 ~50s, 300 ~75s ... 500 ~130 seconds
 #       , mincriterion = 0
@@ -269,7 +276,7 @@ tic(); rf_no_dins <- randomForest::randomForest(
 #             , file = paste0('../Massive_forests/cf_no_dins_', Sys.Date(), '.Rdata')); toc()
 
 # read back in
-tic(); load(file = '../Massive_forests/cf_no_dins_2022-02-22.Rdata'); toc()
+tic(); load(file = '../Massive_forests/cf_no_dins_2022-02-22.Rdata'); toc() # ~9s
 
 ```
 
@@ -277,24 +284,26 @@ tic(); load(file = '../Massive_forests/cf_no_dins_2022-02-22.Rdata'); toc()
 ### B DINS analyses (smaller dataset, more predictors)
 ```{r}
 
-# # random forest via party::cforest which accepts missing data and is slower 
-# tic(); cf_dins <- party::cforest(
-#   damage_cat ~ .
-#   , data = build_dins # notice build_dins here, no "no" in the object name.
-#   , controls = 
-#     cforest_control(  
-#         mtry = 5
-#       , ntree = n_tree # 10 ~2 seconds, 100 ~25s, 200 ~50s, 300 ~75s
-#       , mincriterion = 0
-#       )
-#   ); toc()
-# 
-# # save out since it is slow
-# tic(); save(cf_dins
-#             , file = paste0('../Massive_forests/cf_dins_', Sys.Date(), '.Rdata')); toc()
+# predicting severity
+
+# random forest via party::cforest which accepts missing data and is slower
+tic(); cf_dins <- party::cforest(
+  damage_severity ~ . # severity, not binary
+  , data = build_dins # notice build_dins here, no "no" in the object name.
+  , controls =
+    cforest_control(
+        mtry = 5
+      , ntree = n_tree # 10 ~0.52 seconds, 100 ~1.5s, 200 ~2.7s, 300 ~3.5s ... 500 ~7s
+      , mincriterion = 0
+      )
+  ); toc()
+
+# not sure if saving is needed..
+tic(); save(cf_dins
+            , file = paste0('../Massive_forests/cf_dins_', Sys.Date(), '.Rdata')); toc() # 3.5 seconds
 
 # read back in
-tic(); load(file = '../Massive_forests/cf_dins_2022-02-22.Rdata'); toc()
+tic(); load(file = '../Massive_forests/cf_dins_2022-02-22.Rdata'); toc() # 1.5 seconds
 
 
 ```
@@ -339,21 +348,23 @@ vip_rf_no_dins
 # # vi_scores <- vi(model, method = "firm")". That's how I learned to extract importance
 # from randomForest::randomForest models
 
-# not sure about this scaling. When scale is FALSE the values are on totally different scales
-# `rank = TRUE`
-tic(); vi_rf_no_dins <- vi(rf_no_dins, scale = TRUE) %>% mutate(Model = 'rf_no_dins', n_tree = n_tree); toc()
-tic(); vi_cf_no_dins <- vi(cf_no_dins, scale = TRUE) %>% mutate(Model = 'cf_no_dins', n_tree = n_tree); toc()
-tic(); vi_cf_dins    <- vi(cf_dins,    scale = TRUE) %>% mutate(Model =    'cf_dins', n_tree = n_tree); toc()
-
-
-bind_rows(vi_rf_no_dins, vi_cf_no_dins, vi_cf_dins) %>% # combines variable importance from each model
-  write_csv(paste0('../Massive_forests/variable_importance_', Sys.Date(), '.csv'))
+# # since the second one takes 10 minutes, this code is commented out. Instead of re-running, just read a *.csv backin
+# # not sure about this scaling. When scale is FALSE the values are on totally different scales
+# # `rank = TRUE`
+# tic(); vi_rf_no_dins <- vi(rf_no_dins, scale = TRUE) %>% mutate(Model = 'rf_no_dins', n_tree = n_tree); toc()
+# tic(); vi_cf_no_dins <- vi(cf_no_dins, scale = TRUE) %>% mutate(Model = 'cf_no_dins', n_tree = n_tree); toc() # 10 mins
+# tic(); vi_cf_dins    <- vi(cf_dins,    scale = TRUE) %>% mutate(Model =    'cf_dins', n_tree = n_tree); toc() # 1 min
+# 
+# 
+# bind_rows(vi_rf_no_dins, vi_cf_no_dins, vi_cf_dins) %>% # combines variable importance from each model
+#   write_csv(paste0('../Massive_forests/variable_importance_', Sys.Date(), '.csv'))
 
 # TODO join in aliases and type, repurpose directly below.
 (
   variable_importance <- read_csv('../Massive_forests/variable_importance_2022-02-22.csv') %>% 
     group_by(Model) %>% 
-    mutate(rank = row_number(Model))
+    mutate(rank = row_number(Model)) %>% 
+    ungroup()
   )
 
 # # get tab_lab
@@ -366,7 +377,7 @@ bind_rows(vi_rf_no_dins, vi_cf_no_dins, vi_cf_dins) %>% # combines variable impo
 
 ## 5 partial dependence plots
 ### A base-style graphs (example only)
-```{r}
+```{r eval=FALSE, include=FALSE}
 # single base-graphics partial dependency plot, modeled after Figure 2 here:
 # https://bgreenwell.github.io/pdp/articles/pdp.html#other-vignettes
 # partialPlot(boston_rf, pred.data = boston, x.var = "lstat")  # Figure 2
@@ -374,7 +385,12 @@ randomForest::partialPlot(rf_no_dins
                           , pred.data = build_no_dins
                           , x.var = "build_near_dest"
                           ) # ugly!
+```
 
+
+### B ggplot graphs
+#### i test on a single predictor
+```{r}
 # # building off of the third chunk from
 # # https://bgreenwell.github.io/pdp/articles/pdp.html#other-vignettes
 # # AND third chunk from this vignette
@@ -383,6 +399,7 @@ randomForest::partialPlot(rf_no_dins
 # p2 <- partial(boston_rf, pred.var = "lstat", plot = TRUE,
 #               plot.engine = "ggplot2")
 
+# THIS IS A SINGLE VARIBLE TEST
 pdp::partial(rf_no_dins                      # random forest model
              , pred.var = "build_near_dest"  # predictor variable
              , plot = TRUE                   # if FALSE returns prediction data
@@ -401,9 +418,119 @@ pdp::partial(rf_no_dins                      # random forest model
 
 test_pdp # accesses plot
 
+variable <- "build_near_dest"
+ggsave(file = paste0(getwd(), '/figures/cf_dins/', variable, '_', Sys.Date(), '.png')
+       , width = 6.5*2
+       , height = 6.5*1.5
+       , dpi = 100)
+```
 
-# TODO loop through each predictor to create vip
-# Miranda, we can look at all plots, but maybe we just want to look at the top 10 or 20 top predictors
+#### ii non-DINS RF
+```{r}
+# TODO
+```
+
+#### iii non-DINS CF
+```{r}
+# TODO Miranda, we can look at all plots, but maybe we just want to look at the top 10 or 20 top predictors
+
+## CF non-DINS
+# loop through predictors to get PDP
+# first get the iterator, here the variable names
+
+# using ALL predictors
+(pdp_cf_no_dins_vars <- variable_importance %>% filter(Model == 'cf_no_dins') %>%                 pull(Variable))
+
+# using top n predictors
+top_n <- 10          # set n (can revise to 20 or any other value greater than zero and less than 71)
+(pdp_cf_no_dins_vars <- variable_importance %>% filter(Model == 'cf_no_dins') %>% slice(1:top_n) %>% pull(Variable)) 
+
+
+resolution <- 100                       # dots per inch (dpi) for figure output (lower values keep files size down,
+                                        # can increase for publication)
+tic()                                   # clock in for whole loop
+for(variable in pdp_cf_no_dins_vars){   # start loop, iterating over pdp_cf_no_dins_vars
+  print(variable)                       # just to track the progress
+  tic()                                 # clock in within the loop
+  pdp::partial(cf_dins                  # the model
+             , pred.var = variable  
+             , plot = TRUE              
+             , plot.engine = "ggplot2"  
+             , rug = TRUE               
+             , progress = "text"        
+             , quantiles = TRUE         
+             , probs = 0:20/20          
+             , ice = TRUE               
+             , center = TRUE            
+             , alpha = .1               
+             ) + 
+    theme_bw(16) +                       # ggplot adjustment for black/white & large text size 
+    # scale_y_continuous(expand = c(0, 0)) +
+    labs(title = variable) +
+    NULL
+  
+  # save out
+  ggsave(file = paste0(getwd(), '/figures/cf_no_dins/', variable, '_', Sys.Date(), '.png')
+         , width = 6.5*2
+         , height = 6.5*1.5
+         , dpi = resolution)
+  toc()    # clock out within loop
+  }; toc() # clock out whole loop
+
+
+
+```
+
+#### iv DINS CF
+```{r}
+# TODO Miranda, we can look at all plots, but maybe we just want to look at the top 10 or 20 top predictors
+
+
+## CF DINS
+# loop through predictors to get PDP
+# first get the iterator, here the variable names
+
+# using ALL predictors
+(pdp_cf_dins_vars <- variable_importance %>% filter(Model == 'cf_dins') %>%                 pull(Variable))
+
+# using top n predictors
+top_n <- 10          # set n (can revise to 20 or any other value greater than zero and less than 71)
+(pdp_cf_dins_vars <- variable_importance %>% filter(Model == 'cf_dins') %>% slice(1:top_n) %>% pull(Variable)) 
+
+
+resolution <- 100                       # dots per inch (dpi) for figure output (lower values keep files size down,
+                                        # can increase for publication)
+tic()                                   # clock in for whole loop
+for(variable in pdp_cf_dins_vars){      # start loop
+  print(variable)                       # just to track the progress
+  tic()                                 # clock in within the loop
+  pdp::partial(cf_dins                  # the model
+             , pred.var = variable  
+             , plot = TRUE              
+             , plot.engine = "ggplot2"  
+             , rug = TRUE               
+             , progress = "text"        
+             , quantiles = TRUE         
+             , probs = 0:20/20          
+             , ice = TRUE               
+             , center = TRUE            
+             , alpha = .1               
+             ) + 
+    theme_bw(16) +                       # ggplot adjustment for black/white & large text size 
+    # scale_y_continuous(expand = c(0, 0)) +
+    labs(title = variable) +
+    NULL
+  
+  # save out
+  ggsave(file = paste0(getwd(), '/figures/cf_dins/', variable, '_', Sys.Date(), '.png')
+         , width = 6.5*2
+         , height = 6.5*1.5
+         , dpi = resolution)
+  toc()    # clock out within loop
+  }; toc() # clock out whole loop
+
+
+
 ```
 
 

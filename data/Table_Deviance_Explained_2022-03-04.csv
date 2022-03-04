@@ -14,7 +14,7 @@ Defensible Space,build_has_tree_overhang,Do trees overhang building (binary),0.3
 Defensible Space,build_min_dist_shrub,Distance to nearest shrub (ft),0.465,11134,Building,UVM
 Defensible Space,build_min_dist_tree,Distance to nearest tree (ft),0.417,11134,Building,UVM
 Defensible Space,build_near_build,Distance to nearest building (ft),0.446,11134,Building,UVM
-Defensible Space,build_overhang_ht,Average height of trees overhanging building (UNITS),0.616,11087,Building,UVM
+Defensible Space,build_overhang_ht,Average height of trees overhanging building (ft),0.616,11087,Building,UVM
 Defensible Space,build_perc_overhang,Percent of building with trees over top,0.128,11087,Building,UVM
 Defensible Space,parcel_Build_P,Parcel land cover- percent buildings,7.011,11134,Parcel,UVM
 Defensible Space,parcel_Can_P,Parcel land cover- percent tree,2.726,11134,Parcel,UVM

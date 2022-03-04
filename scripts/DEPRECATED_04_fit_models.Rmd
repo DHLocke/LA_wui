@@ -332,7 +332,7 @@ build_a <- build %>% #retain only the 71 predictors of interest for final analys
 # # table1 contains a list of predictor variables for analysis and vectors to store the results for each variable 
 # 
 # 
-# 
+# # 
 # (table1 <- list(names(build_a)) %>% #created a list of predictors
 #   data.frame() %>%
 #   mutate(dev2 = 0, n2 = 0) %>%
@@ -341,7 +341,7 @@ build_a <- build %>% #retain only the 71 predictors of interest for final analys
 # 
 # # # repurposed from Owne Price
 #  dat.model <- data.frame(y = build_a$damage_binary, x = 0)
-# # 
+# #
 # i<-0
 # for (varname in table1$upvar) {
 #   i<-i+1
@@ -358,9 +358,9 @@ build_a <- build %>% #retain only the 71 predictors of interest for final analys
 #     table1$dev2[i] <- 100 * (mod$null.deviance - mod$deviance) / mod$null.deviance
 #   }
 # }
-# # 
+# #
 # 
-#  
+# 
 # # read in variable descriptions
 # (tab_labs <- readxl::read_xlsx('data/Data LA Study 20220209.xlsx') %>%
 #   mutate(Type =
@@ -383,19 +383,19 @@ build_a <- build %>% #retain only the 71 predictors of interest for final analys
 #                   , Source
 #                   ) %>%
 # #     arrange(desc(Deviance))%>%
-#   arrange(Type, desc(Deviance)) %>%
+# #  arrange(Type, desc(Deviance)) %>%
 #   mutate_if(is.double, round, 3))
-# #  
+# #
 # # export
 # # redone Feb  9 2022
 #   tab_labs %>%
 #     drop_na()%>%
-#    write_csv(., paste0(getwd(), '/data/Table_Deviance_Explained_', Sys.Date(), '.csv')) 
-#    
-#    
+#    write_csv(., paste0(getwd(), '/data/Table_Deviance_Explained_', Sys.Date(), '.csv'))
+
+
 #reading back in deviance explained
 (tab_labs <- 
-  read_csv(paste0(getwd(), '/data/Table_Deviance_Explained_2022-02-09.csv'))) 
+  read_csv(paste0(getwd(), '/data/Table_Deviance_Explained_2022-03-04.csv'))) 
 
 # next steps for getting table to look nice  type look up table ??
 

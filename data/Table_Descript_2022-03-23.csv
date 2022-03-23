@@ -1,0 +1,32 @@
+**Characteristic**,"**0**, N = 9,831","**1**, N = 1,303"
+parcel_area,NA,NA
+Mean (SD),"480,870 (2,445,260)","1,037,975 (5,542,599)"
+Median (IQR),"45,921 (13,601, 241,415)","84,193 (36,387, 420,174)"
+Minimum-Maximum,"830-65,882,420","2,428-65,882,420"
+build_area,NA,NA
+Mean (SD),"2,819 (3,776)","2,655 (2,058)"
+Median (IQR),"2,240 (961, 3,565)","2,385 (1,289, 3,465)"
+Minimum-Maximum,"0-115,868","252-39,542"
+build_min_dist_tree,NA,NA
+Mean (SD),3.5 (12.2),2.0 (6.6)
+Median (IQR),"0.8 (0.8, 0.8)","0.8 (0.8, 0.8)"
+Minimum-Maximum,0.8-345.3,0.8-162.5
+build_near_build,NA,NA
+Mean (SD),40 (103),63 (124)
+Median (IQR),"16 (8, 37)","28 (11, 65)"
+Minimum-Maximum,"0-3,916","0-2,048"
+build_min_dist_shrub,NA,NA
+Mean (SD),295 (303),243 (299)
+Median (IQR),"188 (75, 417)","132 (60, 298)"
+Minimum-Maximum,"1-2,377","1-2,114"
+build_has_tree_overhang,"6,866 / 9,792 (70%)","993 / 1,295 (77%)"
+Missing,39,8
+build_has_tree_overhang,"6,866 / 6,866 (100%)",993 / 993 (100%)
+build_perc_overhang,NA,NA
+Mean (SD),13 (25),15 (25)
+Median (IQR),"3 (1, 12)","4 (1, 15)"
+Minimum-Maximum,0-100,0-100
+build_overhang_ht,NA,NA
+Mean (SD),20 (10),21 (11)
+Median (IQR),"18 (12, 25)","20 (14, 27)"
+Minimum-Maximum,0-78,2-90

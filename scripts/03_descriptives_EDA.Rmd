@@ -24,6 +24,7 @@ packs <- c('tidyverse'        # a must have!
            , 'janitor'        # cleans things up
            , 'sf'             # simple features
            , 'mapview'        # quick webmaps for zoom/pan viz
+           , 'gtsummary'      # for descriptive table
            #'tidycensus',     # access to Census data in a tidy way 
            #'party',          # random forests
            , 'dataMaid'       # nice reports
@@ -100,7 +101,7 @@ build <- read_csv(paste0(getwd(), '/output_data/building_2022-02-01.csv')) %>% g
 ```
 
 
-## 2 descriptive statistics
+## 2 descriptive statistics & table for pub
 ```{r eval=FALSE, include=FALSE}
 
 # generates report of univariate distributions with added info
@@ -118,9 +119,7 @@ build %>%
   # write_csv(., paste0(getwd(), '/output_data/describe_',
   #                   gsub('[[:punct:]]', '_', Sys.time()), '.csv'))
 
-# Remember re sample size w RF, we should include parcel_year_built and build_Mean_distroad
-# are missing 1008 for parcel_year_built (will try to impute median) and missing 88 for build_Mean_distroad (drop?)
-
+# Remember re sample size w RF, we should include parcel_year_built and build_Mean_distroad 
 #some additional descriptive information/summaries
 length(unique(build$ID_Parcel)) #number of unique parcels
 table(build$damage_cat)
@@ -135,6 +134,56 @@ table(build$parcel_UseType)
 #homeowner occupied
 table(build$parcel_Roll_HomeOwnersExemp); #5600 or 7000 indicates homeowner occupied - see https://www.titleadvantage.com/mdocs/Homeowners%20prop%20tax%20exemption%20all.pdf
 table(build$parcel_UseType,build$parcel_Roll_HomeOwnersExemp) #Among residential, Residential 44.3% are owner occupied, and 54.9% renter occupied
+  
+# # confirming it's ok to have low values for build_perc_overhang and build_overhang_ht when build_has_tree_overhang is 1
+# build %>% 
+#   select(damage_binary, build_has_tree_overhang, build_perc_overhang, build_overhang_ht) %>%  
+#   mutate(build_perc_overhang = build_perc_overhang*100) %>%
+#     filter(build_has_tree_overhang == '1') %>% view()
+
+
+#Summary tables on defensible space - descriptive summary for pub
+# notes as of 3/23/2022 - will share table with coauthors - not sure if we want mean/sd or median IQR
+
+# part 1 - builds a table about defensible space and building and parcel area
+build %>% 
+  select(damage_binary, parcel_area, build_area, build_min_dist_tree, build_near_build, build_min_dist_shrub, build_has_tree_overhang, ) %>%  # cols of interest
+  tbl_summary(by =damage_binary,                                     # create summary table
+    type = all_continuous() ~ "continuous2",       # indicate that you want to print multiple statistics 
+    statistic = list(all_continuous() ~ c("{mean} ({sd})",                            #line 1: mean and SD
+                                          "{median} ({p25}, {p75})",                   # line 2: median IQR
+                                          "{min}-{max}"),                              # line 3: min and max
+         all_categorical() ~ c("{n} / {N} ({p}%)")),
+      label  = list(                                              # display labels for column names
+          damage_binary   ~ "Building Destroyed"),
+        missing_text = "Missing"  )->t1
+
+
+# part 2 - for those buildings with tree overhang, summary of percent overhang and height
+build %>% 
+  select(damage_binary, build_has_tree_overhang, build_perc_overhang, build_overhang_ht) %>%  
+  mutate(build_perc_overhang = build_perc_overhang*100) %>%
+    filter(build_has_tree_overhang == '1') %>%  
+        tbl_summary(by =damage_binary,                                     # create summary table
+    type = all_continuous() ~ "continuous2",       # indicate that you want to print multiple statistics 
+    statistic = list(all_continuous() ~ c("{mean} ({sd})",                            #line 1: mean and SD
+                                          "{median} ({p25}, {p75})",                   # line 2: median IQR
+                                          "{min}-{max}"),                              # line 3: min and max
+         all_categorical() ~ c("{n} / {N} ({p}%)")),
+      label  = list(                                              # display labels for column names
+          damage_binary   ~ "Building Destroyed"),
+        missing_text = "Missing"  )->t2
+
+tbl_desc <- tbl_stack(list(t1, t2))  #combines tables
+    
+
+tbl_desc %>% #exports as csv
+      gtsummary::as_tibble()  %>% 
+          write_csv(., paste0(getwd(), '/data/Table_Descript_', Sys.Date(), '.csv'))
+  
+tbl_desc %>% #exports as image
+      as_gt() %>%             # convert to gt table
+           gt::gtsave(., paste0(getwd(), '/figures/Table_Descript_' , Sys.Date(), '.png'))
 
 
 
@@ -169,7 +218,6 @@ build %>%
 cors_tibble %>% 
   filter(value > .7 & value < 1) %>% 
     View()
- 
 
 
 #Older thoughts on correlations

@@ -6,14 +6,15 @@ CON,build_EXTERIORSI,"Exterior siding (combustible, ignition-resistant, unknown)
 CON,build_FENCEATTAC,"Fence materials (combustible, non-combustible, no fence, unknown)",1.166,1037,Building,Structure assessment-DINS
 CON,build_PATIOCOVER,"Carport/covered patio materials (combustible, non-combustible, unknown, no patio/carport)",0.206,948,Building,Structure assessment-DINS
 CON,build_ROOFCONSTR,"Roof materials (asphalt, concrete, metal, tile, wood, other, unknown)",2.143,1069,Building,Structure assessment-DINS
-CON,build_VEGCLEARAN,"Defensible space-vegetation clearance (in feet, 0-30, 30-100, >100, unknown, not applicable)",0.944,1141,Building,Structure assessment-DINS
 CON,build_VENTSCREEN,"Vent screen (mesh screen <= 1/8"", mesh screen > 1/8"", unscreened, unknown, no vents)",0.541,418,Building,Structure assessment-DINS
 CON,build_WINDOWPANE,"Window pane (singlepane, multipane, unknown, no windows)",4.789,571,Building,Structure assessment-DINS
+CON,parcel_year_built,Year built (from parcel data),0.009,10126,Parcel,LA County data
 DEF,build_has_tree_overhang,Do trees overhang building (binary),0.31,11087,Building,UVM
 DEF,build_min_dist_shrub,Distance to nearest shrub (ft),0.465,11134,Building,UVM
 DEF,build_min_dist_tree,Distance to nearest tree (ft),0.417,11134,Building,UVM
 DEF,build_near_build,Distance to nearest building (ft),0.446,11134,Building,UVM
 DEF,build_overhang_ht,Average height of trees overhanging building (ft),0.616,11087,Building,UVM
+DEF,build_p_building_10,"Percent built land cover, 10 ft around building",0.215,11134,Building,UVM
 DEF,build_p_grass_10,"Percent grass land cover, 10 ft around building",1.358,11134,Building,UVM
 DEF,build_p_otherpaved_10,"Percent paved land cover, 10 ft around building",0.516,11134,Building,UVM
 DEF,build_p_road_10,"Percent road land cover, 10 ft around building",0.004,11134,Building,UVM
@@ -23,6 +24,7 @@ DEF,build_p_tree_10,"Percent tree land cover, 10 ft around building",0.828,11134
 DEF,build_p_water_10,"Percent water land cover, 10 ft around building",0.022,11134,Building,UVM
 DEF,build_perc_overhang,Percent of building with trees over top,0.128,11087,Building,UVM
 DEF,build_PROPANETAN,"Distance to propane tank  (in feet, 0-10, 11-20, 21-30, >30', unknown, no tank)",1.888,844,Building,Structure assessment-DINS
+DEF,build_VEGCLEARAN,"Defensible space-vegetation clearance (in feet, 0-30, 30-100, >100, unknown, not applicable)",0.944,1141,Building,Structure assessment-DINS
 DEF,parcel_Build_P,Parcel land cover- percent buildings,7.011,11134,Parcel,UVM
 DEF,parcel_Can_P,Parcel land cover- percent tree,2.726,11134,Parcel,UVM
 DEF,parcel_Grass_P,Parcel land cover- percent grass,3.186,11134,Parcel,UVM
@@ -32,12 +34,10 @@ DEF,parcel_Road_P,Parcel land cover- percent road,0.131,11134,Parcel,UVM
 DEF,parcel_Shrub_P,Parcel land cover- percent shrub,1.748,11134,Parcel,UVM
 DEF,parcel_Soil_P,Parcel land cover- percent soil,1.267,11134,Parcel,UVM
 DEF,parcel_Water_P,Parcel land cover- percent water,0.096,11134,Parcel,UVM
-DEF,parcel_year_built,Year built (from parcel data),0.009,10126,Parcel,LA County data
 EXP,build_near_dest,Distance to nearest destroyed building (ft),23.482,11134,Building,Structure assessment-DINS; Miranda calc'd in Arc
 LAND,build_Mean_builddens,Interpolated housing density based on a 1-km search radius NOTE - housing? Structure?,2.255,11046,Point of building,Alex's data D:\ArcGISfiles\2017_LACounty\1_Data_20200320\Data_from_Alex\dens_1kmr_ha
 LAND,build_Mean_distall_road,Euclidian distance to any road (major and minor) (m),0.14,11122,Point of building,Alex's data D:\ArcGISfiles\2017_LACounty\1_Data_20200320\Data_from_Alex\dens_1kmr_ha
 LAND,build_Mean_distroad,Euclidian distance to major road (m),1.29,11046,Point of building,Alex's data D:\ArcGISfiles\2017_LACounty\1_Data_20200320\Data_from_Alex\dist_psroad
-LAND,build_p_building_10,"Percent built land cover, 10 ft around building",0.215,11134,Building,UVM
 LAND,build_p_building_100,"Percent built land cover, 100 ft around building",3.714,11134,Building,UVM
 LAND,build_p_building_200,"Percent built land cover, 200 ft around building",4.824,11134,Building,UVM
 LAND,build_p_building_300,"Percent built land cover, 300 ft around building",5.178,11134,Building,UVM

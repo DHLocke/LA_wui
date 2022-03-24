@@ -143,14 +143,15 @@ table(build$parcel_UseType,build$parcel_Roll_HomeOwnersExemp) #Among residential
 
 
 #Summary tables on defensible space - descriptive summary for pub
-# notes as of 3/23/2022 - will share table with coauthors - not sure if we want mean/sd or median IQR
+# notes as of 3/23/2022 - will share table with coauthors - not sure if we want mean/sd or median IQR; if we want by outcome or not
 
 # part 1 - builds a table about defensible space and building and parcel area
 build %>% 
   select(damage_binary, parcel_area, build_area, build_min_dist_tree, build_near_build, build_min_dist_shrub, build_has_tree_overhang, ) %>%  # cols of interest
-  tbl_summary(by =damage_binary,                                     # create summary table
-    type = all_continuous() ~ "continuous2",       # indicate that you want to print multiple statistics 
-    statistic = list(all_continuous() ~ c("{mean} ({sd})",                            #line 1: mean and SD
+  tbl_summary(#by =damage_binary,                                     # create summary table, can turn on or off by damage
+     digits = all_continuous() ~ 1,
+     type = all_continuous() ~ "continuous2",       # indicate that you want to print multiple statistics 
+     statistic = list(all_continuous() ~ c("{mean} ({sd})",                            #line 1: mean and SD
                                           "{median} ({p25}, {p75})",                   # line 2: median IQR
                                           "{min}-{max}"),                              # line 3: min and max
          all_categorical() ~ c("{n} / {N} ({p}%)")),
@@ -164,12 +165,13 @@ build %>%
   select(damage_binary, build_has_tree_overhang, build_perc_overhang, build_overhang_ht) %>%  
   mutate(build_perc_overhang = build_perc_overhang*100) %>%
     filter(build_has_tree_overhang == '1') %>%  
-        tbl_summary(by =damage_binary,                                     # create summary table
-    type = all_continuous() ~ "continuous2",       # indicate that you want to print multiple statistics 
-    statistic = list(all_continuous() ~ c("{mean} ({sd})",                            #line 1: mean and SD
+        tbl_summary(#by =damage_binary, # create summary table, can turn on or off by damage
+            digits = all_continuous() ~ 1,
+            type = all_continuous() ~ "continuous2",       # indicate that you want to print multiple statistics 
+            statistic = list(all_continuous() ~ c("{mean} ({sd})",                            #line 1: mean and SD
                                           "{median} ({p25}, {p75})",                   # line 2: median IQR
                                           "{min}-{max}"),                              # line 3: min and max
-         all_categorical() ~ c("{n} / {N} ({p}%)")),
+            all_categorical() ~ c("{n} / {N} ({p}%)")),
       label  = list(                                              # display labels for column names
           damage_binary   ~ "Building Destroyed"),
         missing_text = "Missing"  )->t2

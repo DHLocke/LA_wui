@@ -436,7 +436,7 @@ build <- read_csv(paste0(getwd(), '/output_data/building_2022-02-01.csv')) %>%
                   , parcel_Build_P 
                   , parcel_Can_P 
                   , parcel_Grass_P 
-                  , parcel_Imperv_P    #inverse of perv surface
+                 # , parcel_Imperv_P    #inverse of perv surface, comment out bc only on parcel
                   , parcel_Paved_P    
                   #  parcel_Perv_P    ,#inverse of imp, just need one
                   , parcel_Road_P

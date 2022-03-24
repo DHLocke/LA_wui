@@ -97,7 +97,7 @@ build <- read_csv(paste0(getwd(), '/output_data/building_2022-02-01.csv')) %>%
     , parcel_Build_P 
     , parcel_Can_P 
     , parcel_Grass_P 
-    , parcel_Imperv_P    #inverse of perv surface
+    #, parcel_Imperv_P    #inverse of perv surface; shld we just drop bc we don't have for other measures?
     , parcel_Paved_P    
     #  parcel_Perv_P    ,#inverse of imp, just need one
     , parcel_Road_P
@@ -161,7 +161,7 @@ build <- read_csv(paste0(getwd(), '/output_data/building_2022-02-01.csv')) %>%
 build %>% 
   map(~sum(is.na(.))) %>% # map is like for loop but vectorized, meaning its faster uses dif. syntax help(purrr::map)
   bind_rows() %>%         # the output of purrr::map is a list, this makes a tibble
-  t() # %>% View() # check for NA's ("t" is for Transpose, just makes it easier to read)
+  t()#  %>% View() # check for NA's ("t" is for Transpose, just makes it easier to read)
 
 # Miranda, are these NA's expected? #  2/23/22Dexter, see line 159 above.
 ```
@@ -190,11 +190,7 @@ build_no_dins <- build %>%
        )
     )
 
-# Miranda, are these NA's expected? Should we drop them or find a random forest model that can make use of missing
-# data?
-# 2/23/22 Dexter, these are expected. Please see Script 2, section ## 4 DINS data and subsection a, exploring DINS data
-# Dexter, we should keep the NAs in DINS data and find a random forest model that can make use of missing
-# data
+# NAs are expected
 build_no_dins %>% 
   map(~sum(is.na(.))) %>% 
   bind_rows() %>% 
@@ -248,24 +244,25 @@ build_dins %>% tabyl(damage_severity)
 # randomForest::randomForest is faster but requires full data
 # party::cforest is slower but can handle missing data
 
-n_tree <- 10 # used for setting number of trees
-n_tree <- 500 
+#n_tree <- 10 # used for setting number of trees
+n_tree <- 2000 #3/24/2022 changed back to 2000 trees as Price paper uses 2000
 
-#  2/23/22 Dexter, since I would like to use party::cforest for DINS analyses below, due to NAs, should we use keep NAs here and use party::cforest as well? You prefer to drop these and use the different forest?
-# random forest 
-tic(); rf_no_dins <- randomForest::randomForest(
-  damage_cat ~ .
-  # need full dataset, can't keep NA's
-  , data = build_no_dins %>% drop_na()
-  , type = 'classification' # not regression
-  , mtry = 5
-  , ntree = n_tree # 10 ~.5 seconds,100 ~5s, 200 ~7.5s, 3 ~12s, ... 5 ~23s 
-                   # tested on a few smaller forests
-  ); toc()
+
+# # random forest but has to drop NAs
+# tic(); rf_no_dins <- randomForest::randomForest(
+#   damage_cat ~ .
+#   # need full dataset, can't keep NA's
+#   , data = build_no_dins %>% drop_na()
+#   , type = 'classification' # not regression
+#   , mtry = 5
+#   , ntree = n_tree # 10 ~.5 seconds,100 ~5s, 200 ~7.5s, 3 ~12s, ... 5 ~23s 
+#                    # tested on a few smaller forests
+#   ); toc()
 
 
 # # since this takes a long time to run, I've commented the code off and just read-in
 # # the completed model file in its "*.Rdata" format with the load() function.
+# sounds good - I had to rerun this on my machine on 3/24/22 so will see that date below
 # # random forest via party::cforest which accepts missing data and is slower 
 # tic(); cf_no_dins <- party::cforest(
 #   damage_cat ~ .
@@ -277,13 +274,18 @@ tic(); rf_no_dins <- randomForest::randomForest(
 #       , mincriterion = 0
 #       )
 #   ); toc()
-# 
+
 # # save out since it is slow
-# tic(); save(cf_no_dins
+# sounds good - I had to rerun this on my machine on 3/24/22 so will see that date below
+#tic(); save(cf_no_dins
 #             , file = paste0('../Massive_forests/cf_no_dins_', Sys.Date(), '.Rdata')); toc()
 
 # read back in
-tic(); load(file = '../Massive_forests/cf_no_dins_2022-02-22.Rdata'); toc() # ~9s
+#tic(); load(file = '../Massive_forests/cf_no_dins_2022-02-22.Rdata'); toc() # ~9s
+
+
+# MHM - last date I ran this was 3/24/22 so will see that date below
+#tic(); load(file = '../Massive_forests/cf_no_dins_2022-03-24.Rdata'); toc() # ~9s
 
 ```
 
@@ -312,16 +314,20 @@ tic(); save(cf_dins
 # read back in
 tic(); load(file = '../Massive_forests/cf_dins_2022-02-22.Rdata'); toc() # 1.5 seconds
 
+# MHM - last date I ran this was 3/24/22 so will see that date below
+#tic(); load(file = '../Massive_forests/cf_dins_2022-03-24.Rdata'); toc() # ~9s
+
 
 ```
 
 
 ## 3 overall model accuracy
-under construction :-/ DHL todo
-"100_old_hold.Rmd" has good code to pull from
+```{r}
+# under construction :-/ DHL todo
+#"100_old_hold.Rmd" has good code to pull from
+#also the ROC curves from "### v how did the model perform?" chunk in "Philly_Land_Cover_Change.Rmd"
 
-also the ROC curves from "### v how did the model perform?" chunk in "Philly_Land_Cover_Change.Rmd"
-
+```
 
 ## 4 variable importance
 ```{r}
@@ -359,14 +365,15 @@ vip_rf_no_dins
 # # not sure about this scaling. When scale is FALSE the values are on totally different scales
 # # `rank = TRUE`
 # tic(); vi_rf_no_dins <- vi(rf_no_dins, scale = TRUE) %>% mutate(Model = 'rf_no_dins', n_tree = n_tree); toc()
-# tic(); vi_cf_no_dins <- vi(cf_no_dins, scale = TRUE) %>% mutate(Model = 'cf_no_dins', n_tree = n_tree); toc() # 10 mins
-# tic(); vi_cf_dins    <- vi(cf_dins,    scale = TRUE) %>% mutate(Model =    'cf_dins', n_tree = n_tree); toc() # 1 min
+ tic(); vi_cf_no_dins <- vi(cf_no_dins, scale = TRUE) %>% mutate(Model = 'cf_no_dins', n_tree = n_tree); toc() # 10 mins
+ tic(); vi_cf_dins    <- vi(cf_dins,    scale = TRUE) %>% mutate(Model =    'cf_dins', n_tree = n_tree); toc() # 1 min
 # 
 # 
 # bind_rows(vi_rf_no_dins, vi_cf_no_dins, vi_cf_dins) %>% # combines variable importance from each model
 #   write_csv(paste0('../Massive_forests/variable_importance_', Sys.Date(), '.csv'))
 
 # TODO join in aliases and type, repurpose directly below.
+ #MHM -3/23/2022 - let's hold off on displaying scale in variable importance plots until we talk more w alex, I think theme is somewhat repeating this information and would like her take
 (
   variable_importance <- read_csv('../Massive_forests/variable_importance_2022-02-22.csv') %>% 
     group_by(Model) %>% 

@@ -327,6 +327,186 @@ tic(); load(file = '../Massive_forests/cf_dins_2022-02-22.Rdata'); toc() # 1.5 s
 #"100_old_hold.Rmd" has good code to pull from
 #also the ROC curves from "### v how did the model perform?" chunk in "Philly_Land_Cover_Change.Rmd"
 
+# rest of chunk taken from "Philly_Land_Cover_Change.Rmd"
+# NEEDS TO BE EDITED
+
+### v how did the model perform?
+
+# check_collinearity(dat_multi_mod)
+# check_collinearity(dat_multi_mod_idw)
+
+# # it looks like we are over-predicting tree persistence
+(tibble(obs = as.factor(dat_multi$delta), # observed
+        pred= predict(dat_multi_mod)) %>% # predicted
+    tabyl(obs, pred) -> ctab)
+
+
+# nice worked example of multiclass ROC
+# https://rdrr.io/cran/pROC/man/multiclass.html
+
+# but this one is better
+# https://github.com/WandeRum/multiROC
+# get response categories as one hot encoded-tibble
+# naming with multiROC::multi_roc is really finicky
+# column names cannot have dots and must end with 
+# "_true" for the observed data and "_pred_xx" 
+# for the predicted data, where "_xx" is a method (like 
+# 'mn' for multinomial or 'rf' for random forest)
+# (
+model.matrix(~0 + dat_multi$delta) %>% # one hot encoding trick
+  as_tibble() %>% #glimpse()
+  mutate_all(., ~as.integer(.)) %>% 
+  rename_all(., ~str_remove_all(., "dat_multi\\$delta")) %>%
+  rename_all(., ~paste0(., '_true')) %>%
+  bind_cols(., 
+            predict(dat_multi_mod, type = 'prob') %>% # multinomial, container
+              as_tibble() %>%
+              rename_all(., ~paste0(., '_pred_MNc')),
+            # predict(dat_multi_mod_idw, type = 'prob') %>% # multinomial, IDW
+            #   as_tibble() %>%
+            #   rename_all(., ~paste0(., '_pred_MNi')),
+            predict(dat_multi_mod_rf, type = 'prob') %>% # random forest, container
+              as_tibble() %>% 
+              rename_all(., ~paste0(., '_pred_RFc'))
+            # predict(dat_multi_mod_rf_idw, type = 'prob') %>% # random forest, IDW
+            #   as_tibble() %>% 
+            #   rename_all(., ~paste0(., '_pred_RFi'))
+  ) %>% 
+  rename_all(., ~str_replace_all(., '\\.', '_')) %>%  
+  data.frame() -> class_test
+
+model.matrix(~0 + dat_multi_idw$delta) %>% # one hot encoding trick
+  as_tibble() %>% #glimpse()
+  mutate_all(., ~as.integer(.)) %>% 
+  rename_all(., ~str_remove_all(., "dat_multi_idw\\$delta")) %>%
+  rename_all(., ~paste0(., '_true')) %>%
+  bind_cols(., 
+            # predict(dat_multi_mod, type = 'prob') %>% # multinomial, container
+            #   as_tibble() %>%
+            #   rename_all(., ~paste0(., '_pred_MNc')),
+            predict(dat_multi_mod_idw, type = 'prob') %>% # multinomial, IDW
+              as_tibble() %>%
+              rename_all(., ~paste0(., '_pred_MNi')),
+            # predict(dat_multi_mod_rf, type = 'prob') %>% # random forest, container
+            #   as_tibble() %>% 
+            #   rename_all(., ~paste0(., '_pred_RFc')),
+            predict(dat_multi_mod_rf_idw, type = 'prob') %>% # random forest, IDW
+              as_tibble() %>%
+              rename_all(., ~paste0(., '_pred_RFi'))
+  ) %>% 
+  rename_all(., ~str_replace_all(., '\\.', '_')) %>%  
+  data.frame() -> class_test_idw  
+
+# )
+
+
+compare_performance(dat_multi_mod, dat_multi_mod_idw
+                    , rank = TRUE
+)
+
+# model_performance(dat_multi_mod)
+# model_performance(dat_multi_mod_idw)
+
+dat_multi_mod_rf; dat_multi_mod_rf_idw
+
+class_test %>% names
+class_test %>% glimpse
+
+class_test_idw %>% names
+class_test_idw %>% glimpse
+
+
+roc_res <- multiROC::multi_roc(class_test, force_diag=TRUE)
+plot_roc_df <- plot_roc_data(roc_res)
+
+roc_res_idw <- multiROC::multi_roc(class_test_idw, force_diag=TRUE)
+plot_roc_df_idw <- plot_roc_data(roc_res_idw)
+
+
+
+
+# roc_res$AUC
+(auc <- tibble(variable             = roc_res$AUC$MNc %>% names()
+               , multinomial_reg     =     roc_res$AUC$MNc %>% unlist()
+               , multinomial_reg_idw = roc_res_idw$AUC$MNi %>% unlist()
+               , random_forest       =     roc_res$AUC$RFc %>% unlist()
+               , random_forest_idw   = roc_res_idw$AUC$RFi %>% unlist()
+) |> 
+    mutate_if(is.double, round, 2)
+  # arrange(desc(multinomial_reg))
+)
+
+auc |> View()
+
+auc |> 
+  tidylog::select('Land Cover Transition' = variable, AUC = multinomial_reg) |> 
+  mutate(  'Land Cover Transition' = str_replace_all(`Land Cover Transition`, '\\.', ' ')
+           , 'Land Cover Transition' = str_to_title(`Land Cover Transition`)) |> 
+  write_csv('outputs/AUC.csv')
+
+# round (and transpose) kind of weird that this works
+auc %>% dplyr::select(-variable) %>% map(., ~round(., 2)) |> bind_rows(.id = 'var') |> View()
+# roc_res$AUC$MNc %>% flatten() |> bind_rows() |> str()
+
+
+# AUC contains a list of AUC for each group of different classifiers. Micro-average ROC-AUC was calculated by stacking all groups together, thus converting the multi-class classification into binary classification. Macro-average ROC-AUC was calculated by averaging all groups results (one vs rest) and linear interpolation was used between points of ROC.
+
+# (
+#   roc_all <- plot_roc_df %>% 
+#     bind_rows(plot_roc_df_idw) |> 
+#     ggplot(aes(x = 1-Specificity, y = Sensitivity)) +
+#     geom_path(aes(color = Group, linetype=Method), size = 1) + # , alpha = .5) +
+#     geom_segment(aes(x = 0, y = 0, xend = 1, yend = 1), 
+#                           colour='grey', linetype = 'dotdash') +
+#     scale_y_continuous(expand = c(0, 0)) +
+#     scale_x_continuous(expand = c(0, 0)) +
+#     theme_bw() + 
+#     theme(plot.title = element_text(hjust = 0.5), 
+#                    legend.justification=c(1, 0), legend.position=c(.95, .05),
+#                    legend.title=element_blank(), 
+#                    legend.background = element_rect(fill=NULL, size=0.5, 
+#                                                              linetype="solid", colour ="black")) + 
+#     coord_fixed() + 
+#     # facet_wrap(~Method) + 
+#     NULL
+# )
+
+# ggsave(paste0(getwd(), '/figs/roc_all_', Sys.Date(), '.png')
+#        , width = 6.5, height = 6.5)
+
+
+
+(
+  roc_all_facet <- plot_roc_df %>%
+    bind_rows(plot_roc_df_idw) |> # adds in the idw
+    ggplot(aes(x = 1-Specificity, y = Sensitivity)) +
+    geom_path(aes(color = Group, linetype=Method), size = 1) + # , alpha = .5) +
+    geom_segment(aes(x = 0, y = 0, xend = 1, yend = 1),
+                 colour='grey', linetype = 'dotdash') +
+    scale_y_continuous(expand = c(0, 0)) +
+    scale_x_continuous(expand = c(0, 0)) +
+    theme_bw() +
+    theme(plot.title = element_text(hjust = 0.5),
+          # legend.justification=c(1, 0), legend.position=c(.95, .05),
+          legend.title=element_blank(),
+          legend.background = element_rect(fill=NULL, size=0.5,
+                                           linetype="solid", colour ="black")) +
+    coord_fixed() +
+    facet_wrap(~Method) +
+    NULL
+)
+
+# ggsave(paste0(getwd(), '/figs/roc_all_facet_', Sys.Date(), '.png')
+#        , width = 6.5, height = 6.5)
+
+
+
+# https://github.com/WandeRum/multiROC/blob/master/README.md
+# https://stats.stackexchange.com/questions/2151/how-to-plot-roc-curves-in-multiclass-classification
+# https://cran.r-project.org/web/packages/pROC/pROC.pdf
+# https://bookdown.org/chua/ber642_advanced_regression/multinomial-logistic-regression.html#checking-assumptionl-multicollinearity
+
+
 ```
 
 ## 4 variable importance

@@ -34,6 +34,7 @@ packs <- c('tidyverse'        # a must have!
            , 'randomForest'  #'rfUtilities', 'verification'
            , 'tictoc'         # times things
            , 'beepr'          # makes noises
+           ,  'ggpubr'
            # , 'broom'          # tidy up regression models
            # , 'performance'    # nice regression diagnostics
            # , 'psych'          # describe is very useful for descriptive statistics
@@ -285,16 +286,16 @@ n_tree <- 2000 #3/24/2022 changed back to 2000 trees as Price paper uses 2000
 
 
 # MHM - last date I ran this was 3/24/22 so will see that date below
-#tic(); load(file = '../Massive_forests/cf_no_dins_2022-03-24.Rdata'); toc() # ~9s
+#tic(); load(file = '../Massive_forests/cf_no_dins_2022-03-24.Rdata'); toc() # ~3 min
 
 ```
 
 
 ### B DINS analyses (smaller dataset, more predictors)
 ```{r}
+n_tree <- 2000 #3/24/2022 changed back to 2000 trees as Price paper uses 2000
 
-# predicting severity
-
+# predicting severity of damage - with dins
 # random forest via party::cforest which accepts missing data and is slower
 tic(); cf_dins <- party::cforest(
   damage_severity ~ . # severity, not binary
@@ -307,16 +308,45 @@ tic(); cf_dins <- party::cforest(
       )
   ); toc()
 
-# not sure if saving is needed..
-tic(); save(cf_dins
-            , file = paste0('../Massive_forests/cf_dins_', Sys.Date(), '.Rdata')); toc() # 3.5 seconds
 
-# read back in
+
+# 3/20/2022 - Dexter, I wanted to see if switching to categorial outcomes added anything extra to our findings so
+# I also included a DINS model with a binary outcome. I then compared the variable importance (top 20 variables, importance scores) for both DINS outcomes (binary, categorical) in section 4A. Because the outcomes are so similar I want to keep DINS as binary outcome - I think it's easier for descriptive figures and the reader, and it's keeping story simpler overall
+#keeping this as binary - with dins
+# subset
+build_dins_binary <- build %>% 
+  filter(build_DINS == 1) %>% 
+  select(-build_DINS, -damage_severity)
+  # dropping the DV for the smaller model
+# random forest via party::cforest which accepts missing data and is slower
+tic(); cf_dins_binary <- party::cforest(
+  damage_cat ~ . # binary
+  , data = build_dins_binary # notice build_dins_binary here, no "no" in the object name.
+  , controls =
+    cforest_control(
+        mtry = 5
+      , ntree = n_tree # 2000 is 80 sec - MHM
+      , mincriterion = 0
+      )
+  ); toc()
+
+
+
+ 
+ 
+# not sure if saving is needed..
+# tic(); save(cf_dins
+#              , file = paste0('../Massive_forests/cf_dins_', Sys.Date(), '.Rdata')); toc() # 3.5 seconds
+# tic(); save(cf_dins_binary
+#             , file = paste0('../Massive_forests/cf_dins_binary_', Sys.Date(), '.Rdata')); toc() # secs
+
+# read back in, Dexter
 tic(); load(file = '../Massive_forests/cf_dins_2022-02-22.Rdata'); toc() # 1.5 seconds
 
-# MHM - last date I ran this was 3/24/22 so will see that date below
-#tic(); load(file = '../Massive_forests/cf_dins_2022-03-24.Rdata'); toc() # ~9s
-
+#read back in, Miranda
+#last date I ran this was 3/29/22 so will see that date below
+tic(); load(file = '../Massive_forests/cf_dins_2022-03-29.Rdata'); toc() # 
+tic(); load(file = '../Massive_forests/cf_dins_binary_2022-03-29.Rdata'); toc() # 
 
 ```
 
@@ -324,6 +354,7 @@ tic(); load(file = '../Massive_forests/cf_dins_2022-02-22.Rdata'); toc() # 1.5 s
 ## 3 overall model accuracy
 ```{r}
 # under construction :-/ DHL todo
+ 
 #"100_old_hold.Rmd" has good code to pull from
 #also the ROC curves from "### v how did the model perform?" chunk in "Philly_Land_Cover_Change.Rmd"
 
@@ -545,21 +576,26 @@ vip_rf_no_dins
 # # not sure about this scaling. When scale is FALSE the values are on totally different scales
 # # `rank = TRUE`
 # tic(); vi_rf_no_dins <- vi(rf_no_dins, scale = TRUE) %>% mutate(Model = 'rf_no_dins', n_tree = n_tree); toc()
- tic(); vi_cf_no_dins <- vi(cf_no_dins, scale = TRUE) %>% mutate(Model = 'cf_no_dins', n_tree = n_tree); toc() # 10 mins
- tic(); vi_cf_dins    <- vi(cf_dins,    scale = TRUE) %>% mutate(Model =    'cf_dins', n_tree = n_tree); toc() # 1 min
+# tic(); vi_cf_no_dins <- vi(cf_no_dins, scale = TRUE) %>% mutate(Model = 'cf_no_dins', n_tree = n_tree); toc() # 10 mins
+# tic(); vi_cf_dins    <- vi(cf_dins,    scale = TRUE) %>% mutate(Model =    'cf_dins', n_tree = n_tree); toc() # 1 min
+# tic(); vi_cf_dins_binary    <- vi(cf_dins_binary,    scale = TRUE) %>% mutate(Model =    'cf_dins_binary', n_tree = n_tree); toc() # 1 min
 # 
 # 
-# bind_rows(vi_rf_no_dins, vi_cf_no_dins, vi_cf_dins) %>% # combines variable importance from each model
-#   write_csv(paste0('../Massive_forests/variable_importance_', Sys.Date(), '.csv'))
+ # bind_rows(vi_cf_no_dins, vi_cf_dins,vi_cf_dins_binary) %>% # combines variable importance from each model
+ #    write_csv(., paste0(getwd(), '/data/variable_importance', Sys.Date(), '.csv'))
+ 
 
-# TODO join in aliases and type, repurpose directly below.
- #MHM -3/23/2022 - let's hold off on displaying scale in variable importance plots until we talk more w alex, I think theme is somewhat repeating this information and would like her take
-(
-  variable_importance <- read_csv('../Massive_forests/variable_importance_2022-02-22.csv') %>% 
+ #reading back in variable importance
+ (
+  variable_importance <- read_csv(paste0(getwd(), '/data/variable_importance_2022-03-29.csv')) %>% 
     group_by(Model) %>% 
     mutate(rank = row_number(Model)) %>% 
     ungroup()
   )
+ 
+# TODO join in aliases and type, repurpose directly below.
+ #MHM -3/23/2022 - let's hold off on displaying scale in variable importance plots until we talk more w alex, I think theme is somewhat repeating this information and would like her take
+
 
 # # get tab_lab
 # left_join(
@@ -568,6 +604,40 @@ vip_rf_no_dins
 
 ```
 
+### A. compare DINS - class vs binary
+```{r}
+#compare variable importance outcomes for two ways of considering DINS outcomes - 
+# DINS RF with binary outcome and categorial outcome
+# 3/20/2022 - Dexter, I   compared the variable importance (top 20 variables, importance scores) for both DINS outcomes (binary, categorical) in section 4A. Because the outcomes are so similar I want to keep DINS as binary outcome - I think it's easier for descriptive figures and the reader, and it's keeping story simpler overall
+
+
+#first, are same variables listed in top 20? #for most part, yes
+variable_importance %>% 
+  filter (rank <21)  %>% 
+    filter (Model=='cf_dins' | Model== 'cf_dins_binary')  %>% 
+      add_count(Variable) %>% 
+        filter (n==1) 
+
+#for the most part- there are two variables in top 2 for each model that are unique to that model
+#cf_dins - categorial outcome includes  parcel_Paved_P & parcel_year_built but cf_dins_binary - binary outcome does not
+#cf_dins_binary - binary outcome includes build_PATIOCOVER and build_p_building_2000 but cf_dins - categorial outcome does not
+
+#second, are variable importances correlated?
+#yes, highly correlated
+variable_importance %>% 
+ filter (Model=='cf_dins' | Model== 'cf_dins_binary') %>%
+      dplyr::select(Variable, Importance, Model) %>% 
+        pivot_wider(
+          names_from = "Model",
+          values_from = "Importance") ->Imp_wide
+ 
+ggscatter(Imp_wide, x = "cf_dins", y = "cf_dins_binary", 
+          add = "reg.line", conf.int = TRUE, 
+          cor.coef = TRUE, cor.method = "pearson",
+          xlab = "Imp_cf_bins - Category", ylab = "Imp_cf_dins - Binary")
+
+  
+```
 
 ## 5 partial dependence plots
 ### A base-style graphs (example only)

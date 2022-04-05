@@ -788,16 +788,17 @@ for(variable in pdp_cf_dins_vars){      # start loop
 ```{r}
 # TODO Miranda, we can look at all plots, but maybe we just want to look at the top 10 or 20 top predictors
 #2/23/22 Dexter I think top 10 seems fine, the Price MS only shows several in final MS.
+#4/5/22 Dexter I ran this with 5 on my computer, just trying not to take too long. 
 
 ## CF DINS BINARY cf_dins_binary
 # loop through predictors to get PDP
 # first get the iterator, here the variable names
 
 # using ALL predictors
-(pdp_cf_dins_bin_vars <- variable_importance %>% filter(Model == 'cf_dins_binary') %>%                 pull(Variable))
+(pdp_cf_dins_bin_vars <- variable_importance %>% filter(Model == 'cf_dins_binary') %>% pull(Variable))
 
 # using top n predictors
-top_n <- 10          # set n (can revise to 20 or any other value greater than zero and less than 71)
+top_n <- 5          # set n (can revise to 20 or any other value greater than zero and less than 71)
 (pdp_cf_dins_bin_vars <- variable_importance %>% filter(Model == 'cf_dins_binary') %>% slice(1:top_n) %>% pull(Variable)) 
 
 
@@ -831,6 +832,8 @@ for(variable in pdp_cf_dins_bin_vars){      # start loop
          , dpi = resolution)
   toc()    # clock out within loop
   }; toc() # clock out whole loop
+
+
 
 
 ```

@@ -25,6 +25,7 @@ packs <- c('tidyverse'        # a must have!
            , 'sf'             # simple features
            , 'mapview'        # quick webmaps for zoom/pan viz
            , 'gtsummary'      # for descriptive table
+           , 'patchwork'
            #'tidycensus',     # access to Census data in a tidy way 
            #'party',          # random forests
            , 'dataMaid'       # nice reports
@@ -248,7 +249,7 @@ build %>%
 
 
 
-# 5 hists of land cover in buffers
+# 5 hists land cover & draft for pub
 ```{r}
 
 build %>% 
@@ -268,9 +269,39 @@ build %>%
   #                   gsub('[[:punct:]]', '_', Sys.time()), '.png')) +
   NULL
 
+#work on for publication, only 300 m
+# 4/6/2022
+#if we keep, reorder factors, and tweak formatting
+ggp4<- build %>% 
+  #st_drop_geometry() %>% 
+  tidylog::select(ID_Build, contains('build_p_')) %>% 
+  pivot_longer(-ID_Build) %>% 
+  mutate(#buff_dist = as.numeric(str_remove_all(name, '\\D')),
+         var = str_remove(name, 'build_p_')) %>% 
+  separate(var, into = c('var', 'buff_dist'), sep = '_', convert = TRUE) %>%  #if we keep, reorder factors, and tweak formatting
+  filter(buff_dist == 300 & var != 'water')%>% 
+  ggplot(aes(x = value, fill = var)) +  
+  geom_histogram() +
+  facet_wrap(~var, ncol=4)+
+  theme_bw() + labs(title = "Histogram of land cover (300 ft) around building")+ 
+  # ggsave(file = paste0(getwd(), '/figures/buff_landcover_300',
+  #                   gsub('[[:punct:]]', '_', Sys.time()), '.png')) +
+  # NULL
 
-build %>% ggplot(aes(build_min_dist_tree)) + geom_histogram(binwidth = 2)
-build %>% ggplot(aes(build_min_dist_shrub)) + geom_histogram(binwidth = 2)
+#work on for publication, 
+# 4/6/2022  
+
+
+ggp1<- build %>% ggplot(aes(build_Mean_elev_100m)) + geom_histogram(binwidth = 25) + theme_classic()
+ggp2<- build %>% ggplot(aes(build_Mean_distroad)) + geom_histogram(binwidth = 20)+ theme_classic()
+ggp3<- build %>% ggplot(aes(build_Mean_builddens)) + geom_histogram(binwidth = .1)+ theme_classic()
+ggp_all <- (ggp1 + ggp2) / (ggp3 + ggp4) +    # Create grid of plots with title
+  plot_annotation(title = "Descriptives for publication") & 
+  theme(plot.title = element_text(hjust = 0.5))
+ggp_all   
+
+
+
 
 ```
 
@@ -380,7 +411,10 @@ build %>%
 # summary(lm(damage_binary ~ build_near_exp, build))
 
 
-```
+
+
+ 
+ ```
 
 
 TODO expand EDA? Others?

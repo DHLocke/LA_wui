@@ -798,7 +798,7 @@ for(variable in pdp_cf_dins_vars){      # start loop
 (pdp_cf_dins_bin_vars <- variable_importance %>% filter(Model == 'cf_dins_binary') %>% pull(Variable))
 
 # using top n predictors
-top_n <- 5          # set n (can revise to 20 or any other value greater than zero and less than 71)
+top_n <- 10          # set n (can revise to 20 or any other value greater than zero and less than 71)
 (pdp_cf_dins_bin_vars <- variable_importance %>% filter(Model == 'cf_dins_binary') %>% slice(1:top_n) %>% pull(Variable)) 
 
 
@@ -832,8 +832,7 @@ for(variable in pdp_cf_dins_bin_vars){      # start loop
          , dpi = resolution)
   toc()    # clock out within loop
   }; toc() # clock out whole loop
-
-
+ 
 
 
 ```

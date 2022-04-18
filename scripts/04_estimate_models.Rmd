@@ -7,18 +7,14 @@ editor_options:
   chunk_output_type: console
 ---
 
-
-
-
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
 This assumes "02_Woosley_combine_data.Rmd" was run
 
-
-
 ## 0 set up: load libraries, custom functions, set defaults
+
 ```{r}
 # load libraries
 # packages we'll be using
@@ -64,10 +60,10 @@ vapply(packs, library, character.only = TRUE, logical(1),
 set.seed(19870630)
 ```
 
-
-
 ## 1 read in data
+
 ### A main `build` file
+
 ```{r}
 
 # one 'main' data frame
@@ -167,9 +163,8 @@ build %>%
 # Miranda, are these NA's expected? #  2/23/22Dexter, see line 159 above.
 ```
 
-
-
 ### B non-DINS data (larger dataset, fewer predictors)
+
 ```{r}
 
 # a subset for non-DINS-associated data
@@ -203,9 +198,8 @@ build_no_dins %>% tabyl(damage_cat)
 
 ```
 
-
-
 ### C DINS data (smaller dataset, more predictors)
+
 ```{r}
 # get data for DINS analyses
 build %>% tabyl(build_DINS)
@@ -236,10 +230,10 @@ build_dins %>% tabyl(damage_severity)
 
 ```
 
-
-
 ## 2 fit random forest models
+
 ### A non-DINS analyses (larger dataset, fewer predictors)
+
 ```{r}
 # fit random forest models
 # randomForest::randomForest is faster but requires full data
@@ -277,8 +271,8 @@ n_tree <- 2000 #3/24/2022 changed back to 2000 trees as Price paper uses 2000
 #   ); toc()
 
 # # save out since it is slow
-# sounds good - I had to rerun this on my machine on 3/24/22 so will see that date below
-#tic(); save(cf_no_dins
+# # sounds good - I had to rerun this on my machine on 3/24/22 so will see that date below
+# tic(); save(cf_no_dins
 #             , file = paste0('../Massive_forests/cf_no_dins_', Sys.Date(), '.Rdata')); toc()
 
 # read back in
@@ -290,8 +284,8 @@ n_tree <- 2000 #3/24/2022 changed back to 2000 trees as Price paper uses 2000
 
 ```
 
-
 ### B DINS analyses (smaller dataset, more predictors)
+
 ```{r}
 
 # predicting severity
@@ -326,7 +320,7 @@ tic(); cf_dins_binary <- party::cforest(
       , ntree = n_tree # 2000 is 80 sec - MHM
       , mincriterion = 0
       )
-  ); toc()
+  ); toc() # ~25 seconds
 
 
 
@@ -344,26 +338,53 @@ tic(); load(file = '../Massive_forests/cf_dins_2022-03-29.Rdata'); toc() #
 tic(); load(file = '../Massive_forests/cf_dins_binary_2022-03-29.Rdata'); toc() # 
 ```
 
-
 ## 3 overall model accuracy
+### A cf_no_dins
 ```{r}
-# under construction :-/ DHL todo
-#"100_old_hold.Rmd" has good code to pull from
-#also the ROC curves from "### v how did the model perform?" chunk in "Philly_Land_Cover_Change.Rmd"
+# tic(); predict_cf_no_dins <- predict(cf_no_dins); toc() # ~1 hr
+# 
+# tic(); save(predict_cf_no_dins
+#             , file = paste0('output_data/predict_cf_no_dins_', Sys.Date(), '.Rdata')); toc() # basically instant
 
-# rest of chunk taken from "Philly_Land_Cover_Change.Rmd"
-# NEEDS TO BE EDITED
+load('output_data/predict_cf_no_dins_2022-04-18.Rdata')
 
-### v how did the model perform?
 
-# check_collinearity(dat_multi_mod)
-# check_collinearity(dat_multi_mod_idw)
+# # probability version (instead of hard class) used in ROC / AUC below
+# tic(); predict_probs_cf_no_dins <- predict(cf_no_dins, type = 'prob'); toc() # ~1 hr
+# 
+# tic(); save(predict_probs_cf_no_dins
+#             , file = paste0('output_data/predict_probs_cf_no_dins_', Sys.Date(), '.Rdata')); toc() # basically instant
 
-# # it looks like we are over-predicting tree persistence
-(tibble(obs = as.factor(dat_multi$delta), # observed
-        pred= predict(dat_multi_mod)) %>% # predicted
-    tabyl(obs, pred) -> ctab)
+load('output_data/predict_probs_cf_no_dins_2022-04-18.Rdata')
 
+
+table(build_no_dins$damage_cat) # truth
+table(predict_cf_no_dins)       # prediction
+
+# compare observed (aka truth) with prediction
+(table(  build_no_dins$damage_cat
+      , predict_cf_no_dins) |>
+  as.data.frame.matrix(row.names = c('true Destroyed', 'true Survived')) |> 
+  rownames_to_column() -> build_no_dins_accuracy_table)
+
+# accuracy = (TN + TP) / (TN + FP + FN + TP)
+
+(TN <- build_no_dins_accuracy_table$Destroyed[1]) # True Positive
+(TP <- build_no_dins_accuracy_table$Survived[2])  # True Negative
+
+100*((TN + TP) / sum(build_no_dins_accuracy_table$Destroyed,
+                     build_no_dins_accuracy_table$Survived))
+
+build_no_dins_accuracy_table |> 
+  adorn_percentages(denominator = 'all') |>
+  adorn_pct_formatting()
+
+
+
+```
+
+#### i ROC curve (kinda useless - dang)
+```{r}
 
 # nice worked example of multiclass ROC
 # https://rdrr.io/cran/pROC/man/multiclass.html
@@ -377,100 +398,158 @@ tic(); load(file = '../Massive_forests/cf_dins_binary_2022-03-29.Rdata'); toc() 
 # for the predicted data, where "_xx" is a method (like 
 # 'mn' for multinomial or 'rf' for random forest)
 # (
-model.matrix(~0 + dat_multi$delta) %>% # one hot encoding trick
+model.matrix(~0 + build_no_dins$damage_cat) %>% # one hot encoding trick
   as_tibble() %>% #glimpse()
   mutate_all(., ~as.integer(.)) %>% 
-  rename_all(., ~str_remove_all(., "dat_multi\\$delta")) %>%
+  rename_all(., ~str_remove_all(., "build_no_dins\\$damage_cat")) %>%
   rename_all(., ~paste0(., '_true')) %>%
-  bind_cols(., 
-            predict(dat_multi_mod, type = 'prob') %>% # multinomial, container
-              as_tibble() %>%
-              rename_all(., ~paste0(., '_pred_MNc')),
-            # predict(dat_multi_mod_idw, type = 'prob') %>% # multinomial, IDW
-            #   as_tibble() %>%
-            #   rename_all(., ~paste0(., '_pred_MNi')),
-            predict(dat_multi_mod_rf, type = 'prob') %>% # random forest, container
-              as_tibble() %>% 
-              rename_all(., ~paste0(., '_pred_RFc'))
-            # predict(dat_multi_mod_rf_idw, type = 'prob') %>% # random forest, IDW
-            #   as_tibble() %>% 
-            #   rename_all(., ~paste0(., '_pred_RFi'))
-  ) %>% 
-  rename_all(., ~str_replace_all(., '\\.', '_')) %>%  
-  data.frame() -> class_test
+  bind_cols(., predict_probs_cf_no_dins |> 
+              map(.x, .f = as_tibble) |> 
+              bind_rows() |> 
+              rename_all(~str_remove_all(., 'damage_cat.')) |> 
+              rename_all(~paste0(., '_pred_cf'))
+  ) |> 
+  data.frame() -> class_test_build_no_dins
 
-model.matrix(~0 + dat_multi_idw$delta) %>% # one hot encoding trick
-  as_tibble() %>% #glimpse()
-  mutate_all(., ~as.integer(.)) %>% 
-  rename_all(., ~str_remove_all(., "dat_multi_idw\\$delta")) %>%
-  rename_all(., ~paste0(., '_true')) %>%
-  bind_cols(., 
-            # predict(dat_multi_mod, type = 'prob') %>% # multinomial, container
-            #   as_tibble() %>%
-            #   rename_all(., ~paste0(., '_pred_MNc')),
-            predict(dat_multi_mod_idw, type = 'prob') %>% # multinomial, IDW
-              as_tibble() %>%
-              rename_all(., ~paste0(., '_pred_MNi')),
-            # predict(dat_multi_mod_rf, type = 'prob') %>% # random forest, container
-            #   as_tibble() %>% 
-            #   rename_all(., ~paste0(., '_pred_RFc')),
-            predict(dat_multi_mod_rf_idw, type = 'prob') %>% # random forest, IDW
-              as_tibble() %>%
-              rename_all(., ~paste0(., '_pred_RFi'))
-  ) %>% 
-  rename_all(., ~str_replace_all(., '\\.', '_')) %>%  
-  data.frame() -> class_test_idw  
-
-# )
+class_test_build_no_dins %>% names
+class_test_build_no_dins %>% glimpse
 
 
-compare_performance(dat_multi_mod, dat_multi_mod_idw
-                    , rank = TRUE
-)
 
-# model_performance(dat_multi_mod)
-# model_performance(dat_multi_mod_idw)
-
-dat_multi_mod_rf; dat_multi_mod_rf_idw
-
-class_test %>% names
-class_test %>% glimpse
-
-class_test_idw %>% names
-class_test_idw %>% glimpse
-
-
-roc_res <- multiROC::multi_roc(class_test, force_diag=TRUE)
-plot_roc_df <- plot_roc_data(roc_res)
-
-roc_res_idw <- multiROC::multi_roc(class_test_idw, force_diag=TRUE)
-plot_roc_df_idw <- plot_roc_data(roc_res_idw)
+roc_res <- multiROC::multi_roc(class_test_build_dins_binary, force_diag=TRUE)
+plot_roc_df <- multiROC::plot_roc_data(roc_res)
 
 
 
 
 # roc_res$AUC
-(auc <- tibble(variable             = roc_res$AUC$MNc %>% names()
-               , multinomial_reg     =     roc_res$AUC$MNc %>% unlist()
-               , multinomial_reg_idw = roc_res_idw$AUC$MNi %>% unlist()
-               , random_forest       =     roc_res$AUC$RFc %>% unlist()
-               , random_forest_idw   = roc_res_idw$AUC$RFi %>% unlist()
-) |> 
-    mutate_if(is.double, round, 2)
+(auc <- tibble(variable             = roc_res$AUC$cf %>% names()
+               , multinomial_reg     =     roc_res$AUC$cf %>% unlist()
+               # , multinomial_reg_idw = roc_res_idw$AUC$MNi %>% unlist()
+               # , random_forest       =     roc_res$AUC$RFc %>% unlist()
+               # , random_forest_idw   = roc_res_idw$AUC$RFi %>% unlist()
+) #|> mutate_if(is.double, round, 2)
   # arrange(desc(multinomial_reg))
 )
 
 auc |> View()
 
-auc |> 
-  tidylog::select('Land Cover Transition' = variable, AUC = multinomial_reg) |> 
-  mutate(  'Land Cover Transition' = str_replace_all(`Land Cover Transition`, '\\.', ' ')
-           , 'Land Cover Transition' = str_to_title(`Land Cover Transition`)) |> 
-  write_csv('outputs/AUC.csv')
 
-# round (and transpose) kind of weird that this works
-auc %>% dplyr::select(-variable) %>% map(., ~round(., 2)) |> bind_rows(.id = 'var') |> View()
-# roc_res$AUC$MNc %>% flatten() |> bind_rows() |> str()
+
+# AUC contains a list of AUC for each group of different classifiers. Micro-average ROC-AUC was calculated by stacking all groups together, thus converting the multi-class classification into binary classification. Macro-average ROC-AUC was calculated by averaging all groups results (one vs rest) and linear interpolation was used between points of ROC.
+
+
+
+(
+  roc_all_facet <- plot_roc_df %>%
+    ggplot(aes(x = 1-Specificity, y = Sensitivity)) +
+    geom_path(aes(color = Group, linetype=Method), size = 1) + # , alpha = .5) +
+    geom_segment(aes(x = 0, y = 0, xend = 1, yend = 1),
+                 colour='grey', linetype = 'dotdash') +
+    scale_y_continuous(expand = c(0, 0)) +
+    scale_x_continuous(expand = c(0, 0)) +
+    theme_bw() +
+    theme(plot.title = element_text(hjust = 0.5),
+          # legend.justification=c(1, 0), legend.position=c(.95, .05),
+          legend.title=element_blank(),
+          legend.background = element_rect(fill=NULL, size=0.5,
+                                           linetype="solid", colour ="black")) +
+    coord_fixed() +
+    facet_wrap(~Method) +
+    NULL
+)
+
+# ggsave(paste0(getwd(), '/figs/roc_all_facet_', Sys.Date(), '.png')
+#        , width = 6.5, height = 6.5)
+
+```
+
+
+### B cf_dins_binary
+```{r}
+# REPEAT for cf_dins_binary
+
+tic(); predict_cf_dins_binary <- predict(cf_dins_binary); toc() # ~75 secs
+
+# used in ROC curve calcs
+tic(); predict_probs_cf_dins_binary <- predict(cf_dins_binary, type = 'prob'); toc() # ~75 secs
+
+
+table(build_dins_binary$damage_cat) # truth
+table(predict_cf_dins_binary)       # prediction
+
+# compare observed (aka truth) with prediction
+(table( build_dins_binary$damage_cat
+      , predict_cf_dins_binary) |>
+  as.data.frame.matrix(row.names = c('true Destroyed', 'true Survived')) |> 
+  rownames_to_column() -> cf_dins_binary_accuracy_table)
+
+# accuracy = (TN + TP) / (TN + FP + FN + TP)
+
+(TN <- cf_dins_binary_accuracy_table$Destroyed[1]) # True Positive
+(TP <- cf_dins_binary_accuracy_table$Survived[2])  # True Negative
+
+100*((TN + TP) / sum(cf_dins_binary_accuracy_table$Destroyed,
+                     cf_dins_binary_accuracy_table$Survived))
+
+
+cf_dins_binary_accuracy_table |> 
+  adorn_percentages(denominator = 'all') |>
+  adorn_pct_formatting()
+
+```
+
+#### i ROC curve (kinda useless - dang)
+```{r}
+
+# nice worked example of multiclass ROC
+# https://rdrr.io/cran/pROC/man/multiclass.html
+
+# but this one is better
+# https://github.com/WandeRum/multiROC
+# get response categories as one hot encoded-tibble
+# naming with multiROC::multi_roc is really finicky
+# column names cannot have dots and must end with 
+# "_true" for the observed data and "_pred_xx" 
+# for the predicted data, where "_xx" is a method (like 
+# 'mn' for multinomial or 'rf' for random forest)
+# (
+model.matrix(~0 + build_dins_binary$damage_cat) %>% # one hot encoding trick
+  as_tibble() %>% #glimpse()
+  mutate_all(., ~as.integer(.)) %>% 
+  rename_all(., ~str_remove_all(., "build_dins_binary\\$damage_ca")) %>%
+  rename_all(., ~paste0(., '_true')) %>%
+  bind_cols(., predict_probs_cf_dins_binary |> 
+              map(.x, .f = as_tibble) |> 
+              bind_rows() |> 
+              rename_all(~str_remove_all(., 'damage_cat.')) |> 
+              rename_all(~paste0(., '_pred_cf'))
+  ) |> 
+  data.frame() -> class_test_build_dins_binary
+
+class_test_build_dins_binary %>% names
+class_test_build_dins_binary %>% glimpse
+
+
+
+roc_res <- multiROC::multi_roc(class_test_build_dins_binary, force_diag=TRUE)
+plot_roc_df <- multiROC::plot_roc_data(roc_res)
+
+
+
+
+# roc_res$AUC
+(auc <- tibble(variable             = roc_res$AUC$cf %>% names()
+               , multinomial_reg     =     roc_res$AUC$cf %>% unlist()
+               # , multinomial_reg_idw = roc_res_idw$AUC$MNi %>% unlist()
+               # , random_forest       =     roc_res$AUC$RFc %>% unlist()
+               # , random_forest_idw   = roc_res_idw$AUC$RFi %>% unlist()
+) #|> mutate_if(is.double, round, 2)
+  # arrange(desc(multinomial_reg))
+)
+
+auc |> View()
+
 
 
 # AUC contains a list of AUC for each group of different classifiers. Micro-average ROC-AUC was calculated by stacking all groups together, thus converting the multi-class classification into binary classification. Macro-average ROC-AUC was calculated by averaging all groups results (one vs rest) and linear interpolation was used between points of ROC.
@@ -498,11 +577,8 @@ auc %>% dplyr::select(-variable) %>% map(., ~round(., 2)) |> bind_rows(.id = 'va
 # ggsave(paste0(getwd(), '/figs/roc_all_', Sys.Date(), '.png')
 #        , width = 6.5, height = 6.5)
 
-
-
 (
   roc_all_facet <- plot_roc_df %>%
-    bind_rows(plot_roc_df_idw) |> # adds in the idw
     ggplot(aes(x = 1-Specificity, y = Sensitivity)) +
     geom_path(aes(color = Group, linetype=Method), size = 1) + # , alpha = .5) +
     geom_segment(aes(x = 0, y = 0, xend = 1, yend = 1),
@@ -523,17 +599,10 @@ auc %>% dplyr::select(-variable) %>% map(., ~round(., 2)) |> bind_rows(.id = 'va
 # ggsave(paste0(getwd(), '/figs/roc_all_facet_', Sys.Date(), '.png')
 #        , width = 6.5, height = 6.5)
 
-
-
-# https://github.com/WandeRum/multiROC/blob/master/README.md
-# https://stats.stackexchange.com/questions/2151/how-to-plot-roc-curves-in-multiclass-classification
-# https://cran.r-project.org/web/packages/pROC/pROC.pdf
-# https://bookdown.org/chua/ber642_advanced_regression/multinomial-logistic-regression.html#checking-assumptionl-multicollinearity
-
-
 ```
 
 ## 4 variable importance
+
 ```{r}
 # # modified from first chunk here:
 # # https://bgreenwell.github.io/pdp/articles/pdp.html#other-vignettes
@@ -594,7 +663,9 @@ vip_rf_no_dins
 #         tidylog::select(`Variable name`, Alias, Type, Scale)) 
 
 ```
+
 ### A. compare DINS - class vs binary
+
 ```{r}
 #compare variable importance outcomes for two ways of considering DINS outcomes - 
 # DINS RF with binary outcome and categorial outcome
@@ -625,7 +696,9 @@ ggscatter(Imp_wide, x = "cf_dins", y = "cf_dins_binary",
 ```
 
 ## 5 partial dependence plots
+
 ### A base-style graphs (example only)
+
 ```{r eval=FALSE, include=FALSE}
 # single base-graphics partial dependency plot, modeled after Figure 2 here:
 # https://bgreenwell.github.io/pdp/articles/pdp.html#other-vignettes
@@ -636,9 +709,10 @@ randomForest::partialPlot(rf_no_dins
                           ) # ugly!
 ```
 
-
 ### B ggplot graphs
+
 #### i test on a single predictor
+
 ```{r}
 # # building off of the third chunk from
 # # https://bgreenwell.github.io/pdp/articles/pdp.html#other-vignettes
@@ -675,11 +749,13 @@ ggsave(file = paste0(getwd(), '/figures/cf_dins/', variable, '_', Sys.Date(), '.
 ```
 
 #### ii non-DINS RF
+
 ```{r}
 # TODO
 ```
 
 #### iii non-DINS CF
+
 ```{r}
 # TODO Miranda, we can look at all plots, but maybe we just want to look at the top 10 or 20 top predictors
 #2/23/22 Dexter I think top 10 seems fine, the Price MS only shows several in final MS.
@@ -731,6 +807,7 @@ for(variable in pdp_cf_no_dins_vars){   # start loop, iterating over pdp_cf_no_d
 ```
 
 #### iv DINS CF
+
 ```{r}
 # TODO Miranda, we can look at all plots, but maybe we just want to look at the top 10 or 20 top predictors
 #2/23/22 Dexter I think top 10 seems fine, the Price MS only shows several in final MS.
@@ -783,8 +860,8 @@ for(variable in pdp_cf_dins_vars){      # start loop
 
 ```
 
-
 #### v DINS CF - binary outcome
+
 ```{r}
 # TODO Miranda, we can look at all plots, but maybe we just want to look at the top 10 or 20 top predictors
 #2/23/22 Dexter I think top 10 seems fine, the Price MS only shows several in final MS.
@@ -837,16 +914,12 @@ for(variable in pdp_cf_dins_bin_vars){      # start loop
 
 ```
 
-
 ```{r, citations}
 lapply(packages, citation)
 ```
 
-
 Last knit on `r format(Sys.time())`
-
 
 ```{r}
 system.time(save.image(file = paste0('saved_sessions/wui_r_models_', gsub('[[:punct:]]', '-', Sys.time()), '.RData')))
 ```
-

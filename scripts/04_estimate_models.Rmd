@@ -37,6 +37,7 @@ packs <- c('tidyverse'        # a must have!
            # , 'sjPlot'         # useful plotting and regression support
            # , 'rpart'          # for random forests
            # # , pROC           # for AUC calculation
+           , 'doParallel'     # make partial dependency plots less-slow
            , 'pdp'            # partial dep plots
            , 'vip'            # Variable Importance Plots (and extracting vip vals)
            # , 'caret'          #random forest work
@@ -137,7 +138,7 @@ build <- read_csv(paste0(getwd(), '/output_data/building_2022-02-01.csv')) %>%
     , parcel_area  
     , build_Mean_builddens  
     , build_Mean_distall_road  
-    , build_Mean_distroad  
+    , build_Mean_distroad   
     , build_Mean_aspect_100m_DEM  
     , build_Mean_aspect_30m_DEM  
     , build_Mean_elev_100m  
@@ -239,8 +240,9 @@ build_dins %>% tabyl(damage_severity)
 # randomForest::randomForest is faster but requires full data
 # party::cforest is slower but can handle missing data
 
-#n_tree <- 10 # used for setting number of trees
-n_tree <- 2000 #3/24/2022 changed back to 2000 trees as Price paper uses 2000
+# n_tree <- 10 # used for setting number of trees
+# n_tree <- 2000 #3/24/2022 changed back to 2000 trees as Price paper uses 2000
+n_tree <- 500 # May 20, 2022 because we want graphs this centry
 
 
 # # random forest but has to drop NAs
@@ -255,10 +257,10 @@ n_tree <- 2000 #3/24/2022 changed back to 2000 trees as Price paper uses 2000
 #   ); toc()
 
 
-# # since this takes a long time to run, I've commented the code off and just read-in
-# # the completed model file in its "*.Rdata" format with the load() function.
-# sounds good - I had to rerun this on my machine on 3/24/22 so will see that date below
-# # random forest via party::cforest which accepts missing data and is slower 
+# # # since this takes a long time to run, I've commented the code off and just read-in
+# # # the completed model file in its "*.Rdata" format with the load() function.
+# # sounds good - I had to rerun this on my machine on 3/24/22 so will see that date below
+# # # random forest via party::cforest which accepts missing data and is slower 
 # tic(); cf_no_dins <- party::cforest(
 #   damage_cat ~ .
 #   , data = build_no_dins # notice no drop_na here
@@ -268,7 +270,7 @@ n_tree <- 2000 #3/24/2022 changed back to 2000 trees as Price paper uses 2000
 #       , ntree = n_tree # 10 ~2 seconds, 100 ~25s, 200 ~50s, 300 ~75s ... 500 ~130 seconds
 #       , mincriterion = 0
 #       )
-#   ); toc()
+#   ); toc(); beepr::beep() # 12 mins with 500 trees
 
 # # save out since it is slow
 # # sounds good - I had to rerun this on my machine on 3/24/22 so will see that date below
@@ -276,8 +278,9 @@ n_tree <- 2000 #3/24/2022 changed back to 2000 trees as Price paper uses 2000
 #             , file = paste0('../Massive_forests/cf_no_dins_', Sys.Date(), '.Rdata')); toc()
 
 # read back in
-#tic(); load(file = '../Massive_forests/cf_no_dins_2022-02-22.Rdata'); toc() # ~9s
-
+# tic(); load(file = '../Massive_forests/cf_no_dins_2022-02-22.Rdata'); toc() # ~9s
+# tic(); load(file = '../Massive_forests/cf_no_dins_2022-05-17.Rdata'); toc() # ~50s with 2000 trees!
+tic(); load(file = '../Massive_forests/cf_no_dins_2022-05-20.Rdata'); toc() # < 10s with 500 trees
 
 # MHM - last date I ran this was 3/24/22 so will see that date below
 #tic(); load(file = '../Massive_forests/cf_no_dins_2022-03-24.Rdata'); toc() # 
@@ -288,9 +291,9 @@ n_tree <- 2000 #3/24/2022 changed back to 2000 trees as Price paper uses 2000
 
 ```{r}
 
-# predicting severity
-
-# random forest via party::cforest which accepts missing data and is slower
+# # predicting severity
+# 
+# # random forest via party::cforest which accepts missing data and is slower
 tic(); cf_dins <- party::cforest(
   damage_severity ~ . # severity, not binary
   , data = build_dins # notice build_dins here, no "no" in the object name.
@@ -300,12 +303,14 @@ tic(); cf_dins <- party::cforest(
       , ntree = n_tree # 10 ~0.52 seconds, 100 ~1.5s, 200 ~2.7s, 300 ~3.5s ... 500 ~7s
       , mincriterion = 0
       )
-  ); toc()
+  ); toc() # ~6 seconds
 
 # 3/20/2022 - Dexter, I wanted to see if switching to categorial outcomes added anything extra to our findings so
 # I also included a DINS model with a binary outcome. I then compared the variable importance (top 20 variables, importance scores) for both DINS outcomes (binary, categorical) in section 4A. Because the outcomes are so similar I want to keep DINS as binary outcome - I think it's easier for descriptive figures and the reader, and it's keeping story simpler overall
 #keeping this as binary - with dins
 # subset
+
+n_tree <- 500
 build_dins_binary <- build %>% 
   filter(build_DINS == 1) %>% 
   select(-build_DINS, -damage_severity)
@@ -320,27 +325,31 @@ tic(); cf_dins_binary <- party::cforest(
       , ntree = n_tree # 2000 is 80 sec - MHM
       , mincriterion = 0
       )
-  ); toc() # ~25 seconds
+  ); toc() # ~6 seconds with 500
 
 
 
-# not sure if saving is needed..
-# tic(); save(cf_dins
-#              , file = paste0('../Massive_forests/cf_dins_', Sys.Date(), '.Rdata')); toc() # 3.5 seconds
+# # not sure if saving is needed..
+# # tic(); save(cf_dins
+# #              , file = paste0('../Massive_forests/cf_dins_', Sys.Date(), '.Rdata')); toc() # 3.5 seconds
 # tic(); save(cf_dins_binary
-#             , file = paste0('../Massive_forests/cf_dins_binary_', Sys.Date(), '.Rdata')); toc() # secs
+#             , file = paste0('../Massive_forests/cf_dins_binary_', Sys.Date(), '.Rdata')); toc() # ~20 secs
 
-# read back in
-tic(); load(file = '../Massive_forests/cf_dins_2022-02-22.Rdata'); toc() # 1.5 seconds
+# # read back in
+# tic(); load(file = '../Massive_forests/cf_dins_2022-02-22.Rdata'); toc() # 1.5 seconds
+# tic(); load(file = '../Massive_forests/cf_dins_binary_2022-05-17.Rdata'); toc() # 4 seconds 2000 trees
+# tic(); load(file = '../Massive_forests/cf_dins_binary_2022-05-20.Rdata'); toc() # <1 second with 500 trees
+ 
+# #last date I ran this was 3/29/22 so will see that date below
+# tic(); load(file = '../Massive_forests/cf_dins_2022-03-29.Rdata'); toc() # 
+# tic(); load(file = '../Massive_forests/cf_dins_binary_2022-03-29.Rdata'); toc() # 
 
-#last date I ran this was 3/29/22 so will see that date below
-tic(); load(file = '../Massive_forests/cf_dins_2022-03-29.Rdata'); toc() # 
-tic(); load(file = '../Massive_forests/cf_dins_binary_2022-03-29.Rdata'); toc() # 
+
 ```
 
 ## 3 overall model accuracy
 ### A cf_no_dins
-```{r}
+```{r eval=FALSE, include=FALSE}
 # tic(); predict_cf_no_dins <- predict(cf_no_dins); toc() # ~1 hr
 # 
 # tic(); save(predict_cf_no_dins
@@ -384,7 +393,7 @@ build_no_dins_accuracy_table |>
 ```
 
 #### i ROC curve (kinda useless - dang)
-```{r}
+```{r eval=FALSE, include=FALSE}
 
 # nice worked example of multiclass ROC
 # https://rdrr.io/cran/pROC/man/multiclass.html
@@ -466,7 +475,7 @@ auc |> View()
 
 
 ### B cf_dins_binary
-```{r}
+```{r eval=FALSE, include=FALSE}
 # REPEAT for cf_dins_binary
 
 tic(); predict_cf_dins_binary <- predict(cf_dins_binary); toc() # ~75 secs
@@ -500,7 +509,7 @@ cf_dins_binary_accuracy_table |>
 ```
 
 #### i ROC curve (kinda useless - dang)
-```{r}
+```{r eval=FALSE, include=FALSE}
 
 # nice worked example of multiclass ROC
 # https://rdrr.io/cran/pROC/man/multiclass.html
@@ -609,20 +618,20 @@ auc |> View()
 # # Variable importance plot (compare to randomForest::varImpPlot(boston_rf))
 # vip(boston_rf, bar = FALSE, horizontal = FALSE, size = 1.5)  # Figure 1
 
-# variable importance plot with random forest; fast
-vip_rf_no_dins <- vip(rf_no_dins
-    # , bar = FALSE       # doesn't seem to work "help(vip)" showed that it changed to "geom"
-    # , geom = 'point'    # try "col" instead
-    , geom = 'col'      # try "point" instead
-    , horizontal = TRUE # vignette example had this as FALSE (label easier rotated)
-    # , size = 1.5        # plausibly pertains to point size
-    # see "num_features"
-    # "Integer specifying the number of variable importance scores to plot. Default is 10."
-    ) + 
-  theme_bw(16)          # added some flare (ok just bigger axis text and black/white theme)
-
-# check the plot
-vip_rf_no_dins
+# # variable importance plot with random forest; fast
+# vip_rf_no_dins <- vip(rf_no_dins
+#     # , bar = FALSE       # doesn't seem to work "help(vip)" showed that it changed to "geom"
+#     # , geom = 'point'    # try "col" instead
+#     , geom = 'col'      # try "point" instead
+#     , horizontal = TRUE # vignette example had this as FALSE (label easier rotated)
+#     # , size = 1.5        # plausibly pertains to point size
+#     # see "num_features"
+#     # "Integer specifying the number of variable importance scores to plot. Default is 10."
+#     ) + 
+#   theme_bw(16)          # added some flare (ok just bigger axis text and black/white theme)
+# 
+# # check the plot
+# vip_rf_no_dins
 
 
 
@@ -642,29 +651,36 @@ vip_rf_no_dins
 # tic(); vi_cf_dins_binary    <- vi(cf_dins_binary,    scale = TRUE) %>% mutate(Model =    'cf_dins_binary', n_tree = n_tree); toc() # 1 min
 # 
 # 
- # bind_rows(vi_cf_no_dins, vi_cf_dins,vi_cf_dins_binary) %>% # combines variable importance from each model
- #    write_csv(., paste0(getwd(), '/data/variable_importance', Sys.Date(), '.csv'))
+# bind_rows(vi_cf_no_dins
+#           , vi_cf_dins
+#           , vi_cf_dins_binary) %>% # combines variable importance from each model
+#     write_csv(., paste0(getwd(), '/output_data/variable_importance_', Sys.Date(), '.csv'))
 
  
+
+# reading back in deviance explained
+(tab_labs <- 
+  read_csv(paste0(getwd(), '/data/Table_Deviance_Explained_2022-03-08.csv'))) 
  
-# TODO join in aliases and type, repurpose directly below.
+# join in aliases and type, repurpose directly below.
  #MHM -3/23/2022 - let's hold off on displaying scale in variable importance plots until we talk more w alex, I think theme is somewhat repeating this information and would like her take
 (
-  variable_importance <- read_csv(paste0(getwd(), '/data/variable_importance_2022-03-29.csv')) %>% 
+  variable_importance <- read_csv(paste0(getwd()
+                                         # , '/data/variable_importance_2022-03-29.csv')) %>% 
+                                         , '/output_data/variable_importance_2022-05-20.csv')) %>% 
     group_by(Model) %>% 
     mutate(rank = row_number(Model)) %>% 
-    ungroup()
+    ungroup() |> 
+    left_join(
+      tab_labs |> tidylog::select(Variable = `Variable name`, Alias, Type, Scale)
+      , by = 'Variable') |> 
+    mutate(Variable = factor(Variable))
   )
- 
 
-# # get tab_lab
-# left_join(
-#       tab_labs %>% 
-#         tidylog::select(`Variable name`, Alias, Type, Scale)) 
 
 ```
 
-### A. compare DINS - class vs binary
+### A compare DINS - class vs binary
 
 ```{r}
 #compare variable importance outcomes for two ways of considering DINS outcomes - 
@@ -673,7 +689,7 @@ vip_rf_no_dins
 #first, are same variables listed in top 20? #for most part, yes
 variable_importance %>% 
   filter (rank <21)  %>% 
-    filter (Model=='cf_dins' | Model== 'cf_dins_binary')  %>% 
+  filter (Model=='cf_dins' | Model== 'cf_dins_binary')  %>% 
       add_count(Variable) %>% 
         filter (n==1) 
 #for the most part- there are two variables in top 2 for each model that are unique to that model
@@ -692,7 +708,63 @@ ggscatter(Imp_wide, x = "cf_dins", y = "cf_dins_binary",
           add = "reg.line", conf.int = TRUE, 
           cor.coef = TRUE, cor.method = "pearson",
           xlab = "Imp_cf_bins - Category", ylab = "Imp_cf_dins - Binary")
-  
+```
+
+
+### B graph variable importance
+```{r}
+variable_importance |> 
+  tabyl(Model)
+
+(
+  variable_importance |> 
+    filter(Model == 'cf_no_dins') |> 
+    filter(rank < 21) |> 
+    ggplot(aes(  
+        x = `Importance`
+      , y = reorder(Alias, `Importance`)
+      # , color  = Scale
+      )) +
+    # geom_point(aes(shape = Type)) +
+    geom_col() + 
+    theme_bw(16) +
+    theme(axis.ticks.y = element_blank()) + 
+    theme(legend.position = "top",
+          legend.justification = "left",
+          plot.title.position = "plot",
+          plot.caption = element_text(hjust=0),
+          plot.caption.position = "plot") + 
+    labs(
+        title = 'Variable Importance Scores for Random Forest with no DINS variables (n = 11,134)'
+      , y = '') + 
+    NULL -> a_importance_graph_no_dins
+  )
+
+(
+  variable_importance |> 
+    filter(Model == 'cf_dins_binary') |> 
+    filter(rank < 21) |> 
+    ggplot(aes(  
+        x = `Importance`
+      , y = reorder(Alias, `Importance`)
+      , fill  = Type
+      )) +
+    # geom_point(aes(shape = Type)) +
+    geom_col() + 
+    scale_fill_brewer(palette = 'Dark2') + 
+    theme_bw(16) +
+    theme(axis.ticks.y = element_blank()) + 
+    theme(legend.position = "top",
+          legend.justification = "left",
+          plot.title.position = "plot",
+          plot.caption = element_text(hjust=0),
+          plot.caption.position = "plot") + 
+    labs(
+        title = 'Variable Importance Scores for Random Forest with DINS variables (n = 1,487)'
+      , y = '') + 
+    NULL -> a_importance_graph_dins
+  )
+
 ```
 
 ## 5 partial dependence plots
@@ -713,7 +785,7 @@ randomForest::partialPlot(rf_no_dins
 
 #### i test on a single predictor
 
-```{r}
+```{r eval=FALSE, include=FALSE}
 # # building off of the third chunk from
 # # https://bgreenwell.github.io/pdp/articles/pdp.html#other-vignettes
 # # AND third chunk from this vignette
@@ -751,64 +823,295 @@ ggsave(file = paste0(getwd(), '/figures/cf_dins/', variable, '_', Sys.Date(), '.
 #### ii non-DINS RF
 
 ```{r}
-# TODO
+# TODO? naw
 ```
 
 #### iii non-DINS CF
-
-```{r}
+```{r eval=FALSE, include=FALSE}
 # TODO Miranda, we can look at all plots, but maybe we just want to look at the top 10 or 20 top predictors
 #2/23/22 Dexter I think top 10 seems fine, the Price MS only shows several in final MS.
 ## CF non-DINS
 # loop through predictors to get PDP
 # first get the iterator, here the variable names
 
+# # testing on smaller model
+# n_tree<- 500
+# tic(); cf_no_dins <- party::cforest(
+#   damage_cat ~ .
+#   , data = build_no_dins # notice no drop_na here
+#   , controls =
+#     cforest_control(
+#         mtry = 5
+#       , ntree = n_tree # 10 ~2 seconds, 100 ~25s, 200 ~50s, 300 ~75s ... 500 ~130 seconds
+#       , mincriterion = 0
+#       )
+#   ); toc() # ~2 mins with n_tree = 500
+
 # using ALL predictors
 (pdp_cf_no_dins_vars <- variable_importance %>% filter(Model == 'cf_no_dins') %>%                 pull(Variable))
 
 # using top n predictors
-top_n <- 10          # set n (can revise to 20 or any other value greater than zero and less than 71)
+top_n <- 6         # set n (can revise to 20 or any other value greater than zero and less than 71)
 (pdp_cf_no_dins_vars <- variable_importance %>% filter(Model == 'cf_no_dins') %>% slice(1:top_n) %>% pull(Variable)) 
 
 
-resolution <- 100                       # dots per inch (dpi) for figure output (lower values keep files size down,
-                                        # can increase for publication)
-tic()                                   # clock in for whole loop
-for(variable in pdp_cf_no_dins_vars){   # start loop, iterating over pdp_cf_no_dins_vars
-  print(variable)                       # just to track the progress
-  tic()                                 # clock in within the loop
-  pdp::partial(cf_dins                  # the model
-             , pred.var = variable  
-             , plot = TRUE              
-             , plot.engine = "ggplot2"  
-             , rug = TRUE               
-             , progress = "text"        
-             , quantiles = TRUE         
-             , probs = 0:20/20          
-             , ice = TRUE               
-             , center = TRUE            
-             , alpha = .1               
-             ) + 
-    theme_bw(16) +                       # ggplot adjustment for black/white & large text size 
-    # scale_y_continuous(expand = c(0, 0)) +
-    labs(title = variable) +
-    NULL
-  
-  # save out
-  ggsave(file = paste0(getwd(), '/figures/cf_no_dins/', variable, '_', Sys.Date(), '.png')
-         , width = 6.5*2
-         , height = 6.5*1.5
-         , dpi = resolution)
-  toc()    # clock out within loop
-  }; toc() # clock out whole loop
+# detectCores(); # detect the number of cores of your cpu
+# split <- 10
+# 
+# 
+# cl<-makeCluster(split);
+# registerDoParallel(cl);
+# start.time = proc.time(); 
+# 
+# tic()
+# pdp::partial(cf_no_dins               # the model
+#              , pred.var = 'build_near_dest'
+#              , plot = FALSE
+#              # , plot.engine = "ggplot2"
+#              # , rug = TRUE
+#              # , progress = "text"
+#              , quantiles = TRUE
+#              , probs = 0:20/20
+#               , ice = TRUE
+#              # , center = TRUE
+#              # , alpha = .1
+#              , parallel = TRUE
+#              ) |> 
+#   as_tibble() |> 
+#   group_by(build_near_dest) |> 
+#   summarise(ci = list(mean_cl_normal(yhat))) |> 
+#   unnest(ci) |> 
+#   rename(mean_pred = y, lower_ci = ymin, upper_ci = ymax) -> build_near_dest_pdp; toc(); stopCluster(cl) # ~1hr 10 mins (10 cores)
 
 
+detectCores(); # detect the number of cores of your cpu
+split <- 12
+
+
+tic()
+
+cl<-makeCluster(split);
+registerDoParallel(cl);
+start.time = proc.time(); 
+
+pdp::partial(cf_no_dins               # the model
+           , pred.var = 'build_near_dest'
+           , plot = FALSE
+           # , plot.engine = "ggplot2"
+           # , rug = TRUE
+           # , progress = "text"
+           , quantiles = TRUE
+           , probs = 0:20/20
+           , ice = TRUE
+           , center = TRUE
+           # , alpha = .1
+           , parallel = TRUE
+           ) |> 
+  as_tibble() |> 
+  group_by(build_near_dest) |> 
+  summarise(ci = list(mean_cl_normal(yhat))) |> 
+  unnest(ci) |> 
+  rename(x = build_near_dest) |> 
+  mutate(iv = 'build_near_dest') |> 
+  write_csv(paste0(getwd(), '/output_data/pdp/build_near_dest_', Sys.Date(), '.csv'))
+
+ stopCluster(cl); toc(); beepr::beep() # ~1 hr 15 mins w 10 cores
+
+
+
+
+pdp_cf_no_dins_vars |> tabyl()
+
+ 
+
+
+tic()
+
+cl<-makeCluster(split);
+registerDoParallel(cl);
+start.time = proc.time(); 
+
+pdp::partial(cf_no_dins               # the model
+           , pred.var = 'build_area'
+           , plot = FALSE
+           # , plot.engine = "ggplot2"
+           # , rug = TRUE
+           # , progress = "text"
+           , quantiles = TRUE
+           , probs = 0:20/20
+           , ice = TRUE
+           , center = TRUE
+           # , alpha = .1
+           , parallel = TRUE
+           ) |> 
+  as_tibble() |> 
+  group_by(build_area) |> 
+  summarise(ci = list(mean_cl_normal(yhat))) |> 
+  unnest(ci) |> 
+  rename(x = build_area) |> 
+  mutate(iv = 'build_area') |> 
+  write_csv(paste0(getwd(), '/output_data/pdp/build_area_', Sys.Date(), '.csv'))
+
+ stopCluster(cl); toc(); beepr::beep() # ~1 hr 13 mins
+
+
+
+
+
+
+
+   
+
+   
+tic()
+
+cl<-makeCluster(split);
+registerDoParallel(cl);
+start.time = proc.time(); 
+
+pdp::partial(cf_no_dins               # the model
+           , pred.var = 'build_p_building_300'
+           , plot = FALSE
+           # , plot.engine = "ggplot2"
+           # , rug = TRUE
+           # , progress = "text"
+           , quantiles = TRUE
+           , probs = 0:20/20
+           , ice = TRUE
+           , center = TRUE
+           # , alpha = .1
+           , parallel = TRUE
+           ) |> 
+  as_tibble() |> 
+  group_by(build_p_building_300) |> 
+  summarise(ci = list(mean_cl_normal(yhat))) |> 
+  unnest(ci) |> 
+  rename(x = build_p_building_300) |> 
+  mutate(iv = 'build_p_building_300') |> 
+  write_csv(paste0(getwd(), '/output_data/pdp/build_p_building_300_', Sys.Date(), '.csv'))
+
+ stopCluster(cl); toc(); beepr::beep() # ~1 hr 18 mins
+   
+   
+   
+   
+
+
+
+
+
+
+
+
+   
+tic()
+
+cl<-makeCluster(split);
+registerDoParallel(cl);
+start.time = proc.time(); 
+
+pdp::partial(cf_no_dins               # the model
+           , pred.var = 'build_Mean_distroad'
+           , plot = FALSE
+           # , plot.engine = "ggplot2"
+           # , rug = TRUE
+           # , progress = "text"
+           , quantiles = TRUE
+           , probs = 0:20/20
+           , ice = TRUE
+           , center = TRUE
+           # , alpha = .1
+           , parallel = TRUE
+           ) |> 
+  as_tibble() |> 
+  group_by(build_Mean_distroad) |> 
+  summarise(ci = list(mean_cl_normal(yhat))) |> 
+  unnest(ci) |> 
+  rename(x = build_Mean_distroad) |> 
+  mutate(iv = 'build_Mean_distroad') |> 
+  write_csv(paste0(getwd(), '/output_data/pdp/build_Mean_distroad_', Sys.Date(), '.csv'))
+
+ stopCluster(cl); toc(); beepr::beep() # ~1 hr 20 mins
+ 
+ 
+ 
+ 
+ 
+ 
+
+tic()
+
+cl<-makeCluster(split);
+registerDoParallel(cl);
+start.time = proc.time(); 
+
+pdp::partial(cf_no_dins               # the model
+           , pred.var = 'build_Mean_elev_100m'
+           , plot = FALSE
+           # , plot.engine = "ggplot2"
+           # , rug = TRUE
+           # , progress = "text"
+           , quantiles = TRUE
+           , probs = 0:20/20
+           , ice = TRUE
+           , center = TRUE
+           # , alpha = .1
+           , parallel = TRUE
+           ) |> 
+  as_tibble() |> 
+  group_by(build_Mean_elev_100m) |> 
+  summarise(ci = list(mean_cl_normal(yhat))) |> 
+  unnest(ci) |> 
+  rename(x = build_Mean_elev_100m) |> 
+  mutate(iv = 'build_Mean_elev_100m') |> 
+  write_csv(paste0(getwd(), '/output_data/pdp/build_Mean_elev_100m_', Sys.Date(), '.csv'))
+
+ stopCluster(cl); toc(); beepr::beep() # ~1 hr 20 mins
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+tic()
+
+cl<-makeCluster(split);
+registerDoParallel(cl);
+start.time = proc.time(); 
+
+pdp::partial(cf_no_dins               # the model
+           , pred.var = 'build_Mean_elev_30m'
+           , plot = FALSE
+           # , plot.engine = "ggplot2"
+           # , rug = TRUE
+           # , progress = "text"
+           , quantiles = TRUE
+           , probs = 0:20/20
+           , ice = TRUE
+           , center = TRUE
+           # , alpha = .1
+           , parallel = TRUE
+           ) |> 
+  as_tibble() |> 
+  group_by(build_Mean_elev_30m) |> 
+  summarise(ci = list(mean_cl_normal(yhat))) |> 
+  unnest(ci) |> 
+  rename(x = build_Mean_elev_30m) |> 
+  mutate(iv = 'build_Mean_elev_30m') |> 
+  write_csv(paste0(getwd(), '/output_data/pdp/build_Mean_elev_30m_', Sys.Date(), '.csv'))
+
+ stopCluster(cl); toc(); beepr::beep() # ~1 hr 45 mins
+ 
+ 
 
 ```
 
 #### iv DINS CF
 
-```{r}
+```{r eval=FALSE, include=FALSE}
 # TODO Miranda, we can look at all plots, but maybe we just want to look at the top 10 or 20 top predictors
 #2/23/22 Dexter I think top 10 seems fine, the Price MS only shows several in final MS.
 
@@ -819,100 +1122,413 @@ for(variable in pdp_cf_no_dins_vars){   # start loop, iterating over pdp_cf_no_d
 # using ALL predictors
 (pdp_cf_dins_vars <- variable_importance %>% filter(Model == 'cf_dins') %>%                 pull(Variable))
 
-# using top n predictors
-top_n <- 10          # set n (can revise to 20 or any other value greater than zero and less than 71)
-(pdp_cf_dins_vars <- variable_importance %>% filter(Model == 'cf_dins') %>% slice(1:top_n) %>% pull(Variable)) 
-
-
-resolution <- 100                       # dots per inch (dpi) for figure output (lower values keep files size down,
-                                        # can increase for publication)
-tic()                                   # clock in for whole loop
-for(variable in pdp_cf_dins_vars){      # start loop
-  print(variable)                       # just to track the progress
-  tic()                                 # clock in within the loop
-  pdp::partial(cf_dins                  # the model
-             , pred.var = variable  
-             , plot = TRUE              
-             , plot.engine = "ggplot2"  
-             , rug = TRUE               
-             , progress = "text"        
-             , quantiles = TRUE         
-             , probs = 0:20/20          
-             , ice = TRUE               
-             , center = TRUE            
-             , alpha = .1               
-             ) + 
-    theme_bw(16) +                       # ggplot adjustment for black/white & large text size 
-    # scale_y_continuous(expand = c(0, 0)) +
-    labs(title = variable) +
-    NULL
-  
-  
-  # save out
-  ggsave(file = paste0(getwd(), '/figures/cf_dins/', variable, '_', Sys.Date(), '.png')
-         , width = 6.5*2
-         , height = 6.5*1.5
-         , dpi = resolution)
-  toc()    # clock out within loop
-  }; toc() # clock out whole loop
-
-
-
 ```
 
 #### v DINS CF - binary outcome
 
-```{r}
+```{r eval=FALSE, include=FALSE}
 # TODO Miranda, we can look at all plots, but maybe we just want to look at the top 10 or 20 top predictors
 #2/23/22 Dexter I think top 10 seems fine, the Price MS only shows several in final MS.
 #4/5/22 Dexter I ran this with 5 on my computer, just trying not to take too long. 
 
-## CF DINS BINARY cf_dins_binary
-# loop through predictors to get PDP
-# first get the iterator, here the variable names
 
-# using ALL predictors
-(pdp_cf_dins_bin_vars <- variable_importance %>% filter(Model == 'cf_dins_binary') %>% pull(Variable))
 
 # using top n predictors
-top_n <- 10          # set n (can revise to 20 or any other value greater than zero and less than 71)
-(pdp_cf_dins_bin_vars <- variable_importance %>% filter(Model == 'cf_dins_binary') %>% slice(1:top_n) %>% pull(Variable)) 
+top_n <- 6          # set n (can revise to 20 or any other value greater than zero and less than 71)
+(pdp_cf_dins_vars <- variable_importance %>% filter(Model == 'cf_dins_binary') %>% slice(1:top_n) %>% pull(Variable)) 
 
 
-resolution <- 100                       # dots per inch (dpi) for figure output (lower values keep files size down,
-                                        # can increase for publication)
-tic()                                   # clock in for whole loop
-for(variable in pdp_cf_dins_bin_vars){      # start loop
-  print(variable)                       # just to track the progress
-  tic()                                 # clock in within the loop
-  pdp::partial(cf_dins_binary    # the model
-             , pred.var = variable  
-             , plot = TRUE              
-             , plot.engine = "ggplot2"  
-             , rug = TRUE               
-             , progress = "text"        
-             , quantiles = TRUE         
-             , probs = 0:20/20          
-             , ice = TRUE               
-             , center = TRUE            
-             , alpha = .1               
-             ) + 
-    theme_bw(16) +                       # ggplot adjustment for black/white & large text size 
-    # scale_y_continuous(expand = c(0, 0)) +
-    labs(title = variable) +
-    NULL
-  
-  # save out
-  ggsave(file = paste0(getwd(), '/figures/cf_dins_binary/', variable, '_', Sys.Date(), '.png')
-         , width = 6.5*2
-         , height = 6.5*1.5
-         , dpi = resolution)
-  toc()    # clock out within loop
-  }; toc() # clock out whole loop
+detectCores(); # detect the number of cores of your cpu
+split <- 10
+
+
+tic()
+
+cl<-makeCluster(split);
+registerDoParallel(cl);
+start.time = proc.time(); 
+
+pdp::partial(cf_dins_binary               # the model
+           , pred.var = 'build_WINDOWPANE'
+           , plot = FALSE
+           # , plot.engine = "ggplot2"
+           # , rug = TRUE
+           # , progress = "text"
+           , quantiles = TRUE
+           , probs = 0:20/20
+           , ice = TRUE
+           , center = TRUE
+           # , alpha = .1
+           , parallel = TRUE
+           ) |> 
+  as_tibble() |> 
+  group_by(build_WINDOWPANE) |> 
+  summarise(ci = list(mean_cl_normal(yhat))) |> 
+  unnest(ci) |> 
+  rename(x_chr = build_WINDOWPANE) |> 
+  mutate(iv = 'build_WINDOWPANE') |> 
+  write_csv(paste0(getwd(), '/output_data/pdp_dins/build_WINDOWPANE_', Sys.Date(), '.csv'))
+
+ stopCluster(cl); toc(); beepr::beep() # ~45 seconds 500 trees and 10 cores.
+
+
+
  
+ 
+ 
+ 
+ 
+ tic()
 
+cl<-makeCluster(split);
+registerDoParallel(cl);
+start.time = proc.time(); 
+
+pdp::partial(cf_dins_binary               # the model
+           , pred.var = 'build_EAVES'
+           , plot = FALSE
+           # , plot.engine = "ggplot2"
+           # , rug = TRUE
+           # , progress = "text"
+           , quantiles = TRUE
+           , probs = 0:20/20
+           , ice = TRUE
+           , center = TRUE
+           # , alpha = .1
+           , parallel = TRUE
+           ) |> 
+  as_tibble() |> 
+  group_by(build_EAVES) |> 
+  summarise(ci = list(mean_cl_normal(yhat))) |> 
+  unnest(ci) |> 
+  rename(x_chr = build_EAVES) |> 
+  mutate(iv = 'build_EAVES') |> 
+  write_csv(paste0(getwd(), '/output_data/pdp_dins/build_EAVES_', Sys.Date(), '.csv'))
+
+ stopCluster(cl); toc(); beepr::beep() # 45s
+
+
+
+
+
+tic()
+
+cl<-makeCluster(split);
+registerDoParallel(cl);
+start.time = proc.time(); 
+
+pdp::partial(cf_dins_binary               # the model
+           , pred.var = 'build_near_dest'
+           , plot = FALSE
+           # , plot.engine = "ggplot2"
+           # , rug = TRUE
+           # , progress = "text"
+           , quantiles = TRUE
+           , probs = 0:20/20
+           , ice = TRUE
+           , center = TRUE
+           # , alpha = .1
+           , parallel = TRUE
+           ) |> 
+  as_tibble() |> 
+  group_by(build_near_dest) |> 
+  summarise(ci = list(mean_cl_normal(yhat))) |> 
+  unnest(ci) |> 
+  rename(x = build_near_dest) |> 
+  mutate(iv = 'build_near_dest') |> 
+  write_csv(paste0(getwd(), '/output_data/pdp_dins/build_near_dest_', Sys.Date(), '.csv'))
+
+stopCluster(cl); toc(); beepr::beep() # ~90 seconds
+
+
+
+
+
+tic()
+
+cl<-makeCluster(split);
+registerDoParallel(cl);
+start.time = proc.time(); 
+
+pdp::partial(cf_dins_binary               # the model
+           , pred.var = 'build_p_otherpaved_200'
+           , plot = FALSE
+           # , plot.engine = "ggplot2"
+           # , rug = TRUE
+           # , progress = "text"
+           , quantiles = TRUE
+           , probs = 0:20/20
+           , ice = TRUE
+           , center = TRUE
+           # , alpha = .1
+           , parallel = TRUE
+           ) |> 
+  as_tibble() |> 
+  group_by(build_p_otherpaved_200) |> 
+  summarise(ci = list(mean_cl_normal(yhat))) |> 
+  unnest(ci) |> 
+  rename(x = build_p_otherpaved_200) |> 
+  mutate(iv = 'build_p_otherpaved_200') |> 
+  write_csv(paste0(getwd(), '/output_data/pdp_dins/build_p_otherpaved_200_', Sys.Date(), '.csv'))
+
+stopCluster(cl); toc(); beepr::beep() # ~100s
+
+
+
+
+
+tic()
+
+cl<-makeCluster(split);
+registerDoParallel(cl);
+start.time = proc.time(); 
+
+pdp::partial(cf_dins_binary               # the model
+           , pred.var = 'build_VENTSCREEN'
+           , plot = FALSE
+           # , plot.engine = "ggplot2"
+           # , rug = TRUE
+           # , progress = "text"
+           , quantiles = TRUE
+           , probs = 0:20/20
+           , ice = TRUE
+           , center = TRUE
+           # , alpha = .1
+           , parallel = TRUE
+           ) |> 
+  as_tibble() |> 
+  group_by(build_VENTSCREEN) |> 
+  summarise(ci = list(mean_cl_normal(yhat))) |> 
+  unnest(ci) |> 
+  rename(x_chr = build_VENTSCREEN) |> 
+  mutate(iv = 'build_VENTSCREEN') |> 
+  write_csv(paste0(getwd(), '/output_data/pdp_dins/build_VENTSCREEN_', Sys.Date(), '.csv'))
+
+stopCluster(cl); toc(); beepr::beep() # ~45s
+
+
+
+
+
+
+
+tic()
+
+cl<-makeCluster(split);
+registerDoParallel(cl);
+start.time = proc.time(); 
+
+pdp::partial(cf_dins_binary               # the model
+           , pred.var = 'build_min_dist_shrub'
+           , plot = FALSE
+           # , plot.engine = "ggplot2"
+           # , rug = TRUE
+           # , progress = "text"
+           , quantiles = TRUE
+           , probs = 0:20/20
+           , ice = TRUE
+           , center = TRUE
+           # , alpha = .1
+           , parallel = TRUE
+           ) |> 
+  as_tibble() |> 
+  group_by(build_min_dist_shrub) |> 
+  summarise(ci = list(mean_cl_normal(yhat))) |> 
+  unnest(ci) |> 
+  rename(x = build_min_dist_shrub) |> 
+  mutate(iv = 'build_min_dist_shrub') |> 
+  write_csv(paste0(getwd(), '/output_data/pdp_dins/build_min_dist_shrub_', Sys.Date(), '.csv'))
+
+stopCluster(cl); toc(); beepr::beep() # ~100s
 
 ```
+
+
+#### vi read in PDPs and graph
+```{r}
+
+pdp_cf_no_dins_vars
+
+
+(
+  pdp_cf_no_dins_tibble <- tibble(files = dir('output_data/pdp', full.names = TRUE)) %>%
+    mutate(file_contents = map(files, ~read_csv(., col_types = cols()))) |> # col_types = cols() just to be quiet
+    unnest(file_contents) |> 
+    select(-files) |> 
+    left_join(variable_importance |> distinct(iv = Variable, Alias), by = 'iv') |> 
+    mutate(iv = factor(iv, levels = pdp_cf_no_dins_vars, labels = pdp_cf_no_dins_vars, ordered = TRUE)) 
+  )
+
+pdp_cf_no_dins_tibble |> tabyl(iv)
+# pdp_cf_no_dins_tibble |> tabyl(x)
+
+(
+  b_g_build <- pdp_cf_no_dins_tibble |> 
+    ggplot(aes(x, y)) + 
+    geom_ribbon(aes(ymin = ymin, ymax = ymax)) +
+    geom_line(color = 'red') + 
+    geom_hline(yintercept = 0, col = 'dark gray') + 
+    theme_bw(16) + 
+    facet_wrap(~str_wrap(Alias, 30), scales = 'free_x') +
+    NULL
+  )
+
+library(patchwork)
+a_importance_graph_no_dins / b_g_build
+
+pdp_cf_dins_vars
+
+(
+  pdp_cf_no_dins_tibble <- tibble(files = dir('output_data/pdp_dins', full.names = TRUE)) %>%
+    mutate(file_contents = map(files,~read_csv(., col_types = cols()))) |> #, col_types = 'fdddf'))) |> 
+    # mutate(file_contents = map(files, ~mutate(., ifelse(is.character(.$iv),))))
+    unnest(file_contents) |> 
+    select(-files) |> 
+    left_join(variable_importance |> distinct(iv = Variable, Alias), by = 'iv') |> 
+    mutate(iv = factor(iv, levels = pdp_cf_dins_vars, labels = pdp_cf_dins_vars, ordered = TRUE)) 
+  )
+
+pdp_cf_no_dins_tibble |> tabyl(iv)
+pdp_cf_no_dins_tibble |> tabyl(Alias, iv)
+# pdp_cf_no_dins_tibble |> tabyl(x)
+
+
+
+# # great start to graphs!
+# pdp_cf_no_dins_tibble |>
+#   filter(is.na(x_chr)) |>
+#   ggplot(aes(x, y)) +
+#   geom_ribbon(aes(ymin = ymin, ymax = ymax)) +
+#   geom_line(color = 'red') +
+#   geom_hline(yintercept = 0, col = 'dark gray', size = 1) +
+#   theme_bw(16) +
+#   facet_wrap(~str_wrap(Alias, 30), scales = 'free_x') +
+#   NULL
+# 
+# pdp_cf_no_dins_tibble |> 
+#   filter(!is.na(x_chr)) |>
+#   # ggplot(aes(x_chr, y)) + 
+#   ggplot(aes(y, x_chr)) + 
+#   # geom_errorbar(aes(ymin = ymin, ymax = ymax), width = .1, size = 1) + 
+#   geom_errorbarh(aes(xmin = ymin, xmax = ymax), size = 1) + 
+#   geom_vline(xintercept = 0, col = 'gray', size = 1) + 
+#   geom_point(color = 'red', size = 3) + 
+#   theme_bw(16) + 
+#   facet_wrap(~iv) +
+#   NULL
+# 
+# pdp_cf_no_dins_tibble |>
+#   filter(!is.na(x_chr)) |>
+#   ggplot(aes(x_chr, y)) +
+#   # ggplot(aes(y, x_chr)) +
+#   geom_errorbar(aes(ymin = ymin, ymax = ymax), width = .1, size = 1) +
+#   # geom_errorbarh(aes(xmin = ymin, xmax = ymax), size = 1) +
+#   # geom_vline(xintercept = 0, col = 'gray', size = 1) +
+#   geom_hline(yintercept = 0, col = 'dark gray', size = 1) +
+#   geom_point(color = 'red', size = 3) +
+#   theme_bw(16) +
+#   theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = .5)) +
+#   facet_wrap(~str_wrap(Alias, 30), scales = 'free_x') +
+#   NULL
+
+
+
+(
+  b_build_WINDOWPANE <- pdp_cf_no_dins_tibble |>
+    filter(iv == 'build_WINDOWPANE') |>
+    ggplot(aes(x_chr, y)) +
+    geom_hline(yintercept = 0, col = 'dark gray', size = 1) +
+    geom_errorbar(aes(ymin = ymin, ymax = ymax), width = .1, size = 1) +
+    geom_point(color = 'red', size = 3) +
+    theme_bw(16) +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = .5)) +
+    facet_wrap(~str_wrap(Alias, 30), scales = 'free_x') +
+    labs(y = 'Predicted Probability', x = '(Multi Pane as reference)') + 
+    NULL
+  )
+
+(
+  c_build_EAVES <- pdp_cf_no_dins_tibble |>
+    filter(iv == 'build_EAVES') |>
+    ggplot(aes(x_chr, y)) +
+    geom_hline(yintercept = 0, col = 'dark gray', size = 1) +
+    geom_errorbar(aes(ymin = ymin, ymax = ymax), width = .1, size = 1) +
+    geom_point(color = 'red', size = 3) +
+    theme_bw(16) +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = .5)) +
+    facet_wrap(~str_wrap(Alias, 30), scales = 'free_x') +
+    labs(y = 'Predicted Probability', x = '(Enclosed as reference)') + 
+    NULL
+  )
+
+(
+  d_build_near_dest <- pdp_cf_no_dins_tibble |>
+    filter(iv == 'build_near_dest') |>
+    ggplot(aes(x, y)) +
+    geom_hline(yintercept = 0, col = 'dark gray', size = 1) +
+    geom_ribbon(aes(ymin = ymin, ymax = ymax)) +
+    geom_line(color = 'red') +
+    theme_bw(16) +
+    facet_wrap(~str_wrap(Alias, 30), scales = 'free_x') +
+    labs(y = 'Predicted Probability', x = 'Distance') + 
+    NULL
+  )
+
+
+(
+  e_build_p_otherpaved_200 <- pdp_cf_no_dins_tibble |>
+    filter(iv == 'build_p_otherpaved_200') |>
+    ggplot(aes(x, y)) +
+    geom_hline(yintercept = 0, col = 'dark gray', size = 1) +
+    geom_ribbon(aes(ymin = ymin, ymax = ymax)) +
+    geom_line(color = 'red') +
+    theme_bw(16) +
+    facet_wrap(~str_wrap(Alias, 30), scales = 'free_x') +
+    labs(y = 'Predicted Probability', x = '% cover') + 
+    NULL
+  )
+
+
+
+(
+  f_build_VENTSCREEN <- pdp_cf_no_dins_tibble |>
+    filter(iv == 'build_VENTSCREEN') |>
+    ggplot(aes(x_chr, y)) +
+    geom_hline(yintercept = 0, col = 'dark gray', size = 1) +
+    geom_errorbar(aes(ymin = ymin, ymax = ymax), width = .1, size = 1) +
+    geom_point(color = 'red', size = 3) +
+    theme_bw(16) +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = .5)) +
+    facet_wrap(~str_wrap(Alias, 30), scales = 'free_x') +
+    labs(y = 'Predicted Probability', x = 'Vent Screen') + 
+    NULL
+  )
+
+
+
+(
+  g_build_min_dist_shrub <- pdp_cf_no_dins_tibble |>
+    filter(iv == 'build_min_dist_shrub') |>
+    ggplot(aes(x, y)) +
+    geom_hline(yintercept = 0, col = 'dark gray', size = 1) +
+    geom_ribbon(aes(ymin = ymin, ymax = ymax)) +
+    geom_line(color = 'red') +
+    theme_bw(16) +
+    facet_wrap(~str_wrap(Alias, 30), scales = 'free_x') +
+    labs(y = 'Predicted Probability', x = 'Distance') +
+    NULL
+  )
+
+pdp_cf_no_dins_tibble |> tabyl(iv)
+library(patchwork)
+a_importance_graph_dins / 
+  (b_build_WINDOWPANE + c_build_EAVES + d_build_near_dest) / 
+  (e_build_p_otherpaved_200 +  f_build_VENTSCREEN + g_build_min_dist_shrub) + 
+  plot_annotation(tag_levels = 'A')
+
+```
+
+
 
 ```{r, citations}
 lapply(packages, citation)

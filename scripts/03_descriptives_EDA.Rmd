@@ -94,8 +94,94 @@ set.seed(19870630)
 #build <- read_csv(paste0(getwd(), '/output_data/building_2021-11-03.csv')) %>% glimpse
 #build <- read_csv(paste0(getwd(), '/output_data/building_2021-12-02.csv')) %>% glimpse
 # build <- read_csv(paste0(getwd(), '/output_data/building_2021-12-22.csv')) %>% glimpse
-build <- read_csv(paste0(getwd(), '/output_data/building_2022-02-01.csv')) %>% glimpse
+# build <- read_csv(paste0(getwd(), '/output_data/building_2022-02-01.csv')) %>% glimpse
 
+
+# one 'main' data frame
+build <- read_csv(paste0(getwd(), '/output_data/building_2022-02-01.csv')) %>%
+  tidylog::select(
+    # damage_binary
+      damage_cat         # binary outcome encoded as categorical (Destroyed / Survived)
+    , damage_severity    # five levels
+    , build_area   
+    # build_DECKPORCHE    , #drop this on 12/20/21
+    , build_DECKPORCHO
+    , build_EAVES
+    , build_EXTERIORSI
+    , build_FENCEATTAC
+    , build_PATIOCOVER
+    , build_PROPANETAN
+    , build_ROOFCONSTR
+    , build_VEGCLEARAN 
+    , build_VENTSCREEN 
+    , build_WINDOWPANE 
+    , parcel_year_built 
+    , build_near_build 
+    , build_has_tree_overhang 
+    , build_min_dist_shrub 
+    , build_min_dist_tree 
+    , build_overhang_ht 
+    , build_perc_overhang 
+    , parcel_Build_P 
+    , parcel_Can_P 
+    , parcel_Grass_P 
+    #, parcel_Imperv_P    #inverse of perv surface; shld we just drop bc we don't have for other measures?
+    , parcel_Paved_P    
+    #  parcel_Perv_P    ,#inverse of imp, just need one
+    , parcel_Road_P
+    , parcel_Shrub_P  
+    , parcel_Soil_P  
+    , parcel_Water_P  
+    , build_near_dest  
+    , build_p_building_10  
+    , build_p_building_100  
+    , build_p_building_200  
+    , build_p_building_300  
+    , build_p_grass_10  
+    , build_p_grass_100  
+    , build_p_grass_200  
+    , build_p_grass_300  
+    , build_p_otherpaved_10  
+    , build_p_otherpaved_100  
+    , build_p_otherpaved_200  
+    , build_p_otherpaved_300  
+    , build_p_road_10  
+    , build_p_road_100  
+    , build_p_road_200  
+    , build_p_road_300  
+    , build_p_shrub_10  
+    , build_p_shrub_100  
+    , build_p_shrub_200  
+    , build_p_shrub_300  
+    , build_p_soil_10  
+    , build_p_soil_100  
+    , build_p_soil_200  
+    , build_p_soil_300  
+    , build_p_tree_10  
+    , build_p_tree_100  
+    , build_p_tree_200  
+    , build_p_tree_300  
+    , build_p_water_10  
+    , build_p_water_100  
+    , build_p_water_200  
+    , build_p_water_300  
+    , parcel_area  
+    , build_Mean_builddens  
+    , build_Mean_distall_road  
+    , build_Mean_distroad  
+    , build_Mean_aspect_100m_DEM  
+    , build_Mean_aspect_30m_DEM  
+    , build_Mean_elev_100m  
+    , build_Mean_elev_30m  
+    , build_Mean_slope_100m_DEM  
+    , build_Mean_slope_30m_DEM
+    , build_DINS
+    ) %>%
+  mutate_if(is.character, as.factor) %>% # turns characters into factors
+  droplevels() %>% 
+  data.frame() # some of the random forest functions do not 'like' tibbles
+               # since the non-dins and dins data will be pulled from here
+               # we change here so that the subsets are already formatted as data.frames
 
 
  
@@ -146,48 +232,76 @@ table(build$parcel_UseType,build$parcel_Roll_HomeOwnersExemp) #Among residential
 #Summary tables on defensible space - descriptive summary for pub
 # notes as of 3/23/2022 - will share table with coauthors - not sure if we want mean/sd or median IQR; if we want by outcome or not
 
-# part 1 - builds a table about defensible space and building and parcel area
-build %>% 
-  select(damage_binary, parcel_area, build_area, build_min_dist_tree, build_near_build, build_min_dist_shrub, build_has_tree_overhang, ) %>%  # cols of interest
-  tbl_summary(#by =damage_binary,                                     # create summary table, can turn on or off by damage
-     digits = all_continuous() ~ 1,
-     type = all_continuous() ~ "continuous2",       # indicate that you want to print multiple statistics 
-     statistic = list(all_continuous() ~ c("{mean} ({sd})",                            #line 1: mean and SD
-                                          "{median} ({p25}, {p75})",                   # line 2: median IQR
-                                          "{min}-{max}"),                              # line 3: min and max
-         all_categorical() ~ c("{n} / {N} ({p}%)")),
-      label  = list(                                              # display labels for column names
-          damage_binary   ~ "Building Destroyed"),
-        missing_text = "Missing"  )->t1
+# # part 1 - builds a table about defensible space and building and parcel area
+# build %>% 
+#   select(damage_binary, parcel_area, build_area, build_min_dist_tree, build_near_build, build_min_dist_shrub, build_has_tree_overhang, ) %>%  # cols of interest
+#   tbl_summary(#by =damage_binary,                                     # create summary table, can turn on or off by damage
+#      digits = all_continuous() ~ 1,
+#      type = all_continuous() ~ "continuous2",       # indicate that you want to print multiple statistics 
+#      statistic = list(all_continuous() ~ c("{mean} ({sd})",                            #line 1: mean and SD
+#                                           "{median} ({p25}, {p75})",                   # line 2: median IQR
+#                                           "{min}-{max}"),                              # line 3: min and max
+#          all_categorical() ~ c("{n} / {N} ({p}%)")),
+#       label  = list(                                              # display labels for column names
+#           damage_binary   ~ "Building Destroyed"),
+#         missing_text = "Missing"  )->t1
+# 
+# 
+# # part 2 - for those buildings with tree overhang, summary of percent overhang and height
+# build %>% 
+#   select(damage_binary, build_has_tree_overhang, build_perc_overhang, build_overhang_ht) %>%  
+#   mutate(build_perc_overhang = build_perc_overhang*100) %>%
+#     filter(build_has_tree_overhang == '1') %>%  
+#         tbl_summary(#by =damage_binary, # create summary table, can turn on or off by damage
+#             digits = all_continuous() ~ 1,
+#             type = all_continuous() ~ "continuous2",       # indicate that you want to print multiple statistics 
+#             statistic = list(all_continuous() ~ c("{mean} ({sd})",                            #line 1: mean and SD
+#                                           "{median} ({p25}, {p75})",                   # line 2: median IQR
+#                                           "{min}-{max}"),                              # line 3: min and max
+#             all_categorical() ~ c("{n} / {N} ({p}%)")),
+#       label  = list(                                              # display labels for column names
+#           damage_binary   ~ "Building Destroyed"),
+#         missing_text = "Missing"  )->t2
+# 
+# tbl_desc <- tbl_stack(list(t1, t2))  #combines tables
+#     
+# 
+# tbl_desc %>% #exports as csv
+#       gtsummary::as_tibble()  %>% 
+#           write_csv(., paste0(getwd(), '/data/Table_Descript_', Sys.Date(), '.csv'))
+#   
+# tbl_desc %>% #exports as image
+#       as_gt() %>%             # convert to gt table
+#            gt::gtsave(., paste0(getwd(), '/figures/Table_Descript_' , Sys.Date(), '.png'))
 
 
-# part 2 - for those buildings with tree overhang, summary of percent overhang and height
-build %>% 
-  select(damage_binary, build_has_tree_overhang, build_perc_overhang, build_overhang_ht) %>%  
-  mutate(build_perc_overhang = build_perc_overhang*100) %>%
-    filter(build_has_tree_overhang == '1') %>%  
-        tbl_summary(#by =damage_binary, # create summary table, can turn on or off by damage
-            digits = all_continuous() ~ 1,
-            type = all_continuous() ~ "continuous2",       # indicate that you want to print multiple statistics 
-            statistic = list(all_continuous() ~ c("{mean} ({sd})",                            #line 1: mean and SD
-                                          "{median} ({p25}, {p75})",                   # line 2: median IQR
-                                          "{min}-{max}"),                              # line 3: min and max
-            all_categorical() ~ c("{n} / {N} ({p}%)")),
-      label  = list(                                              # display labels for column names
-          damage_binary   ~ "Building Destroyed"),
-        missing_text = "Missing"  )->t2
+build |> 
+  # select(-damage_severity, -build_DINS) |> # to be all-inclusive
+  select(  damage_cat                     # to match Miranda's selections above re: defensible space and over hang
+         , parcel_area
+         , build_area
+         , build_min_dist_tree
+         , build_near_build
+         , build_min_dist_shrub
+         , build_has_tree_overhang
+         , build_has_tree_overhang
+         , build_perc_overhang
+         , build_overhang_ht
+         ) |> 
+  tbl_summary(by = damage_cat) |> 
+  add_overall() |> 
+  add_p() |> 
+  as_gt() |> 
+  gt::gtsave(paste0(getwd(), '/figures/Table_Descript_' , Sys.Date(), '.png'))
 
-tbl_desc <- tbl_stack(list(t1, t2))  #combines tables
-    
 
-tbl_desc %>% #exports as csv
-      gtsummary::as_tibble()  %>% 
-          write_csv(., paste0(getwd(), '/data/Table_Descript_', Sys.Date(), '.csv'))
-  
-tbl_desc %>% #exports as image
-      as_gt() %>%             # convert to gt table
-           gt::gtsave(., paste0(getwd(), '/figures/Table_Descript_' , Sys.Date(), '.png'))
-
+build |> 
+  select(-damage_severity, -build_DINS) |> # to be all-inclusive
+  tbl_summary(by = damage_cat) |> 
+  add_overall() |> 
+  add_p() |> 
+  as_gt() |> 
+  gt::gtsave(paste0(getwd(), '/figures/Table_Descript_ALL_VARS' , Sys.Date(), '.html'))
 
 
 ```
@@ -272,35 +386,103 @@ build %>%
 #work on for publication, only 300 m
 # 4/6/2022
 #if we keep, reorder factors, and tweak formatting
-ggp4<- build %>% 
-  #st_drop_geometry() %>% 
-  tidylog::select(ID_Build, contains('build_p_')) %>% 
-  pivot_longer(-ID_Build) %>% 
-  mutate(#buff_dist = as.numeric(str_remove_all(name, '\\D')),
-         var = str_remove(name, 'build_p_')) %>% 
-  separate(var, into = c('var', 'buff_dist'), sep = '_', convert = TRUE) %>%  #if we keep, reorder factors, and tweak formatting
-  filter(buff_dist == 300 & var != 'water')%>% 
-  ggplot(aes(x = value, fill = var)) +  
-  geom_histogram() +
-  facet_wrap(~var, ncol=4)+
-  theme_bw() + labs(title = "Histogram of land cover (300 ft) around building")+ 
-  # ggsave(file = paste0(getwd(), '/figures/buff_landcover_300',
-  #                   gsub('[[:punct:]]', '_', Sys.time()), '.png')) +
-  # NULL
+
+
+(
+  ggp4 <- build %>% 
+    tidylog::select(ID_Build, contains('build_p_')) %>% 
+    pivot_longer(-ID_Build) %>% 
+    mutate(#buff_dist = as.numeric(str_remove_all(name, '\\D')),
+           var = str_remove(name, 'build_p_')) %>% 
+    separate(var, into = c('var', 'buff_dist'), sep = '_', convert = TRUE) %>%  #if we keep, reorder factors, and tweak formatting
+    filter(buff_dist == 300 & var != 'water') %>% 
+    mutate(`Land Cover` = factor(str_to_title(ifelse(var == 'otherpaved', 'other paved', var)), ordered = TRUE,
+           levels = c('Tree', 'Shrub', 'Grass', 'Soil', 'Building', 'Road', 'Other Paved'))) |> 
+    # mutate(holc_grade = factor(holc_grade, levels = LETTERS[1:4], ordered = TRUE)) |>
+    ggplot(aes(x = value, fill = `Land Cover`)) +  
+    geom_histogram(bins = 30) +
+    scale_fill_manual(
+      values = c(
+        '#0b5304', # Tree 
+        '#ffff0c', # Shrub
+        '#b4ff8f', # Grass
+        '#6b3f02', # Soil
+        # '#0b00fe', # Water
+        '#f40008', # Building
+        '#010101', # Road
+        '#908e92' # Other Paved'
+        )
+      ) + 
+    facet_wrap(~`Land Cover`, ncol = 4) +
+    labs(title = "Histogram of land cover 300 ft around building") + 
+    theme_bw(16) + 
+    theme(legend.position = c(.885, .25)) + 
+    scale_y_continuous(expand = c(0, 0)) +
+    scale_x_continuous(expand = c(0, 0)) +
+    NULL
+  )
+
+# ggsave(file = paste0(getwd(), '/figures/buff_landcover_300_',
+#                      gsub('[[:punct:]]', '_', Sys.time()), '.png')
+#        , height = 4*2, width = 5*2
+#        # , dpi = 100
+#        )
 
 #work on for publication, 
 # 4/6/2022  
 
+ggp1 <- build %>% 
+  mutate(`Average Elevation of each Building (100 meter buffer)` = build_Mean_elev_100m,
+         `Damage Category` = damage_cat) |>  
+  ggplot(aes(`Average Elevation of each Building (100 meter buffer)`, fill = `Damage Category`)) + 
+  geom_density(alpha = .5) + 
+  scale_x_continuous(expand = c(0, 0)) +
+  scale_y_continuous(expand = c(0, 0), limits = c(0, 0.0021)) +
+  theme_bw(16) + 
+  theme(legend.position = c(.7, .7)) + 
+  NULL
 
-ggp1<- build %>% ggplot(aes(build_Mean_elev_100m)) + geom_histogram(binwidth = 25) + theme_classic()
-ggp2<- build %>% ggplot(aes(build_Mean_distroad)) + geom_histogram(binwidth = 20)+ theme_classic()
-ggp3<- build %>% ggplot(aes(build_Mean_builddens)) + geom_histogram(binwidth = .1)+ theme_classic()
+ggp2 <- build %>% 
+  mutate(`Average Distance to Road for each Building` = build_Mean_distroad,
+         `Damage Category` = damage_cat) |>  
+  ggplot(aes(`Average Distance to Road for each Building`, fill = `Damage Category`)) + 
+  geom_density(alpha = .5) + 
+  scale_x_continuous(expand = c(0, 0)) +
+  scale_y_continuous(expand = c(0, 0), limits = c(0, 0.0011)
+                     ) +
+  theme_bw(16) + 
+  theme(legend.position = c(.7, .7)) + 
+  NULL
+
+ggp3 <- build %>% 
+  mutate(`Average Building Density` = build_Mean_builddens,
+         `Damage Category` = damage_cat) |>  
+  ggplot(aes(`Average Building Density`, fill = `Damage Category`)) + 
+  geom_density(alpha = .5) + 
+  scale_x_continuous(expand = c(0, 0)) +
+  scale_y_continuous(expand = c(0, 0), limits = c(0, 0.6)) +
+  theme_bw(16) + 
+  theme(legend.position = c(.7, .7)) + 
+  NULL
+
+
+
+# ggp1<- build %>% ggplot(aes(build_Mean_elev_100m)) + geom_histogram(binwidth = 25) + theme_classic()
+# ggp2<- build %>% ggplot(aes(build_Mean_distroad)) + geom_histogram(binwidth = 20)  + theme_classic()
+# ggp3<- build %>% ggplot(aes(build_Mean_builddens)) + geom_histogram(binwidth = .1) + theme_classic()
+
 ggp_all <- (ggp1 + ggp2) / (ggp3 + ggp4) +    # Create grid of plots with title
-  plot_annotation(title = "Descriptives for publication") & 
-  theme(plot.title = element_text(hjust = 0.5))
+   plot_annotation(tag_levels = 'I')
+  # plot_annotation(title = "Descriptives for publication") & 
+  # theme(plot.title = element_text(hjust = 0.5))
 ggp_all   
 
 
+# ggsave(file = paste0(getwd(), '/figures/Fig_2_descriptives_',
+#                      gsub('[[:punct:]]', '_', Sys.time()), '.png')
+#        , height = 6.5*2.5, width = 6.5*2.5
+#        # , dpi = 100
+#        )
 
 
 ```

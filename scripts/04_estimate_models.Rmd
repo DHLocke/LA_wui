@@ -660,7 +660,15 @@ auc |> View()
 
 # reading back in deviance explained
 (tab_labs <- 
-  read_csv(paste0(getwd(), '/data/Table_Deviance_Explained_2022-03-08.csv'))) 
+  read_csv(paste0(getwd(), '/data/Table_Deviance_Explained_2022-03-08.csv')) |>
+   mutate(Type = fct_recode(factor(Type), 
+                              Exposure               = 'EXP'
+                            , Construction           = 'CON'
+                            , 'Defensible Space'     = 'DEF'
+                            , 'Landscape Attributes' = 'LAND'
+                            , Topography             = 'TOPO')
+          )
+ ) 
  
 # join in aliases and type, repurpose directly below.
  #MHM -3/23/2022 - let's hold off on displaying scale in variable importance plots until we talk more w alex, I think theme is somewhat repeating this information and would like her take
@@ -672,7 +680,7 @@ auc |> View()
     mutate(rank = row_number(Model)) %>% 
     ungroup() |> 
     left_join(
-      tab_labs |> tidylog::select(Variable = `Variable name`, Alias, Type, Scale)
+      tab_labs |> tidylog::select(Variable = `Variable name`, Alias, Label, Type, Scale)
       , by = 'Variable') |> 
     mutate(Variable = factor(Variable))
   )
@@ -722,14 +730,32 @@ variable_importance |>
     filter(rank < 21) |> 
     ggplot(aes(  
         x = `Importance`
-      , y = reorder(Alias, `Importance`)
-      # , color  = Scale
+      , y = reorder(Label, `Importance`)
+      , fill = Type
       )) +
     # geom_point(aes(shape = Type)) +
     geom_col() + 
     theme_bw(16) +
+    # scale_fill_viridis_d(option = "A", end = .8, begin = .1) +
+    scale_fill_manual(
+      values = c(
+          '#13082c' # purple
+        , '#4e0070'
+        , '#9d006e'
+        , '#f4264e'
+        , '#ff8650' # orange
+      ),
+      labels = c(
+          'Construction'
+        , 'Defensible Sapce'
+        , 'Exposure'
+        , 'Landscape Attributes'
+        , 'Topography'
+      )
+      , drop = FALSE
+    ) +
     theme(axis.ticks.y = element_blank()) + 
-    theme(legend.position = "top",
+    theme(legend.position = "bottom",
           legend.justification = "left",
           plot.title.position = "plot",
           plot.caption = element_text(hjust=0),
@@ -746,15 +772,33 @@ variable_importance |>
     filter(rank < 21) |> 
     ggplot(aes(  
         x = `Importance`
-      , y = reorder(Alias, `Importance`)
+      , y = reorder(Label, `Importance`)
       , fill  = Type
       )) +
     # geom_point(aes(shape = Type)) +
     geom_col() + 
-    scale_fill_brewer(palette = 'Dark2') + 
+    scale_y_discrete(drop=FALSE) + 
+    # scale_fill_brewer(palette = 'Dark2') + 
+    scale_fill_manual(
+      values = c(
+          '#13082c' # purple
+        , '#4e0070'
+        , '#9d006e'
+        , '#f4264e'
+        , '#ff8650' # orange
+       ),
+      labels = c(
+          'Construction'
+        , 'Defensible Sapce'
+        , 'Exposure'
+        , 'Landscape Attributes'
+        , 'Topography'
+        )
+      , drop = FALSE
+      ) +
     theme_bw(16) +
     theme(axis.ticks.y = element_blank()) + 
-    theme(legend.position = "top",
+    theme(legend.position = "bottom",
           legend.justification = "left",
           plot.title.position = "plot",
           plot.caption = element_text(hjust=0),
@@ -1347,6 +1391,10 @@ stopCluster(cl); toc(); beepr::beep() # ~100s
 #### vi read in PDPs and graph
 ```{r}
 
+top_n <- 6         # set n (can revise to 20 or any other value greater than zero and less than 71)
+(pdp_cf_no_dins_vars <- variable_importance %>% filter(Model == 'cf_no_dins') %>% slice(1:top_n) %>% pull(Variable)) 
+
+
 pdp_cf_no_dins_vars
 
 
@@ -1355,41 +1403,92 @@ pdp_cf_no_dins_vars
     mutate(file_contents = map(files, ~read_csv(., col_types = cols()))) |> # col_types = cols() just to be quiet
     unnest(file_contents) |> 
     select(-files) |> 
-    left_join(variable_importance |> distinct(iv = Variable, Alias), by = 'iv') |> 
-    mutate(iv = factor(iv, levels = pdp_cf_no_dins_vars, labels = pdp_cf_no_dins_vars, ordered = TRUE)) 
+    left_join(variable_importance |> distinct(iv = Variable, Alias, Label, Type)
+              , by = 'iv') |> 
+    mutate(Label = factor(
+        Label
+      , levels = c(
+          'Dist. to destroyed building'
+        , 'Building area'
+        , 'Percent built, 300 ft'
+        , 'Dist. to major raod'
+        , 'Elevation, 100 m around bldg.'
+        , 'Elevation, 30 m around bldg.')
+      , labels = c(
+          'Dist. to destroyed\nbuilding'
+        , 'Building area'
+        , 'Percent built,\n300 ft'
+        , 'Dist. to major raod'
+        , 'Elevation, 100 m\naround bldg.'
+        , 'Elevation, 30 m\naround bldg.')
+      , ordered = TRUE)
+      ) |> 
+    mutate(iv = factor(iv, levels = pdp_cf_no_dins_vars, labels = pdp_cf_no_dins_vars, ordered = TRUE)) # not really need anymore because we use Label instead
   )
 
 pdp_cf_no_dins_tibble |> tabyl(iv)
+pdp_cf_no_dins_tibble |> tabyl(Label)
 # pdp_cf_no_dins_tibble |> tabyl(x)
+bind_cols(pdp_cf_no_dins_tibble |> tabyl(iv),  
+pdp_cf_no_dins_tibble |> tabyl(Label))
 
 (
   b_g_build <- pdp_cf_no_dins_tibble |> 
-    ggplot(aes(x, y)) + 
+    ggplot(aes(x, y, fill = Type)) + 
     geom_ribbon(aes(ymin = ymin, ymax = ymax)) +
-    geom_line(color = 'red') + 
+    # geom_line(color = 'red') + 
+    geom_line() + 
+    # scale_fill_viridis_d(option = "A", end = .8) + 
+    scale_fill_manual(
+      values = c(
+          '#13082c' # purple
+        , '#4e0070'
+        , '#9d006e'
+        , '#f4264e'
+        , '#ff8650' # orange
+        )
+      , labels = c(
+          'Construction'
+        , 'Defensible Sapce'
+        , 'Exposure'
+        , 'Landscape Attributes'
+        , 'Topography'
+        )
+      , drop = FALSE
+    ) +
     geom_hline(yintercept = 0, col = 'dark gray') + 
     theme_bw(16) + 
-    facet_wrap(~str_wrap(Alias, 30), scales = 'free_x') +
+    theme(legend.position = 'none') + 
+    # facet_wrap(~str_wrap(Alias, 30), scales = 'free_x') +
+    # facet_wrap(~str_wrap(Label, 20), scales = 'free_x') +
+    facet_wrap(~Label, scales = 'free_x') +
     NULL
   )
 
 library(patchwork)
 a_importance_graph_no_dins / b_g_build
 
+a_importance_graph_no_dins + 
+  inset_element(b_g_build , left = 0.2, bottom = 0.05, right = .95, top = .9)
+
+
+(pdp_cf_dins_vars <- variable_importance %>% filter(Model == 'cf_dins_binary') %>% slice(1:top_n) %>% pull(Variable)) 
+
 pdp_cf_dins_vars
 
 (
-  pdp_cf_no_dins_tibble <- tibble(files = dir('output_data/pdp_dins', full.names = TRUE)) %>%
+  pdp_cf_dins_tibble <- tibble(files = dir('output_data/pdp_dins', full.names = TRUE)) %>%
     mutate(file_contents = map(files,~read_csv(., col_types = cols()))) |> #, col_types = 'fdddf'))) |> 
     # mutate(file_contents = map(files, ~mutate(., ifelse(is.character(.$iv),))))
     unnest(file_contents) |> 
     select(-files) |> 
-    left_join(variable_importance |> distinct(iv = Variable, Alias), by = 'iv') |> 
+    left_join(variable_importance |> distinct(iv = Variable, Alias, Label, Type)
+              , by = 'iv') |> 
     mutate(iv = factor(iv, levels = pdp_cf_dins_vars, labels = pdp_cf_dins_vars, ordered = TRUE)) 
   )
 
-pdp_cf_no_dins_tibble |> tabyl(iv)
-pdp_cf_no_dins_tibble |> tabyl(Alias, iv)
+pdp_cf_dins_tibble |> tabyl(iv)
+pdp_cf_dins_tibble |> tabyl(Alias, iv)
 # pdp_cf_no_dins_tibble |> tabyl(x)
 
 
@@ -1434,56 +1533,131 @@ pdp_cf_no_dins_tibble |> tabyl(Alias, iv)
 
 
 (
-  b_build_WINDOWPANE <- pdp_cf_no_dins_tibble |>
+  b_build_WINDOWPANE <- pdp_cf_dins_tibble |>
     filter(iv == 'build_WINDOWPANE') |>
     ggplot(aes(x_chr, y)) +
     geom_hline(yintercept = 0, col = 'dark gray', size = 1) +
     geom_errorbar(aes(ymin = ymin, ymax = ymax), width = .1, size = 1) +
-    geom_point(color = 'red', size = 3) +
+    geom_point(aes(color = Type), size = 3) +
+    scale_color_manual(
+      values = c(
+          '#13082c' # purple
+        , '#4e0070'
+        , '#9d006e'
+        , '#f4264e'
+        , '#ff8650' # orange
+      ),
+      labels = c(
+          'Construction'
+        , 'Defensible Sapce'
+        , 'Exposure'
+        , 'Landscape Attributes'
+        , 'Topography'
+      )
+      # , drop = FALSE
+    ) +
     theme_bw(16) +
-    theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = .5)) +
-    facet_wrap(~str_wrap(Alias, 30), scales = 'free_x') +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = .5)
+          , legend.position = 'none') +
+    # facet_wrap(~str_wrap(Alias, 30), scales = 'free_x') +
+    facet_wrap(~str_wrap(Label, 30), scales = 'free_x') +
     labs(y = 'Predicted Probability', x = '(Multi Pane as reference)') + 
     NULL
   )
 
 (
-  c_build_EAVES <- pdp_cf_no_dins_tibble |>
+  c_build_EAVES <- pdp_cf_dins_tibble |>
     filter(iv == 'build_EAVES') |>
     ggplot(aes(x_chr, y)) +
     geom_hline(yintercept = 0, col = 'dark gray', size = 1) +
     geom_errorbar(aes(ymin = ymin, ymax = ymax), width = .1, size = 1) +
-    geom_point(color = 'red', size = 3) +
+    geom_point(aes(color = Type), size = 3) +
+    scale_color_manual(
+      values = c(
+          '#13082c' # purple
+        , '#4e0070'
+        , '#9d006e'
+        , '#f4264e'
+        , '#ff8650' # orange
+      ),
+      labels = c(
+          'Construction'
+        , 'Defensible Sapce'
+        , 'Exposure'
+        , 'Landscape Attributes'
+        , 'Topography'
+      )
+    ) +
     theme_bw(16) +
-    theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = .5)) +
-    facet_wrap(~str_wrap(Alias, 30), scales = 'free_x') +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = .5)
+          , legend.position = 'none') +
+    # facet_wrap(~str_wrap(Alias, 30), scales = 'free_x') +
+    facet_wrap(~str_wrap(Label, 30), scales = 'free_x') +
     labs(y = 'Predicted Probability', x = '(Enclosed as reference)') + 
     NULL
   )
 
 (
-  d_build_near_dest <- pdp_cf_no_dins_tibble |>
+  d_build_near_dest <- pdp_cf_dins_tibble |>
     filter(iv == 'build_near_dest') |>
-    ggplot(aes(x, y)) +
-    geom_hline(yintercept = 0, col = 'dark gray', size = 1) +
+    ggplot(aes(x, y, fill = Type)) +
     geom_ribbon(aes(ymin = ymin, ymax = ymax)) +
-    geom_line(color = 'red') +
+    geom_line() +
+    scale_color_manual(
+      values = c(
+          '#13082c' # purple
+        , '#4e0070'
+        , '#9d006e'
+        , '#f4264e'
+        , '#ff8650' # orange
+      ),
+      labels = c(
+          'Construction'
+        , 'Defensible Sapce'
+        , 'Exposure'
+        , 'Landscape Attributes'
+        , 'Topography'
+      )
+    ) +
+    geom_hline(yintercept = 0, col = 'dark gray', size = 1) +
     theme_bw(16) +
-    facet_wrap(~str_wrap(Alias, 30), scales = 'free_x') +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = .5)
+          , legend.position = 'none') +
+    # facet_wrap(~str_wrap(Alias, 30), scales = 'free_x') +
+    facet_wrap(~str_wrap(Label, 30), scales = 'free_x') +
     labs(y = 'Predicted Probability', x = 'Distance') + 
     NULL
   )
 
 
 (
-  e_build_p_otherpaved_200 <- pdp_cf_no_dins_tibble |>
+  e_build_p_otherpaved_200 <- pdp_cf_dins_tibble |>
     filter(iv == 'build_p_otherpaved_200') |>
-    ggplot(aes(x, y)) +
-    geom_hline(yintercept = 0, col = 'dark gray', size = 1) +
+    ggplot(aes(x, y, fill = Type)) +
     geom_ribbon(aes(ymin = ymin, ymax = ymax)) +
-    geom_line(color = 'red') +
+    geom_line() +
+    scale_color_manual(
+      values = c(
+          '#13082c' # purple
+        , '#4e0070'
+        , '#9d006e'
+        , '#f4264e'
+        , '#ff8650' # orange
+      ),
+      labels = c(
+          'Construction'
+        , 'Defensible Sapce'
+        , 'Exposure'
+        , 'Landscape Attributes'
+        , 'Topography'
+      )
+    ) +
+    geom_hline(yintercept = 0, col = 'dark gray', size = 1) +
     theme_bw(16) +
-    facet_wrap(~str_wrap(Alias, 30), scales = 'free_x') +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = .5)
+          , legend.position = 'none') +
+    # facet_wrap(~str_wrap(Alias, 30), scales = 'free_x') +
+    facet_wrap(~str_wrap(Label, 30), scales = 'free_x') +
     labs(y = 'Predicted Probability', x = '% cover') + 
     NULL
   )
@@ -1491,15 +1665,33 @@ pdp_cf_no_dins_tibble |> tabyl(Alias, iv)
 
 
 (
-  f_build_VENTSCREEN <- pdp_cf_no_dins_tibble |>
+  f_build_VENTSCREEN <- pdp_cf_dins_tibble |>
     filter(iv == 'build_VENTSCREEN') |>
     ggplot(aes(x_chr, y)) +
     geom_hline(yintercept = 0, col = 'dark gray', size = 1) +
     geom_errorbar(aes(ymin = ymin, ymax = ymax), width = .1, size = 1) +
-    geom_point(color = 'red', size = 3) +
+    geom_point(aes(color = Type), size = 3) +
+    scale_color_manual(
+      values = c(
+          '#13082c' # purple
+        , '#4e0070'
+        , '#9d006e'
+        , '#f4264e'
+        , '#ff8650' # orange
+      ),
+      labels = c(
+          'Construction'
+        , 'Defensible Sapce'
+        , 'Exposure'
+        , 'Landscape Attributes'
+        , 'Topography'
+      )
+    ) +
     theme_bw(16) +
-    theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = .5)) +
-    facet_wrap(~str_wrap(Alias, 30), scales = 'free_x') +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = .5)
+          , legend.position = 'none') +
+    # facet_wrap(~str_wrap(Alias, 30), scales = 'free_x') +
+    facet_wrap(~str_wrap(Label, 30), scales = 'free_x') +
     labs(y = 'Predicted Probability', x = 'Vent Screen') + 
     NULL
   )
@@ -1507,14 +1699,33 @@ pdp_cf_no_dins_tibble |> tabyl(Alias, iv)
 
 
 (
-  g_build_min_dist_shrub <- pdp_cf_no_dins_tibble |>
+  g_build_min_dist_shrub <- pdp_cf_dins_tibble |>
     filter(iv == 'build_min_dist_shrub') |>
-    ggplot(aes(x, y)) +
-    geom_hline(yintercept = 0, col = 'dark gray', size = 1) +
+    ggplot(aes(x, y, fill = Type)) +
     geom_ribbon(aes(ymin = ymin, ymax = ymax)) +
-    geom_line(color = 'red') +
+    geom_line() +
+    scale_color_manual(
+      values = c(
+          '#13082c' # purple
+        , '#4e0070'
+        , '#9d006e'
+        , '#f4264e'
+        , '#ff8650' # orange
+      ),
+      labels = c(
+          'Construction'
+        , 'Defensible Sapce'
+        , 'Exposure'
+        , 'Landscape Attributes'
+        , 'Topography'
+      )
+    ) +
+    geom_hline(yintercept = 0, col = 'dark gray', size = 1) +
     theme_bw(16) +
-    facet_wrap(~str_wrap(Alias, 30), scales = 'free_x') +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = .5)
+          , legend.position = 'none') +
+    # facet_wrap(~str_wrap(Alias, 30), scales = 'free_x') +
+    facet_wrap(~str_wrap(Label, 30), scales = 'free_x') +
     labs(y = 'Predicted Probability', x = 'Distance') +
     NULL
   )
@@ -1525,6 +1736,14 @@ a_importance_graph_dins /
   (b_build_WINDOWPANE + c_build_EAVES + d_build_near_dest) / 
   (e_build_p_otherpaved_200 +  f_build_VENTSCREEN + g_build_min_dist_shrub) + 
   plot_annotation(tag_levels = 'A')
+
+
+insets <- (b_build_WINDOWPANE + c_build_EAVES + d_build_near_dest) / 
+  (e_build_p_otherpaved_200 +  f_build_VENTSCREEN + g_build_min_dist_shrub)
+
+a_importance_graph_dins + 
+  inset_element(insets, left = 0.3, bottom = 0.05, right = .95, top = .8)
+  
 
 ```
 

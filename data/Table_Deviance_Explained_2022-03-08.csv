@@ -1,71 +1,71 @@
-Type,Variable name,Alias,Label,Deviance,n,Scale,Source
-CON,build_area,Building area (ft2),Building area,0.034,11134,Building,Structure assessment-DINS
-CON,build_DECKPORCHO,"On-grade deck/porch materials (composite, masonry/concrete, wood, unknown, no deck/porch)",Deck/porch materials,0.472,953,Building,Structure assessment-DINS
-CON,build_EAVES,"Eaves (enclosed, unenclosed, unknown, no eaves)",Eaves,5.156,486,Building,Structure assessment-DINS
-CON,build_EXTERIORSI,"Exterior siding (combustible, ignition-resistant, unknown)",Siding materials,0.163,1122,Building,Structure assessment-DINS
-CON,build_FENCEATTAC,"Fence materials (combustible, non-combustible, no fence, unknown)",Fence materials,1.166,1037,Building,Structure assessment-DINS
-CON,build_PATIOCOVER,"Carport/covered patio materials (combustible, non-combustible, unknown, no patio/carport)",Carport/patio materials,0.206,948,Building,Structure assessment-DINS
-CON,build_ROOFCONSTR,"Roof materials (asphalt, concrete, metal, tile, wood, other, unknown)",Roof materials,2.143,1069,Building,Structure assessment-DINS
-CON,build_VENTSCREEN,"Vent screen (mesh screen <= 1/8"", mesh screen > 1/8"", unscreened, unknown, no vents)",Vent screen,0.541,418,Building,Structure assessment-DINS
-CON,build_WINDOWPANE,"Window pane (singlepane, multipane, unknown, no windows)",Windows,4.789,571,Building,Structure assessment-DINS
-CON,parcel_year_built,Year built (from parcel data),Year built,0.009,10126,Parcel,LA County data
-DEF,build_has_tree_overhang,Do trees overhang building (binary),Trees overhang (y/n),0.31,11087,Building,UVM
-DEF,build_min_dist_shrub,Distance to nearest shrub (ft),Dist. to nearest shrub,0.465,11134,Building,UVM
-DEF,build_min_dist_tree,Distance to nearest tree (ft),Dist. to nearest tree,0.417,11134,Building,UVM
-DEF,build_near_build,Distance to nearest building (ft),Dist. to nearest building,0.446,11134,Building,UVM
-DEF,build_overhang_ht,Average height of trees overhanging building (ft),Avg. height tree overhang,0.616,11087,Building,UVM
-DEF,build_p_building_10,"Percent built land cover, 10 ft around building","Percent built, 10 ft ",0.215,11134,Building,UVM
-DEF,build_p_grass_10,"Percent grass land cover, 10 ft around building","Percent grass, 10 ft",1.358,11134,Building,UVM
-DEF,build_p_otherpaved_10,"Percent paved land cover, 10 ft around building","Percent paved, 10 ft ",0.516,11134,Building,UVM
-DEF,build_p_road_10,"Percent road land cover, 10 ft around building","Percent road, 10 ft ",0.004,11134,Building,UVM
-DEF,build_p_shrub_10,"Percent shrub land cover, 10 ft around building","Percent shrub, 10 ft",0.036,11134,Building,UVM
-DEF,build_p_soil_10,"Percent soil land cover, 10 ft around building","Percent soil, 10 ft",0.504,11134,Building,UVM
-DEF,build_p_tree_10,"Percent tree land cover, 10 ft around building","Percent tree, 10 ft",0.828,11134,Building,UVM
-DEF,build_p_water_10,"Percent water land cover, 10 ft around building","Percent water, 10 ft",0.022,11134,Building,UVM
-DEF,build_perc_overhang,Percent of building with trees over top,Tree overhang (percent),0.128,11087,Building,UVM
-DEF,build_PROPANETAN,"Distance to propane tank  (in feet, 0-10, 11-20, 21-30, >30', unknown, no tank)",Dist. to propane tank,1.888,844,Building,Structure assessment-DINS
-DEF,build_VEGCLEARAN,"Defensible space-vegetation clearance (in feet, 0-30, 30-100, >100, unknown, not applicable)",Def. space (DINS),0.944,1141,Building,Structure assessment-DINS
-DEF,parcel_Build_P,Parcel land cover- percent buildings,"Percent built, parcel",7.011,11134,Parcel,UVM
-DEF,parcel_Can_P,Parcel land cover- percent tree,"Percent tree, parcel",2.726,11134,Parcel,UVM
-DEF,parcel_Grass_P,Parcel land cover- percent grass,"Percent grass, parcel",3.186,11134,Parcel,UVM
-DEF,parcel_Imperv_P,Parcel land cover- percent impervious,"Percent imprev., parcel",7.535,11134,Parcel,UVM
-DEF,parcel_Paved_P,Parcel land cover- percent paved,"Percent paved, parcel",3.755,11134,Parcel,UVM
-DEF,parcel_Road_P,Parcel land cover- percent road,"Percent road, parcel",0.131,11134,Parcel,UVM
-DEF,parcel_Shrub_P,Parcel land cover- percent shrub,"Percent shrub, parcel",1.748,11134,Parcel,UVM
-DEF,parcel_Soil_P,Parcel land cover- percent soil,"Percent soil, parcel",1.267,11134,Parcel,UVM
-DEF,parcel_Water_P,Parcel land cover- percent water,"Percent water, parcel",0.096,11134,Parcel,UVM
-EXP,build_near_dest,Distance to nearest destroyed building (ft),Dist. to destroyed building,23.482,11134,Building,Structure assessment-DINS; Miranda calc'd in Arc
-LAND,build_Mean_builddens,Interpolated housing density based on a 1-km search radius NOTE - housing? Structure?,Housing density,2.255,11046,Point of building,Alex's data D:\ArcGISfiles\2017_LACounty\1_Data_20200320\Data_from_Alex\dens_1kmr_ha
-LAND,build_Mean_distall_road,Euclidian distance to any road (major and minor) (m),Dist. to any road,0.14,11122,Point of building,Alex's data D:\ArcGISfiles\2017_LACounty\1_Data_20200320\Data_from_Alex\dens_1kmr_ha
-LAND,build_Mean_distroad,Euclidian distance to major road (m),Dist. to major raod,1.29,11046,Point of building,Alex's data D:\ArcGISfiles\2017_LACounty\1_Data_20200320\Data_from_Alex\dist_psroad
-LAND,build_p_building_100,"Percent built land cover, 100 ft around building","Percent built, 100 ft ",3.714,11134,Building,UVM
-LAND,build_p_building_200,"Percent built land cover, 200 ft around building","Percent built, 200 ft ",4.824,11134,Building,UVM
-LAND,build_p_building_300,"Percent built land cover, 300 ft around building","Percent built, 300 ft ",5.178,11134,Building,UVM
-LAND,build_p_grass_100,"Percent grass land cover, 100 ft around building","Percent grass, 100 ft ",2.054,11134,Building,UVM
-LAND,build_p_grass_200,"Percent grass land cover, 200 ft around building","Percent grass, 200 ft ",2.81,11134,Building,UVM
-LAND,build_p_grass_300,"Percent grass land cover, 300 ft around building","Percent grass, 300 ft ",3.43,11134,Building,UVM
-LAND,build_p_otherpaved_100,"Percent paved land cover, 100 ft around building","Percent paved, 100 ft ",3.035,11134,Building,UVM
-LAND,build_p_otherpaved_200,"Percent paved land cover, 200 ft around building","Percent paved, 200 ft ",4.796,11134,Building,UVM
-LAND,build_p_otherpaved_300,"Percent paved land cover, 300 ft around building","Percent paved, 300 ft ",5.749,11134,Building,UVM
-LAND,build_p_road_100,"Percent road land cover, 100 ft around building","Percent road, 100 ft ",2.205,11134,Building,UVM
-LAND,build_p_road_200,"Percent road land cover, 200 ft around building","Percent road, 200 ft ",3.1,11134,Building,UVM
-LAND,build_p_road_300,"Percent road land cover, 300 ft around building","Percent road, 300 ft ",4.005,11134,Building,UVM
-LAND,build_p_shrub_100,"Percent shrub land cover, 100 ft around building","Percent shrub, 100 ft ",0.116,11134,Building,UVM
-LAND,build_p_shrub_200,"Percent shrub land cover, 200 ft around building","Percent shrub, 200 ft ",0.516,11134,Building,UVM
-LAND,build_p_shrub_300,"Percent shrub land cover, 300 ft around building","Percent shrub, 300 ft ",1.074,11134,Building,UVM
-LAND,build_p_soil_100,"Percent soil land cover, 100 ft around building","Percent soil, 100 ft ",2.196,11134,Building,UVM
-LAND,build_p_soil_200,"Percent soil land cover, 200 ft around building","Percent soil, 200 ft ",2.682,11134,Building,UVM
-LAND,build_p_soil_300,"Percent soil land cover, 300 ft around building","Percent soil, 300 ft ",2.277,11134,Building,UVM
-LAND,build_p_tree_100,"Percent tree land cover, 100 ft around building","Percent tree, 100 ft ",2.542,11134,Building,UVM
-LAND,build_p_tree_200,"Percent tree land cover, 200 ft around building","Percent tree, 200 ft ",2.238,11134,Building,UVM
-LAND,build_p_tree_300,"Percent tree land cover, 300 ft around building","Percent tree, 300 ft ",2.444,11134,Building,UVM
-LAND,build_p_water_100,"Percent water land cover, 100 ft around building","Percent water, 100 ft ",0.068,11134,Building,UVM
-LAND,build_p_water_200,"Percent water land cover, 200 ft around building","Percent water, 200 ft ",0.031,11134,Building,UVM
-LAND,build_p_water_300,"Percent water land cover, 300 ft around building","Percent water, 300 ft ",0.041,11134,Building,UVM
-LAND,parcel_area,Parcel area (ft2),Parcel area,0.315,11134,Parcel,UVM
-TOPO,build_Mean_aspect_100m_DEM,"Aspect, 100 m around building, derived from a 30 m digital elevation model","Aspect, 100 m around bldg.",0.179,11134,Building,UVM DEM and nDSM--Miranda and Dexter did this
-TOPO,build_Mean_aspect_30m_DEM,"Aspect, 30 m around building, derived from a 30 m digital elevation model","Aspect, 30 m around bldg.",0.106,11134,Building,UVM DEM and nDSM--Miranda and Dexter did this
-TOPO,build_Mean_elev_100m,"Elevation, 100 m around building, derived from a 30 m digital elevation model (ft)","Elevation, 100 m around bldg.",0.06,11134,Building,UVM DEM and nDSM--Miranda and Dexter did this
-TOPO,build_Mean_elev_30m,"Elevation, 30 m around building, derived from a 30 m digital elevation model (ft)","Elevation, 30 m around bldg.",0.076,11134,Building,UVM DEM and nDSM--Miranda and Dexter did this
-TOPO,build_Mean_slope_100m_DEM,"Percentage slope, 100 m around building, derived from a 30 m digital elevation model","Percent slope, 100 m around bldg.",4.557,11134,Building,UVM DEM and nDSM--Miranda and Dexter did this
-TOPO,build_Mean_slope_30m_DEM,"Percentage slope, 30 m around building, derived from a 30 m digital elevation model","Percent slope, 30 m around bldg.",3.599,11134,Building,UVM DEM and nDSM--Miranda and Dexter did this
+Type,Variable name,Alias,Label,Deviance,Table2,n,Scale,Source
+CON,build_area,Building area (ft2),Building area,0.034,0,11134,Building,Structure assessment-DINS
+CON,build_DECKPORCHO,"On-grade deck/porch materials (composite, masonry/concrete, wood, unknown, no deck/porch)",Deck/porch materials,0.472,0,953,Building,Structure assessment-DINS
+CON,build_EAVES,"Eaves (enclosed, unenclosed, unknown, no eaves)",Eaves,5.156,0,486,Building,Structure assessment-DINS
+CON,build_EXTERIORSI,"Exterior siding (combustible, ignition-resistant, unknown)",Siding materials,0.163,0,1122,Building,Structure assessment-DINS
+CON,build_FENCEATTAC,"Fence materials (combustible, non-combustible, no fence, unknown)",Fence materials,1.166,0,1037,Building,Structure assessment-DINS
+CON,build_PATIOCOVER,"Carport/covered patio materials (combustible, non-combustible, unknown, no patio/carport)",Carport/patio materials,0.206,0,948,Building,Structure assessment-DINS
+CON,build_ROOFCONSTR,"Roof materials (asphalt, concrete, metal, tile, wood, other, unknown)",Roof materials,2.143,0,1069,Building,Structure assessment-DINS
+CON,build_VENTSCREEN,"Vent screen (mesh screen <= 1/8"", mesh screen > 1/8"", unscreened, unknown, no vents)",Vent screen,0.541,0,418,Building,Structure assessment-DINS
+CON,build_WINDOWPANE,"Window pane (singlepane, multipane, unknown, no windows)",Windows,4.789,0,571,Building,Structure assessment-DINS
+CON,parcel_year_built,Year built (from parcel data),Year built,0.009,0,10126,Parcel,LA County data
+DEF,build_has_tree_overhang,Do trees overhang building (binary),Trees overhang (y/n),0.31,1,11087,Building,UVM
+DEF,build_min_dist_shrub,Distance to nearest shrub (ft),Dist. to nearest shrub,0.465,1,11134,Building,UVM
+DEF,build_min_dist_tree,Distance to nearest tree (ft),Dist. to nearest tree,0.417,1,11134,Building,UVM
+DEF,build_near_build,Distance to nearest building (ft),Dist. to nearest building,0.446,1,11134,Building,UVM
+DEF,build_overhang_ht,Average height of trees overhanging building (ft),Avg. height tree overhang,0.616,1,11087,Building,UVM
+DEF,build_p_building_10,"Percent built land cover, 10 ft around building","Percent built, 10 ft ",0.215,1,11134,Building,UVM
+DEF,build_p_grass_10,"Percent grass land cover, 10 ft around building","Percent grass, 10 ft",1.358,1,11134,Building,UVM
+DEF,build_p_otherpaved_10,"Percent paved land cover, 10 ft around building","Percent paved, 10 ft ",0.516,1,11134,Building,UVM
+DEF,build_p_road_10,"Percent road land cover, 10 ft around building","Percent road, 10 ft ",0.004,1,11134,Building,UVM
+DEF,build_p_shrub_10,"Percent shrub land cover, 10 ft around building","Percent shrub, 10 ft",0.036,1,11134,Building,UVM
+DEF,build_p_soil_10,"Percent soil land cover, 10 ft around building","Percent soil, 10 ft",0.504,1,11134,Building,UVM
+DEF,build_p_tree_10,"Percent tree land cover, 10 ft around building","Percent tree, 10 ft",0.828,1,11134,Building,UVM
+DEF,build_p_water_10,"Percent water land cover, 10 ft around building","Percent water, 10 ft",0.022,1,11134,Building,UVM
+DEF,build_perc_overhang,Percent of building with trees over top,Tree overhang (percent),0.128,1,11087,Building,UVM
+DEF,build_PROPANETAN,"Distance to propane tank  (in feet, 0-10, 11-20, 21-30, >30', unknown, no tank)",Dist. to propane tank,1.888,0,844,Building,Structure assessment-DINS
+DEF,build_VEGCLEARAN,"Defensible space-vegetation clearance (in feet, 0-30, 30-100, >100, unknown, not applicable)",Def. space (DINS),0.944,1,1141,Building,Structure assessment-DINS
+DEF,parcel_Build_P,Parcel land cover- percent buildings,"Percent built, parcel",7.011,1,11134,Parcel,UVM
+DEF,parcel_Can_P,Parcel land cover- percent tree,"Percent tree, parcel",2.726,1,11134,Parcel,UVM
+DEF,parcel_Grass_P,Parcel land cover- percent grass,"Percent grass, parcel",3.186,1,11134,Parcel,UVM
+DEF,parcel_Imperv_P,Parcel land cover- percent impervious,"Percent imprev., parcel",7.535,1,11134,Parcel,UVM
+DEF,parcel_Paved_P,Parcel land cover- percent paved,"Percent paved, parcel",3.755,1,11134,Parcel,UVM
+DEF,parcel_Road_P,Parcel land cover- percent road,"Percent road, parcel",0.131,1,11134,Parcel,UVM
+DEF,parcel_Shrub_P,Parcel land cover- percent shrub,"Percent shrub, parcel",1.748,1,11134,Parcel,UVM
+DEF,parcel_Soil_P,Parcel land cover- percent soil,"Percent soil, parcel",1.267,1,11134,Parcel,UVM
+DEF,parcel_Water_P,Parcel land cover- percent water,"Percent water, parcel",0.096,1,11134,Parcel,UVM
+EXP,build_near_dest,Distance to nearest destroyed building (ft),Dist. to destroyed building,23.482,0,11134,Building,Structure assessment-DINS; Miranda calc'd in Arc
+LAND,build_Mean_builddens,Interpolated housing density based on a 1-km search radius NOTE - housing? Structure?,Housing density,2.255,0,11046,Point of building,Alex's data D:\ArcGISfiles\2017_LACounty\1_Data_20200320\Data_from_Alex\dens_1kmr_ha
+LAND,build_Mean_distall_road,Euclidian distance to any road (major and minor) (m),Dist. to any road,0.14,0,11122,Point of building,Alex's data D:\ArcGISfiles\2017_LACounty\1_Data_20200320\Data_from_Alex\dens_1kmr_ha
+LAND,build_Mean_distroad,Euclidian distance to major road (m),Dist. to major raod,1.29,0,11046,Point of building,Alex's data D:\ArcGISfiles\2017_LACounty\1_Data_20200320\Data_from_Alex\dist_psroad
+LAND,build_p_building_100,"Percent built land cover, 100 ft around building","Percent built, 100 ft ",3.714,1,11134,Building,UVM
+LAND,build_p_building_200,"Percent built land cover, 200 ft around building","Percent built, 200 ft ",4.824,1,11134,Building,UVM
+LAND,build_p_building_300,"Percent built land cover, 300 ft around building","Percent built, 300 ft ",5.178,1,11134,Building,UVM
+LAND,build_p_grass_100,"Percent grass land cover, 100 ft around building","Percent grass, 100 ft ",2.054,1,11134,Building,UVM
+LAND,build_p_grass_200,"Percent grass land cover, 200 ft around building","Percent grass, 200 ft ",2.81,1,11134,Building,UVM
+LAND,build_p_grass_300,"Percent grass land cover, 300 ft around building","Percent grass, 300 ft ",3.43,1,11134,Building,UVM
+LAND,build_p_otherpaved_100,"Percent paved land cover, 100 ft around building","Percent paved, 100 ft ",3.035,1,11134,Building,UVM
+LAND,build_p_otherpaved_200,"Percent paved land cover, 200 ft around building","Percent paved, 200 ft ",4.796,1,11134,Building,UVM
+LAND,build_p_otherpaved_300,"Percent paved land cover, 300 ft around building","Percent paved, 300 ft ",5.749,1,11134,Building,UVM
+LAND,build_p_road_100,"Percent road land cover, 100 ft around building","Percent road, 100 ft ",2.205,1,11134,Building,UVM
+LAND,build_p_road_200,"Percent road land cover, 200 ft around building","Percent road, 200 ft ",3.1,1,11134,Building,UVM
+LAND,build_p_road_300,"Percent road land cover, 300 ft around building","Percent road, 300 ft ",4.005,1,11134,Building,UVM
+LAND,build_p_shrub_100,"Percent shrub land cover, 100 ft around building","Percent shrub, 100 ft ",0.116,1,11134,Building,UVM
+LAND,build_p_shrub_200,"Percent shrub land cover, 200 ft around building","Percent shrub, 200 ft ",0.516,1,11134,Building,UVM
+LAND,build_p_shrub_300,"Percent shrub land cover, 300 ft around building","Percent shrub, 300 ft ",1.074,1,11134,Building,UVM
+LAND,build_p_soil_100,"Percent soil land cover, 100 ft around building","Percent soil, 100 ft ",2.196,1,11134,Building,UVM
+LAND,build_p_soil_200,"Percent soil land cover, 200 ft around building","Percent soil, 200 ft ",2.682,1,11134,Building,UVM
+LAND,build_p_soil_300,"Percent soil land cover, 300 ft around building","Percent soil, 300 ft ",2.277,1,11134,Building,UVM
+LAND,build_p_tree_100,"Percent tree land cover, 100 ft around building","Percent tree, 100 ft ",2.542,1,11134,Building,UVM
+LAND,build_p_tree_200,"Percent tree land cover, 200 ft around building","Percent tree, 200 ft ",2.238,1,11134,Building,UVM
+LAND,build_p_tree_300,"Percent tree land cover, 300 ft around building","Percent tree, 300 ft ",2.444,1,11134,Building,UVM
+LAND,build_p_water_100,"Percent water land cover, 100 ft around building","Percent water, 100 ft ",0.068,1,11134,Building,UVM
+LAND,build_p_water_200,"Percent water land cover, 200 ft around building","Percent water, 200 ft ",0.031,1,11134,Building,UVM
+LAND,build_p_water_300,"Percent water land cover, 300 ft around building","Percent water, 300 ft ",0.041,1,11134,Building,UVM
+LAND,parcel_area,Parcel area (ft2),Parcel area,0.315,0,11134,Parcel,UVM
+TOPO,build_Mean_aspect_100m_DEM,"Aspect, 100 m around building, derived from a 30 m digital elevation model","Aspect, 100 m around bldg.",0.179,0,11134,Building,UVM DEM and nDSM--Miranda and Dexter did this
+TOPO,build_Mean_aspect_30m_DEM,"Aspect, 30 m around building, derived from a 30 m digital elevation model","Aspect, 30 m around bldg.",0.106,0,11134,Building,UVM DEM and nDSM--Miranda and Dexter did this
+TOPO,build_Mean_elev_100m,"Elevation, 100 m around building, derived from a 30 m digital elevation model (ft)","Elevation, 100 m around bldg.",0.06,0,11134,Building,UVM DEM and nDSM--Miranda and Dexter did this
+TOPO,build_Mean_elev_30m,"Elevation, 30 m around building, derived from a 30 m digital elevation model (ft)","Elevation, 30 m around bldg.",0.076,0,11134,Building,UVM DEM and nDSM--Miranda and Dexter did this
+TOPO,build_Mean_slope_100m_DEM,"Percentage slope, 100 m around building, derived from a 30 m digital elevation model","Percent slope, 100 m around bldg.",4.557,0,11134,Building,UVM DEM and nDSM--Miranda and Dexter did this
+TOPO,build_Mean_slope_30m_DEM,"Percentage slope, 30 m around building, derived from a 30 m digital elevation model","Percent slope, 30 m around bldg.",3.599,0,11134,Building,UVM DEM and nDSM--Miranda and Dexter did this

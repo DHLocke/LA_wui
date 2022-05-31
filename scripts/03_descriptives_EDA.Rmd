@@ -100,8 +100,9 @@ set.seed(19870630)
 # one 'main' data frame
 build <- read_csv(paste0(getwd(), '/output_data/building_2022-02-01.csv')) %>%
   tidylog::select(
+    ID_Build
     # damage_binary
-      damage_cat         # binary outcome encoded as categorical (Destroyed / Survived)
+    , damage_cat         # binary outcome encoded as categorical (Destroyed / Survived)
     , damage_severity    # five levels
     , build_area   
     # build_DECKPORCHE    , #drop this on 12/20/21
@@ -287,6 +288,8 @@ table(build$parcel_UseType,build$parcel_Roll_HomeOwnersExemp) #Among residential
  
 (tab_labs |> filter(Table2 == 1) |> pull(`Variable name`) -> vars_to_include_tbl_2)
 
+
+# TODO change order to be grouped by theme. 
 build |> 
   # select(-damage_severity, -build_DINS) |> # to be all-inclusive
   # select(  damage_cat                     # to match Miranda's selections above re: defensible space and over hang
@@ -307,7 +310,7 @@ build |>
   as_gt() |> 
   gt::gtsave(paste0(getwd(), '/figures/Table_Descript_' , Sys.Date(), '.png'))
 
-
+# TODO change order to be grouped by theme. 
 build |> 
   select(-damage_severity, -build_DINS) |> # to be all-inclusive
   tbl_summary(by = damage_cat) |> 
@@ -401,39 +404,39 @@ build %>%
 #if we keep, reorder factors, and tweak formatting
 
 
-(
-  ggp4 <- build %>% 
-    tidylog::select(ID_Build, contains('build_p_')) %>% 
-    pivot_longer(-ID_Build) %>% 
-    mutate(#buff_dist = as.numeric(str_remove_all(name, '\\D')),
-           var = str_remove(name, 'build_p_')) %>% 
-    separate(var, into = c('var', 'buff_dist'), sep = '_', convert = TRUE) %>%  #if we keep, reorder factors, and tweak formatting
-    filter(buff_dist == 300 & var != 'water') %>% 
-    mutate(`Land Cover` = factor(str_to_title(ifelse(var == 'otherpaved', 'other paved', var)), ordered = TRUE,
-           levels = c('Tree', 'Shrub', 'Grass', 'Soil', 'Building', 'Road', 'Other Paved'))) |> 
-    # mutate(holc_grade = factor(holc_grade, levels = LETTERS[1:4], ordered = TRUE)) |>
-    ggplot(aes(x = value, fill = `Land Cover`)) +  
-    geom_histogram(bins = 30) +
-    scale_fill_manual(
-      values = c(
-        '#0b5304', # Tree 
-        '#ffff0c', # Shrub
-        '#b4ff8f', # Grass
-        '#6b3f02', # Soil
-        # '#0b00fe', # Water
-        '#f40008', # Building
-        '#010101', # Road
-        '#908e92' # Other Paved'
-        )
-      ) + 
-    facet_wrap(~`Land Cover`, ncol = 4) +
-    labs(title = "Histogram of land cover 300 ft around building") + 
-    theme_bw(16) + 
-    theme(legend.position = c(.885, .25)) + 
-    scale_y_continuous(expand = c(0, 0)) +
-    scale_x_continuous(expand = c(0, 0)) +
-    NULL
-  )
+# (
+#   ggp4 <- build %>% 
+#     tidylog::select(ID_Build, contains('build_p_')) %>% 
+#     pivot_longer(-ID_Build) %>% 
+#     mutate(#buff_dist = as.numeric(str_remove_all(name, '\\D')),
+#            var = str_remove(name, 'build_p_')) %>% 
+#     separate(var, into = c('var', 'buff_dist'), sep = '_', convert = TRUE) %>%  #if we keep, reorder factors, and tweak formatting
+#     filter(buff_dist == 300 & var != 'water') %>% 
+#     mutate(`Land Cover` = factor(str_to_title(ifelse(var == 'otherpaved', 'other paved', var)), ordered = TRUE,
+#            levels = c('Tree', 'Shrub', 'Grass', 'Soil', 'Building', 'Road', 'Other Paved'))) |> 
+#     # mutate(holc_grade = factor(holc_grade, levels = LETTERS[1:4], ordered = TRUE)) |>
+#     ggplot(aes(x = value, fill = `Land Cover`)) +  
+#     geom_histogram(bins = 30) +
+#     scale_fill_manual(
+#       values = c(
+#         '#0b5304', # Tree 
+#         '#ffff0c', # Shrub
+#         '#b4ff8f', # Grass
+#         '#6b3f02', # Soil
+#         # '#0b00fe', # Water
+#         '#f40008', # Building
+#         '#010101', # Road
+#         '#908e92' # Other Paved'
+#         )
+#       ) + 
+#     facet_wrap(~`Land Cover`, ncol = 4) +
+#     labs(title = "Histogram of land cover 300 ft around building") + 
+#     theme_bw(16) + 
+#     theme(legend.position = c(.885, .25)) + 
+#     scale_y_continuous(expand = c(0, 0)) +
+#     scale_x_continuous(expand = c(0, 0)) +
+#     NULL
+#   )
 
 # ggsave(file = paste0(getwd(), '/figures/buff_landcover_300_',
 #                      gsub('[[:punct:]]', '_', Sys.time()), '.png')
@@ -441,21 +444,25 @@ build %>%
 #        # , dpi = 100
 #        )
 
-#work on for publication, 
-# 4/6/2022  
+
+Average distance to road
+average building density
+distance to destrooyed building
+building area
+
+# ggp1 <- build %>% 
+#   mutate(`Average Elevation of each Building (100 meter buffer)` = build_Mean_elev_100m,
+#          `Damage Category` = damage_cat) |>  
+#   ggplot(aes(`Average Elevation of each Building (100 meter buffer)`, fill = `Damage Category`)) + 
+#   geom_density(alpha = .5) + 
+#   scale_x_continuous(expand = c(0, 0)) +
+#   scale_y_continuous(expand = c(0, 0), limits = c(0, 0.0021)) +
+#   theme_bw(16) + 
+#   theme(legend.position = c(.7, .7)) + 
+#   NULL
+
 
 ggp1 <- build %>% 
-  mutate(`Average Elevation of each Building (100 meter buffer)` = build_Mean_elev_100m,
-         `Damage Category` = damage_cat) |>  
-  ggplot(aes(`Average Elevation of each Building (100 meter buffer)`, fill = `Damage Category`)) + 
-  geom_density(alpha = .5) + 
-  scale_x_continuous(expand = c(0, 0)) +
-  scale_y_continuous(expand = c(0, 0), limits = c(0, 0.0021)) +
-  theme_bw(16) + 
-  theme(legend.position = c(.7, .7)) + 
-  NULL
-
-ggp2 <- build %>% 
   mutate(`Average Distance to Road for each Building` = build_Mean_distroad,
          `Damage Category` = damage_cat) |>  
   ggplot(aes(`Average Distance to Road for each Building`, fill = `Damage Category`)) + 
@@ -467,7 +474,7 @@ ggp2 <- build %>%
   theme(legend.position = c(.7, .7)) + 
   NULL
 
-ggp3 <- build %>% 
+ggp2 <- build %>% 
   mutate(`Average Building Density` = build_Mean_builddens,
          `Damage Category` = damage_cat) |>  
   ggplot(aes(`Average Building Density`, fill = `Damage Category`)) + 
@@ -476,6 +483,35 @@ ggp3 <- build %>%
   scale_y_continuous(expand = c(0, 0), limits = c(0, 0.6)) +
   theme_bw(16) + 
   theme(legend.position = c(.7, .7)) + 
+  NULL
+
+
+
+ggp3 <- build %>% 
+  mutate(`Distance to Destroyed Building (log scale)` = build_near_dest,
+         `Damage Category` = damage_cat) |>  
+  ggplot(aes(`Distance to Destroyed Building (log scale)`, fill = `Damage Category`)) + 
+  geom_density(alpha = .5) + 
+  # scale_x_continuous(expand = c(0, 0)) +
+  scale_x_log10() + 
+  scale_y_continuous(expand = c(0, 0), limits = c(0, 0.9)
+                     ) +
+  theme_bw(16) + 
+  theme(legend.position = c(.25, .7)) + 
+  NULL
+
+# TODO 
+ggp4 <- build %>% 
+  mutate(`Building Area (log scale)` = build_area,
+         `Damage Category` = damage_cat) |>  
+  ggplot(aes(`Building Area (log scale)`, fill = `Damage Category`)) + 
+  geom_density(alpha = .5) + 
+  # scale_x_continuous(expand = c(0, 0)) +
+  # scale_x_log10() +
+  scale_y_continuous(expand = c(0, 0), limits = c(0, 0.9)
+                     ) +
+  theme_bw(16) + 
+  theme(legend.position = c(.25, .7)) + 
   NULL
 
 

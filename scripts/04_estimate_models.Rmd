@@ -754,6 +754,7 @@ variable_importance |>
       )
       , drop = FALSE
     ) +
+    scale_x_continuous(expand = c(0, 0), limits = c(0, 101)) + 
     theme(axis.ticks.y = element_blank()) + 
     theme(legend.position = "bottom",
           legend.justification = "left",
@@ -796,6 +797,7 @@ variable_importance |>
         )
       , drop = FALSE
       ) +
+    scale_x_continuous(expand = c(0, 0), limits = c(0, 101)) + 
     theme_bw(16) +
     theme(axis.ticks.y = element_blank()) + 
     theme(legend.position = "bottom",
@@ -895,7 +897,7 @@ ggsave(file = paste0(getwd(), '/figures/cf_dins/', variable, '_', Sys.Date(), '.
 (pdp_cf_no_dins_vars <- variable_importance %>% filter(Model == 'cf_no_dins') %>%                 pull(Variable))
 
 # using top n predictors
-top_n <- 6         # set n (can revise to 20 or any other value greater than zero and less than 71)
+top_n <- 9         # set n (can revise to 20 or any other value greater than zero and less than 71)
 (pdp_cf_no_dins_vars <- variable_importance %>% filter(Model == 'cf_no_dins') %>% slice(1:top_n) %>% pull(Variable)) 
 
 
@@ -1149,8 +1151,7 @@ pdp::partial(cf_no_dins               # the model
 
  stopCluster(cl); toc(); beepr::beep() # ~1 hr 45 mins
  
- 
-
+# TODO add three more predicgtors?
 ```
 
 #### iv DINS CF
@@ -1388,6 +1389,15 @@ stopCluster(cl); toc(); beepr::beep() # ~100s
 ```
 
 
+top
+TODO add in next three predictors?
+
+bottom
+TODO wrap text
+TODO reduce text on categorical
+
+
+
 #### vi read in PDPs and graph
 ```{r}
 
@@ -1413,18 +1423,25 @@ pdp_cf_no_dins_vars
         , 'Percent built, 300 ft'
         , 'Dist. to major raod'
         , 'Elevation, 100 m around bldg.'
-        , 'Elevation, 30 m around bldg.')
+        , 'Elevation, 30 m around bldg.'
+        # , 'Percent built, 200 ft'
+        # , 'Percent tree, parcel'
+        )
       , labels = c(
           'Dist. to destroyed\nbuilding'
         , 'Building area'
         , 'Percent built,\n300 ft'
-        , 'Dist. to major raod'
+        , 'Dist. to major road'
         , 'Elevation, 100 m\naround bldg.'
-        , 'Elevation, 30 m\naround bldg.')
+        , 'Elevation, 30 m\naround bldg.'
+        # , 'Percent built, 200 ft'
+        # , 'Percent tree, parcel'
+        )
       , ordered = TRUE)
       ) |> 
     mutate(iv = factor(iv, levels = pdp_cf_no_dins_vars, labels = pdp_cf_no_dins_vars, ordered = TRUE)) # not really need anymore because we use Label instead
   )
+
 
 pdp_cf_no_dins_tibble |> tabyl(iv)
 pdp_cf_no_dins_tibble |> tabyl(Label)
@@ -1458,7 +1475,10 @@ pdp_cf_no_dins_tibble |> tabyl(Label))
     ) +
     geom_hline(yintercept = 0, col = 'dark gray') + 
     theme_bw(16) + 
-    theme(legend.position = 'none') + 
+    labs(y = 'Probability', x = '') + 
+    scale_x_continuous(labels = scales::comma_format()) +
+    # scale_x_continuous(labels = scales::label_number(suffix = " K", scale = 1e-6)) + # thousands
+    theme(legend.position = 'none', axis.text.x = element_text(size = 8.25)) + 
     # facet_wrap(~str_wrap(Alias, 30), scales = 'free_x') +
     # facet_wrap(~str_wrap(Label, 20), scales = 'free_x') +
     facet_wrap(~Label, scales = 'free_x') +
@@ -1466,10 +1486,18 @@ pdp_cf_no_dins_tibble |> tabyl(Label))
   )
 
 library(patchwork)
-a_importance_graph_no_dins / b_g_build
+# a_importance_graph_no_dins / b_g_build
+(importance_pdp_1 <- a_importance_graph_no_dins + 
+  inset_element(b_g_build , left = 0.15, bottom = 0.03, right = .95, top = .93))
+  
+# importance_pdp_1 |> 
+# ggsave(file = paste0(getwd(), '/figures/importance_pdp_', Sys.Date(), '.png')
+#          , height = 6.5*2, width = 6.5*2)
 
-a_importance_graph_no_dins + 
-  inset_element(b_g_build , left = 0.2, bottom = 0.05, right = .95, top = .9)
+#   ggsave(file = paste0(getwd(), '/figures/cf_dins_binary/', variable, '_', Sys.Date(), '.png')
+#          , width = 6.5*2
+#          , height = 6.5*1.5
+#          , dpi = resolution)
 
 
 (pdp_cf_dins_vars <- variable_importance %>% filter(Model == 'cf_dins_binary') %>% slice(1:top_n) %>% pull(Variable)) 
@@ -1557,11 +1585,15 @@ pdp_cf_dins_tibble |> tabyl(Alias, iv)
       # , drop = FALSE
     ) +
     theme_bw(16) +
-    theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = .5)
+    theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = .5, size = 8)
+          , axis.title.x = element_text(size = 12)
           , legend.position = 'none') +
     # facet_wrap(~str_wrap(Alias, 30), scales = 'free_x') +
     facet_wrap(~str_wrap(Label, 30), scales = 'free_x') +
-    labs(y = 'Predicted Probability', x = '(Multi Pane as reference)') + 
+    labs(y = 'Probability'
+         , x = ''
+         # , x = '(Multi Pane\nas ref.)'
+         ) + 
     NULL
   )
 
@@ -1589,11 +1621,15 @@ pdp_cf_dins_tibble |> tabyl(Alias, iv)
       )
     ) +
     theme_bw(16) +
-    theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = .5)
+    theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = .5, size = 8)
+          , axis.title.x = element_text(size = 12)
           , legend.position = 'none') +
     # facet_wrap(~str_wrap(Alias, 30), scales = 'free_x') +
     facet_wrap(~str_wrap(Label, 30), scales = 'free_x') +
-    labs(y = 'Predicted Probability', x = '(Enclosed as reference)') + 
+    labs(y = ''
+         , x = ''
+         # , x = '(Enclosed\nas ref.)'
+         ) + 
     NULL
   )
 
@@ -1621,11 +1657,15 @@ pdp_cf_dins_tibble |> tabyl(Alias, iv)
     ) +
     geom_hline(yintercept = 0, col = 'dark gray', size = 1) +
     theme_bw(16) +
-    theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = .5)
+    theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = .5, size = 8)
+          , axis.title.x = element_text(size = 12)
           , legend.position = 'none') +
     # facet_wrap(~str_wrap(Alias, 30), scales = 'free_x') +
-    facet_wrap(~str_wrap(Label, 30), scales = 'free_x') +
-    labs(y = 'Predicted Probability', x = 'Distance') + 
+    facet_wrap(~str_wrap(Label, 12), scales = 'free_x') +
+    labs(y = ''
+         , x = ''
+         # , x = 'Distance'
+         ) + 
     NULL
   )
 
@@ -1654,11 +1694,15 @@ pdp_cf_dins_tibble |> tabyl(Alias, iv)
     ) +
     geom_hline(yintercept = 0, col = 'dark gray', size = 1) +
     theme_bw(16) +
-    theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = .5)
+    theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = .5, size = 8)
+          , axis.title.x = element_text(size = 12)
           , legend.position = 'none') +
     # facet_wrap(~str_wrap(Alias, 30), scales = 'free_x') +
-    facet_wrap(~str_wrap(Label, 30), scales = 'free_x') +
-    labs(y = 'Predicted Probability', x = '% cover') + 
+    facet_wrap(~str_wrap(Label, 12), scales = 'free_x') +
+    labs(y = 'Probability'
+         , x = ''
+         # , x = '% cover'
+         ) + 
     NULL
   )
 
@@ -1688,11 +1732,15 @@ pdp_cf_dins_tibble |> tabyl(Alias, iv)
       )
     ) +
     theme_bw(16) +
-    theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = .5)
+    theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = .5, size = 8)
+          , axis.title.x = element_text(size = 12)
           , legend.position = 'none') +
     # facet_wrap(~str_wrap(Alias, 30), scales = 'free_x') +
     facet_wrap(~str_wrap(Label, 30), scales = 'free_x') +
-    labs(y = 'Predicted Probability', x = 'Vent Screen') + 
+    labs(y = ''
+         , x = ''
+         # , x = '(Unscreened\nas ref.)'
+         ) + 
     NULL
   )
 
@@ -1722,28 +1770,37 @@ pdp_cf_dins_tibble |> tabyl(Alias, iv)
     ) +
     geom_hline(yintercept = 0, col = 'dark gray', size = 1) +
     theme_bw(16) +
-    theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = .5)
+    theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = .5, size = 8)
+          , axis.title.x = element_text(size = 12)
           , legend.position = 'none') +
     # facet_wrap(~str_wrap(Alias, 30), scales = 'free_x') +
-    facet_wrap(~str_wrap(Label, 30), scales = 'free_x') +
-    labs(y = 'Predicted Probability', x = 'Distance') +
+    facet_wrap(~str_wrap(Label, 12), scales = 'free_x') +
+    labs(y = ''
+         , x = ''
+         # , x = 'Distance'
+         ) +
     NULL
   )
 
 pdp_cf_no_dins_tibble |> tabyl(iv)
-library(patchwork)
-a_importance_graph_dins / 
-  (b_build_WINDOWPANE + c_build_EAVES + d_build_near_dest) / 
-  (e_build_p_otherpaved_200 +  f_build_VENTSCREEN + g_build_min_dist_shrub) + 
-  plot_annotation(tag_levels = 'A')
+# library(patchwork)
+# a_importance_graph_dins / 
+#   (b_build_WINDOWPANE + c_build_EAVES + d_build_near_dest) / 
+#   (e_build_p_otherpaved_200 +  f_build_VENTSCREEN + g_build_min_dist_shrub) + 
+#   plot_annotation(tag_levels = 'A')
 
 
 insets <- (b_build_WINDOWPANE + c_build_EAVES + d_build_near_dest) / 
   (e_build_p_otherpaved_200 +  f_build_VENTSCREEN + g_build_min_dist_shrub)
 
-a_importance_graph_dins + 
-  inset_element(insets, left = 0.3, bottom = 0.05, right = .95, top = .8)
+(importance_pdp_2 <- a_importance_graph_dins + 
+  inset_element(insets, left = 0.3, bottom = 0.05, right = .95, top = .8))
   
+
+importance_pdp_2 |>
+ggsave(file = paste0(getwd(), '/figures/importance_pdp_2_', Sys.Date(), '.png')
+         , height = 6.5*2, width = 6.5*2)
+
 
 ```
 

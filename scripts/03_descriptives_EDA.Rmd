@@ -462,7 +462,7 @@ building area
 #   NULL
 
 
-ggp1 <- build %>% 
+(ggp1 <- build %>% 
   mutate(`Average Distance to Road for each Building` = build_Mean_distroad,
          `Damage Category` = damage_cat) |>  
   ggplot(aes(`Average Distance to Road for each Building`, fill = `Damage Category`)) + 
@@ -472,9 +472,9 @@ ggp1 <- build %>%
                      ) +
   theme_bw(16) + 
   theme(legend.position = c(.7, .7)) + 
-  NULL
+  NULL)
 
-ggp2 <- build %>% 
+(ggp2 <- build %>% 
   mutate(`Average Building Density` = build_Mean_builddens,
          `Damage Category` = damage_cat) |>  
   ggplot(aes(`Average Building Density`, fill = `Damage Category`)) + 
@@ -483,36 +483,37 @@ ggp2 <- build %>%
   scale_y_continuous(expand = c(0, 0), limits = c(0, 0.6)) +
   theme_bw(16) + 
   theme(legend.position = c(.7, .7)) + 
-  NULL
+  NULL)
 
 
 
-ggp3 <- build %>% 
+(ggp3 <- build %>% 
   mutate(`Distance to Destroyed Building (log scale)` = build_near_dest,
          `Damage Category` = damage_cat) |>  
   ggplot(aes(`Distance to Destroyed Building (log scale)`, fill = `Damage Category`)) + 
   geom_density(alpha = .5) + 
   # scale_x_continuous(expand = c(0, 0)) +
-  scale_x_log10() + 
+  scale_x_log10(labels = scales::label_comma()) + # thousands
   scale_y_continuous(expand = c(0, 0), limits = c(0, 0.9)
                      ) +
   theme_bw(16) + 
   theme(legend.position = c(.25, .7)) + 
-  NULL
+  NULL)
 
-# TODO 
-ggp4 <- build %>% 
+
+(ggp4 <- build %>% 
   mutate(`Building Area (log scale)` = build_area,
          `Damage Category` = damage_cat) |>  
   ggplot(aes(`Building Area (log scale)`, fill = `Damage Category`)) + 
   geom_density(alpha = .5) + 
   # scale_x_continuous(expand = c(0, 0)) +
-  # scale_x_log10() +
-  scale_y_continuous(expand = c(0, 0), limits = c(0, 0.9)
-                     ) +
+  # scale_x_log10(labels = scales::label_number(suffix = " K", scale = 1e-6)) + # thousands
+  scale_x_log10(labels = scales::label_comma()) + 
+  # scale_y_continuous(expand = c(0, 0), limits = c(0, 0.9)
+  #                     ) +
   theme_bw(16) + 
   theme(legend.position = c(.25, .7)) + 
-  NULL
+  NULL)
 
 
 

@@ -1151,7 +1151,103 @@ pdp::partial(cf_no_dins               # the model
 
  stopCluster(cl); toc(); beepr::beep() # ~1 hr 45 mins
  
-# TODO add three more predicgtors?
+ 
+ 
+  
+tic()
+
+cl<-makeCluster(split);
+registerDoParallel(cl);
+start.time = proc.time(); 
+
+pdp::partial(cf_no_dins               # the model
+           , pred.var = 'build_p_building_200'
+           , plot = FALSE
+           # , plot.engine = "ggplot2"
+           # , rug = TRUE
+           # , progress = "text"
+           , quantiles = TRUE
+           , probs = 0:20/20
+           , ice = TRUE
+           , center = TRUE
+           # , alpha = .1
+           , parallel = TRUE
+           ) |> 
+  as_tibble() |> 
+  group_by(build_p_building_200) |> 
+  summarise(ci = list(mean_cl_normal(yhat))) |> 
+  unnest(ci) |> 
+  rename(x = build_p_building_200) |> 
+  mutate(iv = 'build_p_building_200') |> 
+  write_csv(paste0(getwd(), '/output_data/pdp/build_p_building_200_', Sys.Date(), '.csv'))
+
+ stopCluster(cl); toc(); beepr::beep() # ~1 hr 12 mins w 10 cores
+
+
+ 
+tic()
+
+cl<-makeCluster(split);
+registerDoParallel(cl);
+start.time = proc.time(); 
+
+pdp::partial(cf_no_dins               # the model
+           , pred.var = 'parcel_Can_P'
+           , plot = FALSE
+           # , plot.engine = "ggplot2"
+           # , rug = TRUE
+           # , progress = "text"
+           , quantiles = TRUE
+           , probs = 0:20/20
+           , ice = TRUE
+           , center = TRUE
+           # , alpha = .1
+           , parallel = TRUE
+           ) |> 
+  as_tibble() |> 
+  group_by(parcel_Can_P) |> 
+  summarise(ci = list(mean_cl_normal(yhat))) |> 
+  unnest(ci) |> 
+  rename(x = parcel_Can_P) |> 
+  mutate(iv = 'parcel_Can_P') |> 
+  write_csv(paste0(getwd(), '/output_data/pdp/parcel_Can_P_', Sys.Date(), '.csv'))
+
+ stopCluster(cl); toc(); beepr::beep() # ~53 mins, 12 cores
+ 
+ 
+ 
+ 
+ 
+tic()
+
+cl<-makeCluster(split);
+registerDoParallel(cl);
+start.time = proc.time(); 
+
+pdp::partial(cf_no_dins               # the model
+           , pred.var = 'build_p_otherpaved_300'
+           , plot = FALSE
+           # , plot.engine = "ggplot2"
+           # , rug = TRUE
+           # , progress = "text"
+           , quantiles = TRUE
+           , probs = 0:20/20
+           , ice = TRUE
+           , center = TRUE
+           # , alpha = .1
+           , parallel = TRUE
+           ) |> 
+  as_tibble() |> 
+  group_by(build_p_otherpaved_300) |> 
+  summarise(ci = list(mean_cl_normal(yhat))) |> 
+  unnest(ci) |> 
+  rename(x = build_p_otherpaved_300) |> 
+  mutate(iv = 'build_p_otherpaved_300') |> 
+  write_csv(paste0(getwd(), '/output_data/pdp/build_p_otherpaved_300_', Sys.Date(), '.csv'))
+
+ stopCluster(cl); toc(); beepr::beep() # ~53 mins, 12 cores
+
+ 
 ```
 
 #### iv DINS CF
@@ -1401,7 +1497,7 @@ TODO reduce text on categorical
 #### vi read in PDPs and graph
 ```{r}
 
-top_n <- 6         # set n (can revise to 20 or any other value greater than zero and less than 71)
+top_n <- 9         # set n (can revise to 20 or any other value greater than zero and less than 71)
 (pdp_cf_no_dins_vars <- variable_importance %>% filter(Model == 'cf_no_dins') %>% slice(1:top_n) %>% pull(Variable)) 
 
 
@@ -1424,8 +1520,9 @@ pdp_cf_no_dins_vars
         , 'Dist. to major raod'
         , 'Elevation, 100 m around bldg.'
         , 'Elevation, 30 m around bldg.'
-        # , 'Percent built, 200 ft'
-        # , 'Percent tree, parcel'
+        , 'Percent built, 200 ft'
+        , 'Percent tree, parcel'
+        , 'Percent paved, 300 ft'
         )
       , labels = c(
           'Dist. to destroyed\nbuilding'
@@ -1434,8 +1531,9 @@ pdp_cf_no_dins_vars
         , 'Dist. to major road'
         , 'Elevation, 100 m\naround bldg.'
         , 'Elevation, 30 m\naround bldg.'
-        # , 'Percent built, 200 ft'
-        # , 'Percent tree, parcel'
+        , 'Percent built, 200 ft'
+        , 'Percent tree, parcel'
+        , 'Percent paved, 300 ft'
         )
       , ordered = TRUE)
       ) |> 
@@ -1490,8 +1588,8 @@ library(patchwork)
 (importance_pdp_1 <- a_importance_graph_no_dins + 
   inset_element(b_g_build , left = 0.15, bottom = 0.03, right = .95, top = .93))
   
-# importance_pdp_1 |> 
-# ggsave(file = paste0(getwd(), '/figures/importance_pdp_', Sys.Date(), '.png')
+# importance_pdp_1 |>
+# ggsave(file = paste0(getwd(), '/figures/importance_pdp_top_9', Sys.Date(), '.png')
 #          , height = 6.5*2, width = 6.5*2)
 
 #   ggsave(file = paste0(getwd(), '/figures/cf_dins_binary/', variable, '_', Sys.Date(), '.png')

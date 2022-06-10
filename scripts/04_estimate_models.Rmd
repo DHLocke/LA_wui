@@ -67,8 +67,12 @@ set.seed(19870630)
 
 ```{r}
 
+# build <- read_csv(paste0(getwd(), '/output_data/building_2022-02-01.csv')) %>% glimpse
+
+
+
 # one 'main' data frame
-build <- read_csv(paste0(getwd(), '/output_data/building_2022-02-01.csv')) %>%
+build <- read_csv(paste0(getwd(), '/output_data/building_2022-06-10.csv')) %>%
   tidylog::select(
     # damage_binary
       damage_cat         # binary outcome encoded as categorical (Destroyed / Survived)

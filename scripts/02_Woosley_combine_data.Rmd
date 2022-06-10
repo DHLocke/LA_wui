@@ -978,6 +978,40 @@ build %>% glimpse()
 ```
 
 
+## 7 CLEANED building fragments and corrected proportion, redone June 2022
+```{r} 
+
+# rather than re-run all of the above building dataset, importing latest (Feb 2022 data above) and 
+# removing building fragments identified in Arc
+
+# read in dataset with fragmented  buildings
+frag <- read_csv(paste0(getwd(), '/data/Table_fragbuild_20220608.csv')) #11214 obs
+frag2<-frag %>% filter(Fragment==1) %>% #if fragment =1, it's a fragmented building
+    tidylog::select(ID_Build,Fragment)
+
+build <- read_csv(paste0(getwd(), '/output_data/building_2022-02-01.csv')) #11134 obs #read in buildings data
+names(build)
+build %<>% 
+  left_join(., frag2, by = c('ID_Build' = 'ID_Build'))%>% 
+  filter(is.na(Fragment) | Fragment != "1") %>%  #keep only those buildings that are not fragments
+  mutate(build_perc_overhang=build_perc_overhang*100) %>% #rescale percent overhang from 0-1
+  tidylog::select(!Fragment) #end up with 10901 buildings
+
+# min(build$build_area) #checked on minimum building size in remaining data set, this is correct
+# [1] 37.19921
+
+```
+
+### a read out/ read in
+```{r}
+# # exporting new build data set 10,901 obs, Columns: 85
+build %>% glimpse()
+ build %>%
+   write_csv(., paste0(getwd(), '/output_data/building_', Sys.Date(), '.csv')) #output_data/building_2022-06-10.csv
+
+
+
+```
 ```{r, citations}
 lapply(packages, citation)
 ```

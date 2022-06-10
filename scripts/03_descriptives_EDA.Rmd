@@ -95,10 +95,12 @@ set.seed(19870630)
 #build <- read_csv(paste0(getwd(), '/output_data/building_2021-12-02.csv')) %>% glimpse
 # build <- read_csv(paste0(getwd(), '/output_data/building_2021-12-22.csv')) %>% glimpse
 # build <- read_csv(paste0(getwd(), '/output_data/building_2022-02-01.csv')) %>% glimpse
+# build <- read_csv(paste0(getwd(), '/output_data/building_2022-02-01.csv')) %>% glimpse
+
 
 
 # one 'main' data frame
-build <- read_csv(paste0(getwd(), '/output_data/building_2022-02-01.csv')) %>%
+build <- read_csv(paste0(getwd(), '/output_data/building_2022-06-10.csv')) %>%
   tidylog::select(
     ID_Build
     # damage_binary
@@ -192,6 +194,15 @@ build <- read_csv(paste0(getwd(), '/output_data/building_2022-02-01.csv')) %>%
 ## 2 descriptive statistics & table for pub
 ```{r eval=FALSE, include=FALSE}
 
+names(build)
+
+test<-build %>%  filter(build_area<400) 
+View(test)
+summary(test$build_area)
+hist(test$build_area)
+
+#DINS has 12% survived only
+table(build$damage_binary,build$build_DINS)
 # generates report of univariate distributions with added info
 system.time(makeDataReport(build, file = paste0(getwd(), '/output_data/dataMaid_',
                                     gsub('[[:punct:]]', '_', Sys.time()), '.Rmd')))

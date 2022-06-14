@@ -191,6 +191,8 @@ build <- read_csv(paste0(getwd(), '/output_data/building_2022-06-10.csv')) %>%
 ```
 
 
+
+
 ## 2 descriptive statistics & table for pub
 ```{r eval=FALSE, include=FALSE}
 
@@ -456,10 +458,10 @@ build %>%
 #        )
 
 
-Average distance to road
-average building density
-distance to destrooyed building
-building area
+# Average distance to road
+# average building density
+# distance to destrooyed building
+# building area
 
 # ggp1 <- build %>% 
 #   mutate(`Average Elevation of each Building (100 meter buffer)` = build_Mean_elev_100m,
@@ -659,7 +661,86 @@ build %>%
 ```
 
 
-TODO expand EDA? Others?
+## 9 univariate models to update Table_Deviance_Explained_2022-03-08.csv (now that data have been filtered)
+```{r}
+
+
+(table1 <- list(names(build)) %>% #created a list of predictors
+  data.frame() %>%
+  mutate(dev2 = 0, n2 = 0) %>%
+  rename(upvar = "c..damage_cat....damage_severity....build_area....build_DECKPORCHO...") %>%
+  data.frame())
+
+# add a binary outcome back in for glms
+build <- build |> 
+  mutate(damage_binary = ifelse(damage_cat == 'Destroyed', 1, 0))
+
+# 2x check
+build |> tabyl(damage_binary, damage_cat)
+table(build$damage_binary, build$damage_cat)
+
+# # repurposed from Owne Price
+ dat.model <- data.frame(y = build$damage_binary, x = 0)
+#
+i<-0
+for (varname in table1$upvar) {
+  i<-i+1
+  if (varname %in% colnames(build)) {
+    dat.model$x <- build[, varname]
+    mod <- glm(y ~ x, data = dat.model, family = binomial())
+  } else {
+    warning(varname, " not found in build_a", immediate. = TRUE)
+    mod <- NULL
+  }
+
+  if (!is.null(mod)) {
+    table1$n2[i] <- nrow(build) - sum(is.na(dat.model$x))
+    table1$dev2[i] <- 100 * (mod$null.deviance - mod$deviance) / mod$null.deviance
+  }
+}
+
+
+# TODO Miranda, are these warnings a problem?
+# read in variable descriptions
+(tab_labs <- readxl::read_xlsx('data/Data LA Study 20220209.xlsx') %>%
+  #mutate(Type = # turned this off bc longer attributes don't fit in table 
+  #         case_when(
+  #             Type == 'CON' ~ 'Construction'
+  #           , Type == 'DEF' ~ 'Defensible Space'
+  #           , Type == 'LAND'~ 'Landscape Attributes'
+  #            , Type == 'TOPO'~ 'Topography'
+  #           , Type == 'EXP' ~ 'Exposure'
+   #          , TRUE ~ 'na')) %>%
+  left_join(.
+            , table1 %>% filter(upvar != 'damage_binary' & upvar!= 'build_DINS')
+            , by = c(`Variable name` = 'upvar')) %>%
+  tidylog::select(Type
+                  , `Variable name`
+                  , Alias # added this
+                  , Deviance = dev2
+                  , n = n2
+                  , Scale
+                  , Source
+                  ) %>%
+#     arrange(desc(Deviance))%>%
+#  arrange(Type, desc(Deviance)) %>%
+  mutate_if(is.double, round, 3))
+#
+# export
+# redone June 13, 2022
+  tab_labs %>%
+    drop_na()%>%
+   write_csv(., paste0(getwd(), '/data/Table_Deviance_Explained_', Sys.Date(), '.csv'))
+
+
+#reading back in deviance explained
+(tab_labs <- 
+  read_csv(paste0(getwd(), '/data/Table_Deviance_Explained_2022-06-13.csv'))) 
+
+
+
+```
+
 
 
 

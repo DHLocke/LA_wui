@@ -284,7 +284,8 @@ n_tree <- 500 # May 20, 2022 because we want graphs this centry
 # read back in
 # tic(); load(file = '../Massive_forests/cf_no_dins_2022-02-22.Rdata'); toc() # ~9s
 # tic(); load(file = '../Massive_forests/cf_no_dins_2022-05-17.Rdata'); toc() # ~50s with 2000 trees!
-tic(); load(file = '../Massive_forests/cf_no_dins_2022-05-20.Rdata'); toc() # < 10s with 500 trees
+# tic(); load(file = '../Massive_forests/cf_no_dins_2022-05-20.Rdata'); toc() # < 10s with 500 trees
+tic(); load(file = '../Massive_forests/cf_no_dins_2022-06-13.Rdata'); toc() # < 10s with 500 trees
 
 # MHM - last date I ran this was 3/24/22 so will see that date below
 #tic(); load(file = '../Massive_forests/cf_no_dins_2022-03-24.Rdata'); toc() # 
@@ -332,21 +333,8 @@ tic(); cf_dins_binary <- party::cforest(
   ); toc() # ~6 seconds with 500
 
 
+# given rapid re-run times, saving is not needed..
 
-# # not sure if saving is needed..
-# # tic(); save(cf_dins
-# #              , file = paste0('../Massive_forests/cf_dins_', Sys.Date(), '.Rdata')); toc() # 3.5 seconds
-# tic(); save(cf_dins_binary
-#             , file = paste0('../Massive_forests/cf_dins_binary_', Sys.Date(), '.Rdata')); toc() # ~20 secs
-
-# # read back in
-# tic(); load(file = '../Massive_forests/cf_dins_2022-02-22.Rdata'); toc() # 1.5 seconds
-# tic(); load(file = '../Massive_forests/cf_dins_binary_2022-05-17.Rdata'); toc() # 4 seconds 2000 trees
-# tic(); load(file = '../Massive_forests/cf_dins_binary_2022-05-20.Rdata'); toc() # <1 second with 500 trees
- 
-# #last date I ran this was 3/29/22 so will see that date below
-# tic(); load(file = '../Massive_forests/cf_dins_2022-03-29.Rdata'); toc() # 
-# tic(); load(file = '../Massive_forests/cf_dins_binary_2022-03-29.Rdata'); toc() # 
 
 
 ```
@@ -652,7 +640,7 @@ auc |> View()
 # # `rank = TRUE`
 # tic(); vi_cf_no_dins <- vi(cf_no_dins, scale = TRUE) %>% mutate(Model = 'cf_no_dins', n_tree = n_tree); toc() # 10 mins
 # tic(); vi_cf_dins    <- vi(cf_dins,    scale = TRUE) %>% mutate(Model =    'cf_dins', n_tree = n_tree); toc() # 1 min
-# tic(); vi_cf_dins_binary    <- vi(cf_dins_binary,    scale = TRUE) %>% mutate(Model =    'cf_dins_binary', n_tree = n_tree); toc() # 1 min
+# tic(); vi_cf_dins_binary<- vi(cf_dins_binary,scale = TRUE) %>% mutate(Model =    'cf_dins_binary', n_tree = n_tree); toc() # 1 min
 # 
 # 
 # bind_rows(vi_cf_no_dins
@@ -664,7 +652,8 @@ auc |> View()
 
 # reading back in deviance explained
 (tab_labs <- 
-  read_csv(paste0(getwd(), '/data/Table_Deviance_Explained_2022-03-08.csv')) |>
+  # read_csv(paste0(getwd(), '/data/Table_Deviance_Explained_2022-03-08.csv')) |>
+   read_csv(paste0(getwd(), '/data/Table_Deviance_Explained_2022-06-13.csv')) |>
    mutate(Type = fct_recode(factor(Type), 
                               Exposure               = 'EXP'
                             , Construction           = 'CON'
@@ -674,18 +663,29 @@ auc |> View()
           )
  ) 
  
+# now that we have updated the deviance explained with the new data, we have a new table
+# but that new table doesn't have the hand-created
+# so we fold those back in here
+(old_labs <- read_csv(paste0(getwd(), '/data/Table_Deviance_Explained_2022-03-08.csv')) |> 
+  tidylog::select(Variable = `Variable name`, Label))
+
 # join in aliases and type, repurpose directly below.
  #MHM -3/23/2022 - let's hold off on displaying scale in variable importance plots until we talk more w alex, I think theme is somewhat repeating this information and would like her take
 (
   variable_importance <- read_csv(paste0(getwd()
                                          # , '/data/variable_importance_2022-03-29.csv')) %>% 
-                                         , '/output_data/variable_importance_2022-05-20.csv')) %>% 
+                                         # , '/output_data/variable_importance_2022-05-20.csv')) %>% 
+                                         , '/output_data/variable_importance_2022-06-13.csv')) %>% 
     group_by(Model) %>% 
     mutate(rank = row_number(Model)) %>% 
     ungroup() |> 
     left_join(
-      tab_labs |> tidylog::select(Variable = `Variable name`, Alias, Label, Type, Scale)
+      tab_labs |> tidylog::select(Variable = `Variable name`
+                                  , Alias #, Label
+                                  , Type
+                                  , Scale)
       , by = 'Variable') |> 
+    left_join(old_labs, by = 'Variable') |> # is this join ok with one-extra row in the y table?
     mutate(Variable = factor(Variable))
   )
 
@@ -935,7 +935,7 @@ top_n <- 9         # set n (can revise to 20 or any other value greater than zer
 
 
 detectCores(); # detect the number of cores of your cpu
-split <- 12
+split <- 8
 
 
 tic()
@@ -965,7 +965,7 @@ pdp::partial(cf_no_dins               # the model
   mutate(iv = 'build_near_dest') |> 
   write_csv(paste0(getwd(), '/output_data/pdp/build_near_dest_', Sys.Date(), '.csv'))
 
- stopCluster(cl); toc(); beepr::beep() # ~1 hr 15 mins w 10 cores
+ stopCluster(cl); toc(); beepr::beep() # ~1 hr 15 mins w 10 cores, 95 mins w 8 cores
 
 
 
@@ -1002,7 +1002,7 @@ pdp::partial(cf_no_dins               # the model
   mutate(iv = 'build_area') |> 
   write_csv(paste0(getwd(), '/output_data/pdp/build_area_', Sys.Date(), '.csv'))
 
- stopCluster(cl); toc(); beepr::beep() # ~1 hr 13 mins
+ stopCluster(cl); toc(); beepr::beep() # ~1 hr 13 mins, ~1.5 hr w 9 cores
 
 
 
@@ -1010,8 +1010,76 @@ pdp::partial(cf_no_dins               # the model
 
 
 
+tic()
+
+cl<-makeCluster(split);
+registerDoParallel(cl);
+start.time = proc.time(); 
+
+pdp::partial(cf_no_dins               # the model
+           , pred.var = 'build_Mean_distroad'
+           , plot = FALSE
+           # , plot.engine = "ggplot2"
+           # , rug = TRUE
+           # , progress = "text"
+           , quantiles = TRUE
+           , probs = 0:20/20
+           , ice = TRUE
+           , center = TRUE
+           # , alpha = .1
+           , parallel = TRUE
+           ) |> 
+  as_tibble() |> 
+  group_by(build_Mean_distroad) |> 
+  summarise(ci = list(mean_cl_normal(yhat))) |> 
+  unnest(ci) |> 
+  rename(x = build_Mean_distroad) |> 
+  mutate(iv = 'build_Mean_distroad') |> 
+  write_csv(paste0(getwd(), '/output_data/pdp/build_Mean_distroad_', Sys.Date(), '.csv'))
+
+ stopCluster(cl); toc(); beepr::beep() # ~1 hr 20 mins, 1:30 with 10
+ 
+ 
    
 
+ 
+ 
+tic()
+
+cl<-makeCluster(split);
+registerDoParallel(cl);
+start.time = proc.time(); 
+
+pdp::partial(cf_no_dins               # the model
+           , pred.var = 'build_Mean_elev_100m'
+           , plot = FALSE
+           # , plot.engine = "ggplot2"
+           # , rug = TRUE
+           # , progress = "text"
+           , quantiles = TRUE
+           , probs = 0:20/20
+           , ice = TRUE
+           , center = TRUE
+           # , alpha = .1
+           , parallel = TRUE
+           ) |> 
+  as_tibble() |> 
+  group_by(build_Mean_elev_100m) |> 
+  summarise(ci = list(mean_cl_normal(yhat))) |> 
+  unnest(ci) |> 
+  rename(x = build_Mean_elev_100m) |> 
+  mutate(iv = 'build_Mean_elev_100m') |> 
+  write_csv(paste0(getwd(), '/output_data/pdp/build_Mean_elev_100m_', Sys.Date(), '.csv'))
+
+ stopCluster(cl); toc(); beepr::beep() # ~1 hr 20 mins; ~1 hr 25 10 cores
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
    
 tic()
 
@@ -1040,28 +1108,20 @@ pdp::partial(cf_no_dins               # the model
   mutate(iv = 'build_p_building_300') |> 
   write_csv(paste0(getwd(), '/output_data/pdp/build_p_building_300_', Sys.Date(), '.csv'))
 
- stopCluster(cl); toc(); beepr::beep() # ~1 hr 18 mins
+ stopCluster(cl); toc(); beepr::beep() # ~1 hr 18 mins; ~1 hr with 12 cores
    
    
-   
-   
 
-
-
-
-
-
-
-
-   
-tic()
+ 
+    
+ tic()
 
 cl<-makeCluster(split);
 registerDoParallel(cl);
 start.time = proc.time(); 
 
 pdp::partial(cf_no_dins               # the model
-           , pred.var = 'build_Mean_distroad'
+           , pred.var = 'build_Mean_slope_100m_DEM'
            , plot = FALSE
            # , plot.engine = "ggplot2"
            # , rug = TRUE
@@ -1074,29 +1134,27 @@ pdp::partial(cf_no_dins               # the model
            , parallel = TRUE
            ) |> 
   as_tibble() |> 
-  group_by(build_Mean_distroad) |> 
+  group_by(build_Mean_slope_100m_DEM) |> 
   summarise(ci = list(mean_cl_normal(yhat))) |> 
   unnest(ci) |> 
-  rename(x = build_Mean_distroad) |> 
-  mutate(iv = 'build_Mean_distroad') |> 
-  write_csv(paste0(getwd(), '/output_data/pdp/build_Mean_distroad_', Sys.Date(), '.csv'))
+  rename(x = build_Mean_slope_100m_DEM) |> 
+  mutate(iv = 'build_Mean_slope_100m_DEM') |> 
+  write_csv(paste0(getwd(), '/output_data/pdp/build_Mean_slope_100m_DEM_', Sys.Date(), '.csv'))
 
- stopCluster(cl); toc(); beepr::beep() # ~1 hr 20 mins
- 
- 
- 
- 
+ stopCluster(cl); toc(); beepr::beep() # ~1 hr 18 mins; ~1 hr with 12 cores
+
  
  
 
-tic()
+ 
+ tic()
 
 cl<-makeCluster(split);
 registerDoParallel(cl);
 start.time = proc.time(); 
 
 pdp::partial(cf_no_dins               # the model
-           , pred.var = 'build_Mean_elev_100m'
+           , pred.var = 'parcel_Build_P'
            , plot = FALSE
            # , plot.engine = "ggplot2"
            # , rug = TRUE
@@ -1109,19 +1167,50 @@ pdp::partial(cf_no_dins               # the model
            , parallel = TRUE
            ) |> 
   as_tibble() |> 
-  group_by(build_Mean_elev_100m) |> 
+  group_by(parcel_Build_P) |> 
   summarise(ci = list(mean_cl_normal(yhat))) |> 
   unnest(ci) |> 
-  rename(x = build_Mean_elev_100m) |> 
-  mutate(iv = 'build_Mean_elev_100m') |> 
-  write_csv(paste0(getwd(), '/output_data/pdp/build_Mean_elev_100m_', Sys.Date(), '.csv'))
+  rename(x = parcel_Build_P) |> 
+  mutate(iv = 'parcel_Build_P') |> 
+  write_csv(paste0(getwd(), '/output_data/pdp/parcel_Build_P_', Sys.Date(), '.csv'))
 
- stopCluster(cl); toc(); beepr::beep() # ~1 hr 20 mins
+ stopCluster(cl); toc(); beepr::beep() # ~53 mins, 12 cores
+ 
+
  
  
  
+   
+
  
- 
+tic()
+
+cl<-makeCluster(split);
+registerDoParallel(cl);
+start.time = proc.time(); 
+
+pdp::partial(cf_no_dins               # the model
+           , pred.var = 'build_p_building_200'
+           , plot = FALSE
+           # , plot.engine = "ggplot2"
+           # , rug = TRUE
+           # , progress = "text"
+           , quantiles = TRUE
+           , probs = 0:20/20
+           , ice = TRUE
+           , center = TRUE
+           # , alpha = .1
+           , parallel = TRUE
+           ) |> 
+  as_tibble() |> 
+  group_by(build_p_building_200) |> 
+  summarise(ci = list(mean_cl_normal(yhat))) |> 
+  unnest(ci) |> 
+  rename(x = build_p_building_200) |> 
+  mutate(iv = 'build_p_building_200') |> 
+  write_csv(paste0(getwd(), '/output_data/pdp/build_p_building_200_', Sys.Date(), '.csv'))
+
+ stopCluster(cl); toc(); beepr::beep() # ~1 hr 12 mins w 10 cores, 50 mins 13 cores
  
  
  
@@ -1153,103 +1242,75 @@ pdp::partial(cf_no_dins               # the model
   mutate(iv = 'build_Mean_elev_30m') |> 
   write_csv(paste0(getwd(), '/output_data/pdp/build_Mean_elev_30m_', Sys.Date(), '.csv'))
 
- stopCluster(cl); toc(); beepr::beep() # ~1 hr 45 mins
+ stopCluster(cl); toc(); beepr::beep() # ~1 hr 45 mins, 1 hr 15 mins with 10 cores
  
  
  
   
-tic()
-
-cl<-makeCluster(split);
-registerDoParallel(cl);
-start.time = proc.time(); 
-
-pdp::partial(cf_no_dins               # the model
-           , pred.var = 'build_p_building_200'
-           , plot = FALSE
-           # , plot.engine = "ggplot2"
-           # , rug = TRUE
-           # , progress = "text"
-           , quantiles = TRUE
-           , probs = 0:20/20
-           , ice = TRUE
-           , center = TRUE
-           # , alpha = .1
-           , parallel = TRUE
-           ) |> 
-  as_tibble() |> 
-  group_by(build_p_building_200) |> 
-  summarise(ci = list(mean_cl_normal(yhat))) |> 
-  unnest(ci) |> 
-  rename(x = build_p_building_200) |> 
-  mutate(iv = 'build_p_building_200') |> 
-  write_csv(paste0(getwd(), '/output_data/pdp/build_p_building_200_', Sys.Date(), '.csv'))
-
- stopCluster(cl); toc(); beepr::beep() # ~1 hr 12 mins w 10 cores
 
 
  
-tic()
-
-cl<-makeCluster(split);
-registerDoParallel(cl);
-start.time = proc.time(); 
-
-pdp::partial(cf_no_dins               # the model
-           , pred.var = 'parcel_Can_P'
-           , plot = FALSE
-           # , plot.engine = "ggplot2"
-           # , rug = TRUE
-           # , progress = "text"
-           , quantiles = TRUE
-           , probs = 0:20/20
-           , ice = TRUE
-           , center = TRUE
-           # , alpha = .1
-           , parallel = TRUE
-           ) |> 
-  as_tibble() |> 
-  group_by(parcel_Can_P) |> 
-  summarise(ci = list(mean_cl_normal(yhat))) |> 
-  unnest(ci) |> 
-  rename(x = parcel_Can_P) |> 
-  mutate(iv = 'parcel_Can_P') |> 
-  write_csv(paste0(getwd(), '/output_data/pdp/parcel_Can_P_', Sys.Date(), '.csv'))
-
- stopCluster(cl); toc(); beepr::beep() # ~53 mins, 12 cores
- 
- 
- 
- 
- 
-tic()
-
-cl<-makeCluster(split);
-registerDoParallel(cl);
-start.time = proc.time(); 
-
-pdp::partial(cf_no_dins               # the model
-           , pred.var = 'build_p_otherpaved_300'
-           , plot = FALSE
-           # , plot.engine = "ggplot2"
-           # , rug = TRUE
-           # , progress = "text"
-           , quantiles = TRUE
-           , probs = 0:20/20
-           , ice = TRUE
-           , center = TRUE
-           # , alpha = .1
-           , parallel = TRUE
-           ) |> 
-  as_tibble() |> 
-  group_by(build_p_otherpaved_300) |> 
-  summarise(ci = list(mean_cl_normal(yhat))) |> 
-  unnest(ci) |> 
-  rename(x = build_p_otherpaved_300) |> 
-  mutate(iv = 'build_p_otherpaved_300') |> 
-  write_csv(paste0(getwd(), '/output_data/pdp/build_p_otherpaved_300_', Sys.Date(), '.csv'))
-
- stopCluster(cl); toc(); beepr::beep() # ~53 mins, 12 cores
+# tic()
+# 
+# cl<-makeCluster(split);
+# registerDoParallel(cl);
+# start.time = proc.time(); 
+# 
+# pdp::partial(cf_no_dins               # the model
+#            , pred.var = 'parcel_Can_P'
+#            , plot = FALSE
+#            # , plot.engine = "ggplot2"
+#            # , rug = TRUE
+#            # , progress = "text"
+#            , quantiles = TRUE
+#            , probs = 0:20/20
+#            , ice = TRUE
+#            , center = TRUE
+#            # , alpha = .1
+#            , parallel = TRUE
+#            ) |> 
+#   as_tibble() |> 
+#   group_by(parcel_Can_P) |> 
+#   summarise(ci = list(mean_cl_normal(yhat))) |> 
+#   unnest(ci) |> 
+#   rename(x = parcel_Can_P) |> 
+#   mutate(iv = 'parcel_Can_P') |> 
+#   write_csv(paste0(getwd(), '/output_data/pdp/parcel_Can_P_', Sys.Date(), '.csv'))
+# 
+#  stopCluster(cl); toc(); beepr::beep() # ~53 mins, 12 cores
+#  
+#  
+#  
+#  
+#  
+# tic()
+# 
+# cl<-makeCluster(split);
+# registerDoParallel(cl);
+# start.time = proc.time(); 
+# 
+# pdp::partial(cf_no_dins               # the model
+#            , pred.var = 'build_p_otherpaved_300'
+#            , plot = FALSE
+#            # , plot.engine = "ggplot2"
+#            # , rug = TRUE
+#            # , progress = "text"
+#            , quantiles = TRUE
+#            , probs = 0:20/20
+#            , ice = TRUE
+#            , center = TRUE
+#            # , alpha = .1
+#            , parallel = TRUE
+#            ) |> 
+#   as_tibble() |> 
+#   group_by(build_p_otherpaved_300) |> 
+#   summarise(ci = list(mean_cl_normal(yhat))) |> 
+#   unnest(ci) |> 
+#   rename(x = build_p_otherpaved_300) |> 
+#   mutate(iv = 'build_p_otherpaved_300') |> 
+#   write_csv(paste0(getwd(), '/output_data/pdp/build_p_otherpaved_300_', Sys.Date(), '.csv'))
+# 
+#  stopCluster(cl); toc(); beepr::beep() # ~53 mins, 12 cores
 
  
 ```
@@ -1282,6 +1343,7 @@ pdp::partial(cf_no_dins               # the model
 top_n <- 6          # set n (can revise to 20 or any other value greater than zero and less than 71)
 (pdp_cf_dins_vars <- variable_importance %>% filter(Model == 'cf_dins_binary') %>% slice(1:top_n) %>% pull(Variable)) 
 
+pdp_cf_dins_vars |> tibble()
 
 detectCores(); # detect the number of cores of your cpu
 split <- 10
@@ -1396,7 +1458,8 @@ registerDoParallel(cl);
 start.time = proc.time(); 
 
 pdp::partial(cf_dins_binary               # the model
-           , pred.var = 'build_p_otherpaved_200'
+           # , pred.var = 'build_p_otherpaved_200'
+           , pred.var = 'build_p_otherpaved_300'
            , plot = FALSE
            # , plot.engine = "ggplot2"
            # , rug = TRUE
@@ -1409,12 +1472,12 @@ pdp::partial(cf_dins_binary               # the model
            , parallel = TRUE
            ) |> 
   as_tibble() |> 
-  group_by(build_p_otherpaved_200) |> 
+  group_by(build_p_otherpaved_300) |> 
   summarise(ci = list(mean_cl_normal(yhat))) |> 
   unnest(ci) |> 
-  rename(x = build_p_otherpaved_200) |> 
-  mutate(iv = 'build_p_otherpaved_200') |> 
-  write_csv(paste0(getwd(), '/output_data/pdp_dins/build_p_otherpaved_200_', Sys.Date(), '.csv'))
+  rename(x = build_p_otherpaved_300) |> 
+  mutate(iv = 'build_p_otherpaved_300') |> 
+  write_csv(paste0(getwd(), '/output_data/pdp_dins/build_p_otherpaved_300_', Sys.Date(), '.csv'))
 
 stopCluster(cl); toc(); beepr::beep() # ~100s
 
@@ -1457,6 +1520,37 @@ stopCluster(cl); toc(); beepr::beep() # ~45s
 
 
 
+# tic()
+# 
+# cl<-makeCluster(split);
+# registerDoParallel(cl);
+# start.time = proc.time(); 
+# 
+# pdp::partial(cf_dins_binary               # the model
+#            , pred.var = 'build_min_dist_shrub'
+#            , plot = FALSE
+#            # , plot.engine = "ggplot2"
+#            # , rug = TRUE
+#            # , progress = "text"
+#            , quantiles = TRUE
+#            , probs = 0:20/20
+#            , ice = TRUE
+#            , center = TRUE
+#            # , alpha = .1
+#            , parallel = TRUE
+#            ) |> 
+#   as_tibble() |> 
+#   group_by(build_min_dist_shrub) |> 
+#   summarise(ci = list(mean_cl_normal(yhat))) |> 
+#   unnest(ci) |> 
+#   rename(x = build_min_dist_shrub) |> 
+#   mutate(iv = 'build_min_dist_shrub') |> 
+#   write_csv(paste0(getwd(), '/output_data/pdp_dins/build_min_dist_shrub_', Sys.Date(), '.csv'))
+# 
+# stopCluster(cl); toc(); beepr::beep() # ~100s
+
+
+
 tic()
 
 cl<-makeCluster(split);
@@ -1464,7 +1558,7 @@ registerDoParallel(cl);
 start.time = proc.time(); 
 
 pdp::partial(cf_dins_binary               # the model
-           , pred.var = 'build_min_dist_shrub'
+           , pred.var = 'build_Mean_distroad'
            , plot = FALSE
            # , plot.engine = "ggplot2"
            # , rug = TRUE
@@ -1477,14 +1571,15 @@ pdp::partial(cf_dins_binary               # the model
            , parallel = TRUE
            ) |> 
   as_tibble() |> 
-  group_by(build_min_dist_shrub) |> 
+  group_by(build_Mean_distroad) |> 
   summarise(ci = list(mean_cl_normal(yhat))) |> 
   unnest(ci) |> 
-  rename(x = build_min_dist_shrub) |> 
-  mutate(iv = 'build_min_dist_shrub') |> 
-  write_csv(paste0(getwd(), '/output_data/pdp_dins/build_min_dist_shrub_', Sys.Date(), '.csv'))
+  rename(x = build_Mean_distroad) |> 
+  mutate(iv = 'build_Mean_distroad') |> 
+  write_csv(paste0(getwd(), '/output_data/pdp_dins/build_Mean_distroad_', Sys.Date(), '.csv'))
 
 stopCluster(cl); toc(); beepr::beep() # ~100s
+
 
 ```
 
@@ -1496,7 +1591,7 @@ bottom
 TODO wrap text
 TODO reduce text on categorical
 
-
+tk
 
 #### vi read in PDPs and graph
 ```{r}
@@ -1506,7 +1601,7 @@ top_n <- 9         # set n (can revise to 20 or any other value greater than zer
 
 
 pdp_cf_no_dins_vars
-
+pdp_cf_no_dins_vars |> data_frame()
 
 (
   pdp_cf_no_dins_tibble <- tibble(files = dir('output_data/pdp', full.names = TRUE)) %>%
@@ -1520,24 +1615,30 @@ pdp_cf_no_dins_vars
       , levels = c(
           'Dist. to destroyed building'
         , 'Building area'
-        , 'Percent built, 300 ft'
         , 'Dist. to major raod'
         , 'Elevation, 100 m around bldg.'
-        , 'Elevation, 30 m around bldg.'
+        , 'Percent built, 300 ft'
+        , 'Percent slope, 100 m around bldg.'
+        # , 'Elevation, 30 m around bldg.'
+        , 'Percent built, parcel'
         , 'Percent built, 200 ft'
-        , 'Percent tree, parcel'
-        , 'Percent paved, 300 ft'
+        , 'Elevation, 30 m around bldg.'
+        # , 'Percent tree, parcel'
+        # , 'Percent paved, 300 ft'
         )
       , labels = c(
           'Dist. to destroyed\nbuilding'
         , 'Building area'
-        , 'Percent built,\n300 ft'
         , 'Dist. to major road'
         , 'Elevation, 100 m\naround bldg.'
-        , 'Elevation, 30 m\naround bldg.'
+        , 'Percent built,\n300 ft'
+        , 'Slope,\n100 m around bldg.'
+        # , 'Elevation, 30 m\naround bldg.'
+        , 'Percent built, parcel'
         , 'Percent built, 200 ft'
-        , 'Percent tree, parcel'
-        , 'Percent paved, 300 ft'
+        , 'Elevation, 30 m around bldg.'
+        # , 'Percent tree, parcel'
+        # , 'Percent paved, 300 ft'
         )
       , ordered = TRUE)
       ) |> 
@@ -1772,9 +1873,47 @@ pdp_cf_dins_tibble |> tabyl(Alias, iv)
   )
 
 
+# (
+#   e_build_p_otherpaved_200 <- pdp_cf_dins_tibble |>
+#     filter(iv == 'build_p_otherpaved_200') |>
+#     ggplot(aes(x, y, fill = Type)) +
+#     geom_ribbon(aes(ymin = ymin, ymax = ymax)) +
+#     geom_line() +
+#     scale_color_manual(
+#       values = c(
+#           '#13082c' # purple
+#         , '#4e0070'
+#         , '#9d006e'
+#         , '#f4264e'
+#         , '#ff8650' # orange
+#       ),
+#       labels = c(
+#           'Construction'
+#         , 'Defensible Sapce'
+#         , 'Exposure'
+#         , 'Landscape Attributes'
+#         , 'Topography'
+#       )
+#     ) +
+#     geom_hline(yintercept = 0, col = 'dark gray', size = 1) +
+#     theme_bw(16) +
+#     theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = .5, size = 8)
+#           , axis.title.x = element_text(size = 12)
+#           , legend.position = 'none') +
+#     # facet_wrap(~str_wrap(Alias, 30), scales = 'free_x') +
+#     facet_wrap(~str_wrap(Label, 12), scales = 'free_x') +
+#     labs(y = 'Probability'
+#          , x = ''
+#          # , x = '% cover'
+#          ) + 
+#     NULL
+#   )
+
+
+
 (
-  e_build_p_otherpaved_200 <- pdp_cf_dins_tibble |>
-    filter(iv == 'build_p_otherpaved_200') |>
+  e_build_p_otherpaved_300 <- pdp_cf_dins_tibble |>
+    filter(iv == 'build_p_otherpaved_300') |>
     ggplot(aes(x, y, fill = Type)) +
     geom_ribbon(aes(ymin = ymin, ymax = ymax)) +
     geom_line() +
@@ -1807,7 +1946,6 @@ pdp_cf_dins_tibble |> tabyl(Alias, iv)
          ) + 
     NULL
   )
-
 
 
 (
@@ -1848,9 +1986,46 @@ pdp_cf_dins_tibble |> tabyl(Alias, iv)
 
 
 
+# (
+#   g_build_min_dist_shrub <- pdp_cf_dins_tibble |>
+#     filter(iv == 'build_min_dist_shrub') |>
+#     ggplot(aes(x, y, fill = Type)) +
+#     geom_ribbon(aes(ymin = ymin, ymax = ymax)) +
+#     geom_line() +
+#     scale_color_manual(
+#       values = c(
+#           '#13082c' # purple
+#         , '#4e0070'
+#         , '#9d006e'
+#         , '#f4264e'
+#         , '#ff8650' # orange
+#       ),
+#       labels = c(
+#           'Construction'
+#         , 'Defensible Sapce'
+#         , 'Exposure'
+#         , 'Landscape Attributes'
+#         , 'Topography'
+#       )
+#     ) +
+#     geom_hline(yintercept = 0, col = 'dark gray', size = 1) +
+#     theme_bw(16) +
+#     theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = .5, size = 8)
+#           , axis.title.x = element_text(size = 12)
+#           , legend.position = 'none') +
+#     # facet_wrap(~str_wrap(Alias, 30), scales = 'free_x') +
+#     facet_wrap(~str_wrap(Label, 12), scales = 'free_x') +
+#     labs(y = ''
+#          , x = ''
+#          # , x = 'Distance'
+#          ) +
+#     NULL
+#   )
+
+
 (
-  g_build_min_dist_shrub <- pdp_cf_dins_tibble |>
-    filter(iv == 'build_min_dist_shrub') |>
+  g_build_Mean_distroad <- pdp_cf_dins_tibble |>
+    filter(iv == 'build_Mean_distroad') |>
     ggplot(aes(x, y, fill = Type)) +
     geom_ribbon(aes(ymin = ymin, ymax = ymax)) +
     geom_line() +
@@ -1884,6 +2059,7 @@ pdp_cf_dins_tibble |> tabyl(Alias, iv)
     NULL
   )
 
+
 pdp_cf_no_dins_tibble |> tabyl(iv)
 # library(patchwork)
 # a_importance_graph_dins / 
@@ -1893,7 +2069,11 @@ pdp_cf_no_dins_tibble |> tabyl(iv)
 
 
 insets <- (b_build_WINDOWPANE + c_build_EAVES + d_build_near_dest) / 
-  (e_build_p_otherpaved_200 +  f_build_VENTSCREEN + g_build_min_dist_shrub)
+  (#e_build_p_otherpaved_200 
+    e_build_p_otherpaved_300
+    +  f_build_VENTSCREEN + g_build_Mean_distroad
+     # g_build_min_dist_shrub
+     )
 
 (importance_pdp_2 <- a_importance_graph_dins + 
   inset_element(insets, left = 0.3, bottom = 0.05, right = .95, top = .8))

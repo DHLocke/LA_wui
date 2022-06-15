@@ -28,7 +28,6 @@ DEF,build_VEGCLEARAN,"Defensible space-vegetation clearance (in feet, 0-30, 30-1
 DEF,parcel_Build_P,Parcel land cover- percent buildings,"Percent built, parcel",7.011,1,11134,Parcel,UVM
 DEF,parcel_Can_P,Parcel land cover- percent tree,"Percent tree, parcel",2.726,1,11134,Parcel,UVM
 DEF,parcel_Grass_P,Parcel land cover- percent grass,"Percent grass, parcel",3.186,1,11134,Parcel,UVM
-DEF,parcel_Imperv_P,Parcel land cover- percent impervious,"Percent imprev., parcel",7.535,1,11134,Parcel,UVM
 DEF,parcel_Paved_P,Parcel land cover- percent paved,"Percent paved, parcel",3.755,1,11134,Parcel,UVM
 DEF,parcel_Road_P,Parcel land cover- percent road,"Percent road, parcel",0.131,1,11134,Parcel,UVM
 DEF,parcel_Shrub_P,Parcel land cover- percent shrub,"Percent shrub, parcel",1.748,1,11134,Parcel,UVM

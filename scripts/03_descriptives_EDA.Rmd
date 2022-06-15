@@ -19,23 +19,23 @@ This assumes "02_Woosley_combine_data.Rmd" was run
 # load libraries
 # packages we'll be using
 packs <- c('tidyverse'        # a must have!
-           , 'tidylog'        # makes things very verbose for 2x checking 
-           , 'magrittr'       # all of the pipes
-           , 'janitor'        # cleans things up
-           , 'sf'             # simple features
-           , 'mapview'        # quick webmaps for zoom/pan viz
+           # , 'tidylog'        # makes things very verbose for 2x checking 
+           # , 'magrittr'       # all of the pipes
+           # , 'janitor'        # cleans things up
+           # , 'sf'             # simple features
+           # , 'mapview'        # quick webmaps for zoom/pan viz
            , 'gtsummary'      # for descriptive table
-           , 'patchwork'
-           #'tidycensus',     # access to Census data in a tidy way 
-           #'party',          # random forests
-           , 'dataMaid'       # nice reports
-           , 'patchwork'      # combine ggplot graphics
-           , 'tictoc'         # times things
-           , 'beepr'          # makes noises
-           , 'psych'          # describe is very useful for descriptive statistics
-           , 'sjPlot'
-           ,'sciplot')        # useful plotting and regression support
-
+           # , 'patchwork'
+           # #'tidycensus',     # access to Census data in a tidy way 
+           # #'party',          # random forests
+           # , 'dataMaid'       # nice reports
+           # , 'patchwork'      # combine ggplot graphics
+           # , 'tictoc'         # times things
+           # , 'beepr'          # makes noises
+           # , 'psych'          # describe is very useful for descriptive statistics
+           # , 'sjPlot'
+           # ,'sciplot')        # useful plotting and regression support
+)
 # check for all of the libraries
 if (length(setdiff(packs, rownames(installed.packages()))) > 0) {
   install.packages(setdiff(packs, rownames(installed.packages())))  
@@ -198,11 +198,6 @@ build <- read_csv(paste0(getwd(), '/output_data/building_2022-06-10.csv')) %>%
 
 names(build)
 
-test<-build %>%  filter(build_area<400) 
-View(test)
-summary(test$build_area)
-hist(test$build_area)
-
 #DINS has 12% survived only
 table(build$damage_binary,build$build_DINS)
 # generates report of univariate distributions with added info
@@ -244,14 +239,13 @@ table(build$parcel_UseType,build$parcel_Roll_HomeOwnersExemp) #Among residential
 
 
 #Summary tables on defensible space - descriptive summary for pub
-# notes as of 3/23/2022 - will share table with coauthors - not sure if we want mean/sd or median IQR; if we want by outcome or not
 
 # # part 1 - builds a table about defensible space and building and parcel area
-# build %>% 
+# build %>%
 #   select(damage_binary, parcel_area, build_area, build_min_dist_tree, build_near_build, build_min_dist_shrub, build_has_tree_overhang, ) %>%  # cols of interest
 #   tbl_summary(#by =damage_binary,                                     # create summary table, can turn on or off by damage
 #      digits = all_continuous() ~ 1,
-#      type = all_continuous() ~ "continuous2",       # indicate that you want to print multiple statistics 
+#      type = all_continuous() ~ "continuous2",       # indicate that you want to print multiple statistics
 #      statistic = list(all_continuous() ~ c("{mean} ({sd})",                            #line 1: mean and SD
 #                                           "{median} ({p25}, {p75})",                   # line 2: median IQR
 #                                           "{min}-{max}"),                              # line 3: min and max
@@ -259,7 +253,7 @@ table(build$parcel_UseType,build$parcel_Roll_HomeOwnersExemp) #Among residential
 #       label  = list(                                              # display labels for column names
 #           damage_binary   ~ "Building Destroyed"),
 #         missing_text = "Missing"  )->t1
-# 
+# # 
 # 
 # # part 2 - for those buildings with tree overhang, summary of percent overhang and height
 # build %>% 
@@ -288,50 +282,65 @@ table(build$parcel_UseType,build$parcel_Roll_HomeOwnersExemp) #Among residential
 #       as_gt() %>%             # convert to gt table
 #            gt::gtsave(., paste0(getwd(), '/figures/Table_Descript_' , Sys.Date(), '.png'))
 # reading back in deviance explained
-(tab_labs <- 
-  read_csv(paste0(getwd(), '/data/Table_Deviance_Explained_2022-03-08.csv')) |>
-   mutate(Type = fct_recode(factor(Type), 
-                              Exposure               = 'EXP'
-                            , Construction           = 'CON'
-                            , 'Defensible Space'     = 'DEF'
-                            , 'Landscape Attributes' = 'LAND'
-                            , Topography             = 'TOPO')
-          )
- ) 
+
+tab_labs <- 
+  read_csv(paste0(getwd(), '/data/Table_Deviance_Explained_2022-03-08.csv'))
+
+tab_labs %>%  
+  filter(Table2 == 1) %>%
+  tidylog::select('Variable name', Type) %>% 
+  mutate(Type = fct_recode(factor(Type),
+                              'Defensible Space'     = 'DEF',
+                              'Landscape Attributes' = 'LAND')) %>% 
+  slice(1,14,5,2:4,15,6:13,16:48)-> vars_to_include_tbl_2 #using slice to do custom reorder of variables for table presentation
  
-(tab_labs |> filter(Table2 == 1) |> pull(`Variable name`) -> vars_to_include_tbl_2)
 
+#BUILD Table 1 with theme - type = defensible space 
+vars_to_include_tbl_2%>% 
+filter(Type == 'Defensible Space') %>% 
+  tidylog::select('Variable name') -> vars_to_include_tbl_2DEF
+
+tbl_DEF<-
+build %>% 
+  select(damage_cat,any_of(vars_to_include_tbl_2DEF$`Variable name`)) %>%  
+  tbl_summary (by = damage_cat) %>%  
+  add_overall() %>%  
+  add_p() %>%  
+  as_gt() # %>% 
+ modify_header(label == "**Defensible Space**")  #Dexter, I can't get this label to change - I want characteristic to be 'defensible space' instead
+
+#BUILD Table 2 with theme - type = landscape
+vars_to_include_tbl_2%>% 
+filter(Type == 'Landscape Attributes') %>% 
+  tidylog::select('Variable name') -> vars_to_include_tbl_2LAND
+
+tbl_LAND<-
+build %>% 
+  select(damage_cat,any_of(vars_to_include_tbl_2LAND$`Variable name`)) %>%  
+  tbl_summary(by = damage_cat) %>%  
+  add_overall() %>%  
+  add_p() %>%  
+  as_gt()  #%>% 
+ modify_header(label = "**Landscape Attributes**") #Dexter, I can't get this label to change - I want characteristic to be 'landscape attributes' instead
+
+tbl_desc <- tbl_stack(list(tbl_DEF, tbl_LAND)) #Dexter, am getting error that these objects are not in class 'gtsummary' - "Error: All objects in 'tbls' must be class 'gtsummary'" 
+gt::gtsave(paste0(getwd(), '/figures/Table_Descript_' , Sys.Date(), '.png'))
 
 # TODO change order to be grouped by theme. 
-build |> 
-  # select(-damage_severity, -build_DINS) |> # to be all-inclusive
-  # select(  damage_cat                     # to match Miranda's selections above re: defensible space and over hang
-  #        , parcel_area
-  #        , build_area
-  #        , build_min_dist_tree
-  #        , build_near_build
-  #        , build_min_dist_shrub
-  #        , build_has_tree_overhang
-  #        , build_has_tree_overhang
-  #        , build_perc_overhang
-  #        , build_overhang_ht
-  #        ) |> 
-  select(damage_cat, any_of(vars_to_include_tbl_2)) |> 
-  tbl_summary(by = damage_cat) |> 
-  add_overall() |> 
-  add_p() |> 
-  as_gt() |> 
-  gt::gtsave(paste0(getwd(), '/figures/Table_Descript_' , Sys.Date(), '.png'))
-
-# TODO change order to be grouped by theme. 
-build |> 
-  select(-damage_severity, -build_DINS) |> # to be all-inclusive
-  tbl_summary(by = damage_cat) |> 
-  add_overall() |> 
-  add_p() |> 
-  as_gt() |> 
+build %>%  
+  select(-damage_severity, -build_DINS) %>%  # to be all-inclusive
+  tbl_summary(by = damage_cat) %>%  
+  add_overall() %>%  
+  add_p() %>%  
+  as_gt() %>% 
   gt::gtsave(paste0(getwd(), '/figures/Table_Descript_ALL_VARS' , Sys.Date(), '.html'))
 
+
+
+#IS NUMERIC PROBLEM
+str(build$build_p_water_10)
+is.numeric(build$build_p_building_10)
+is.numeric(build$build_p_water_10)
 
 ```
 
@@ -426,8 +435,8 @@ build %>%
 #     separate(var, into = c('var', 'buff_dist'), sep = '_', convert = TRUE) %>%  #if we keep, reorder factors, and tweak formatting
 #     filter(buff_dist == 300 & var != 'water') %>% 
 #     mutate(`Land Cover` = factor(str_to_title(ifelse(var == 'otherpaved', 'other paved', var)), ordered = TRUE,
-#            levels = c('Tree', 'Shrub', 'Grass', 'Soil', 'Building', 'Road', 'Other Paved'))) |> 
-#     # mutate(holc_grade = factor(holc_grade, levels = LETTERS[1:4], ordered = TRUE)) |>
+#            levels = c('Tree', 'Shrub', 'Grass', 'Soil', 'Building', 'Road', 'Other Paved'))) %>%  
+#     # mutate(holc_grade = factor(holc_grade, levels = LETTERS[1:4], ordered = TRUE)) %>% 
 #     ggplot(aes(x = value, fill = `Land Cover`)) +  
 #     geom_histogram(bins = 30) +
 #     scale_fill_manual(
@@ -465,7 +474,7 @@ build %>%
 
 # ggp1 <- build %>% 
 #   mutate(`Average Elevation of each Building (100 meter buffer)` = build_Mean_elev_100m,
-#          `Damage Category` = damage_cat) |>  
+#          `Damage Category` = damage_cat) %>%   
 #   ggplot(aes(`Average Elevation of each Building (100 meter buffer)`, fill = `Damage Category`)) + 
 #   geom_density(alpha = .5) + 
 #   scale_x_continuous(expand = c(0, 0)) +
@@ -477,7 +486,7 @@ build %>%
 
 (ggp1 <- build %>% 
   mutate(`Average Distance to Road for each Building` = build_Mean_distroad,
-         `Damage Category` = damage_cat) |>  
+         `Damage Category` = damage_cat) %>%   
   ggplot(aes(`Average Distance to Road for each Building`, fill = `Damage Category`)) + 
   geom_density(alpha = .5) + 
   scale_x_continuous(expand = c(0, 0)) +
@@ -489,7 +498,7 @@ build %>%
 
 (ggp2 <- build %>% 
   mutate(`Average Building Density` = build_Mean_builddens,
-         `Damage Category` = damage_cat) |>  
+         `Damage Category` = damage_cat) %>%   
   ggplot(aes(`Average Building Density`, fill = `Damage Category`)) + 
   geom_density(alpha = .5) + 
   scale_x_continuous(expand = c(0, 0)) +
@@ -502,7 +511,7 @@ build %>%
 
 (ggp3 <- build %>% 
   mutate(`Distance to Destroyed Building (log scale)` = build_near_dest,
-         `Damage Category` = damage_cat) |>  
+         `Damage Category` = damage_cat) %>%   
   ggplot(aes(`Distance to Destroyed Building (log scale)`, fill = `Damage Category`)) + 
   geom_density(alpha = .5) + 
   # scale_x_continuous(expand = c(0, 0)) +
@@ -516,7 +525,7 @@ build %>%
 
 (ggp4 <- build %>% 
   mutate(`Building Area (log scale)` = build_area,
-         `Damage Category` = damage_cat) |>  
+         `Damage Category` = damage_cat) %>%   
   ggplot(aes(`Building Area (log scale)`, fill = `Damage Category`)) + 
   geom_density(alpha = .5) + 
   # scale_x_continuous(expand = c(0, 0)) +
@@ -672,11 +681,11 @@ build %>%
   data.frame())
 
 # add a binary outcome back in for glms
-build <- build |> 
+build <- build %>%  
   mutate(damage_binary = ifelse(damage_cat == 'Destroyed', 1, 0))
 
 # 2x check
-build |> tabyl(damage_binary, damage_cat)
+build %>%  tabyl(damage_binary, damage_cat)
 table(build$damage_binary, build$damage_cat)
 
 # # repurposed from Owne Price

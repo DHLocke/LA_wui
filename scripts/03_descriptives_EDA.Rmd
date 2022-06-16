@@ -240,6 +240,70 @@ table(build$parcel_UseType,build$parcel_Roll_HomeOwnersExemp) #Among residential
 
 #Summary tables on defensible space - descriptive summary for pub
 
+
+tab_labs <- 
+  read_csv(paste0(getwd(), '/data/Table_Deviance_Explained_2022-03-08.csv'))
+
+tab_labs %>%  
+  filter(Table2 == 1) %>%
+  tidylog::select('Variable name', Type) %>% 
+  mutate(Type = fct_recode(factor(Type),
+                              'Defensible Space'     = 'DEF',
+                              'Landscape Attributes' = 'LAND')) %>% 
+  slice(1,14,5,2:4,15,6:13,16:48) -> vars_to_include_tbl_2 #using slice to do custom reorder of variables for table presentation
+# FIXME slice is really dangerous here - just be careful and double, triple check you got what you wanted
+#Ah, is there function you recommend better? It doesn't drop any, just rearranges their order.
+ 
+
+#BUILD Table 1 with theme - type = defensible space 
+vars_to_include_tbl_2 %>% 
+  filter(Type == 'Defensible Space') %>% 
+  tidylog::select('Variable name') -> vars_to_include_tbl_2DEF
+
+tbl_DEF <- build %>% 
+  select(damage_cat, any_of(vars_to_include_tbl_2DEF$`Variable name`)) %>%  
+  tbl_summary (by = damage_cat, type = list(where(is.numeric) ~ "continuous")) %>%  #Dexter, I think this is forcing build_p_water10 to be continuous and looks like output is still the same  
+  add_overall() %>%  
+  add_p()
+
+#BUILD Table 2 with theme - type = landscape
+vars_to_include_tbl_2 %>% 
+  filter(Type == 'Landscape Attributes') %>% 
+  tidylog::select('Variable name') -> vars_to_include_tbl_2LAND
+
+tbl_LAND <- build %>% 
+  select(damage_cat, any_of(vars_to_include_tbl_2LAND$`Variable name`)) %>%  
+  tbl_summary(by = damage_cat) %>%  
+  add_overall() %>%  
+  add_p() 
+
+tbl_desc <- tbl_stack(list(tbl_DEF, tbl_LAND), group_header = c("Defensible Space", "Landscape Attributes")) %>% 
+            as_gt() %>%
+              gt::tab_style(
+              style = gt::cell_text(weight = "bold"),
+              locations = gt::cells_row_groups(groups = everything()))
+
+#Dexter, this is still rather long - do you think this will work for paper? Should we consider placing the tables side by side or other formatting?
+# save out a big stacked table
+tbl_desc  %>%  
+  gt::gtsave(paste0(getwd(), '/figures/Table_Descript_' , Sys.Date(), '.png'))
+
+
+
+# #### OLDER TEXT ON TABLE - CAN REMOVE?
+# # TODO change order to be grouped by theme. 
+# build %>%  
+#   select(-damage_severity, -build_DINS) %>%  # to be all-inclusive
+#   tbl_summary(by = damage_cat) %>%  
+#   add_overall() %>%  
+#   add_p() %>%  
+#   as_gt() %>% 
+#   gt::gtsave(paste0(getwd(), '/figures/Table_Descript_ALL_VARS' , Sys.Date(), '.html'))
+#  
+# test<-build %>% 
+#   select(build_p_water_10, build_p_water_100) %>% 
+#   tbl_summary (type = list(where(is.numeric) ~ "continuous2"))
+
 # # part 1 - builds a table about defensible space and building and parcel area
 # build %>%
 #   select(damage_binary, parcel_area, build_area, build_min_dist_tree, build_near_build, build_min_dist_shrub, build_has_tree_overhang, ) %>%  # cols of interest
@@ -282,71 +346,6 @@ table(build$parcel_UseType,build$parcel_Roll_HomeOwnersExemp) #Among residential
 #       as_gt() %>%             # convert to gt table
 #            gt::gtsave(., paste0(getwd(), '/figures/Table_Descript_' , Sys.Date(), '.png'))
 # reading back in deviance explained
-
-tab_labs <- 
-  read_csv(paste0(getwd(), '/data/Table_Deviance_Explained_2022-03-08.csv'))
-
-tab_labs %>%  
-  filter(Table2 == 1) %>%
-  tidylog::select('Variable name', Type) %>% 
-  mutate(Type = fct_recode(factor(Type),
-                              'Defensible Space'     = 'DEF',
-                              'Landscape Attributes' = 'LAND')) %>% 
-  slice(1,14,5,2:4,15,6:13,16:48) -> vars_to_include_tbl_2 #using slice to do custom reorder of variables for table presentation
-# FIXME slice is really dangerous here - just be careful and double, tripple check you got what you wanted
- 
-
-#BUILD Table 1 with theme - type = defensible space 
-vars_to_include_tbl_2 %>% 
-  filter(Type == 'Defensible Space') %>% 
-  tidylog::select('Variable name') -> vars_to_include_tbl_2DEF
-
-tbl_DEF <- build %>% 
-  select(damage_cat, any_of(vars_to_include_tbl_2DEF$`Variable name`)) %>%  
-  tbl_summary (by = damage_cat) %>%  
-  add_overall() %>%  
-  add_p() #%>%  
-  # as_gt() # %>% 
- # modify_header(label == "**Defensible Space**")  #Dexter, I can't get this label to change - I want characteristic to be 'defensible space' instead
-
-#BUILD Table 2 with theme - type = landscape
-vars_to_include_tbl_2 %>% 
-  filter(Type == 'Landscape Attributes') %>% 
-  tidylog::select('Variable name') -> vars_to_include_tbl_2LAND
-
-tbl_LAND <- build %>% 
-  select(damage_cat, any_of(vars_to_include_tbl_2LAND$`Variable name`)) %>%  
-  tbl_summary(by = damage_cat) %>%  
-  add_overall() %>%  
-  add_p() #%>%  
-  # as_gt()  #%>% 
- # modify_header(label = "**Landscape Attributes**") #Dexter, I can't get this label to change - I want characteristic to be 'landscape attributes' instead
-
-tbl_desc <- tbl_stack(list(tbl_DEF, tbl_LAND)
-                      , group_header = c("**Defensible Space**", "**Landscape Attributes**")
-                      ) # as_gt() in the two pieces above were the problem. Also, tbl_stack() has a header
-# option so I put those lables in there (instead of in each table when they are made)
-
-# save out
-tbl_desc |> 
-  as_gt() |> # looks like as_gt() IS needed, but down here. 
-  gt::gtsave(paste0(getwd(), '/figures/Table_Descript_' , Sys.Date(), '.png'))
-
-# TODO change order to be grouped by theme. 
-build %>%  
-  select(-damage_severity, -build_DINS) %>%  # to be all-inclusive
-  tbl_summary(by = damage_cat) %>%  
-  add_overall() %>%  
-  add_p() %>%  
-  as_gt() %>% 
-  gt::gtsave(paste0(getwd(), '/figures/Table_Descript_ALL_VARS' , Sys.Date(), '.html'))
-
-
-
-#IS NUMERIC PROBLEM
-str(build$build_p_water_10)
-is.numeric(build$build_p_building_10)
-is.numeric(build$build_p_water_10)
 
 ```
 

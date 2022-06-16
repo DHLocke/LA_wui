@@ -1591,7 +1591,7 @@ bottom
 TODO wrap text
 TODO reduce text on categorical
 
-tk
+
 
 #### vi read in PDPs and graph
 ```{r}
@@ -1615,7 +1615,7 @@ pdp_cf_no_dins_vars |> data_frame()
       , levels = c(
           'Dist. to destroyed building'
         , 'Building area'
-        , 'Dist. to major raod'
+        , 'Dist. to major road'
         , 'Elevation, 100 m around bldg.'
         , 'Percent built, 300 ft'
         , 'Percent slope, 100 m around bldg.'
@@ -1694,7 +1694,7 @@ library(patchwork)
   inset_element(b_g_build , left = 0.15, bottom = 0.03, right = .95, top = .93))
   
 # importance_pdp_1 |>
-# ggsave(file = paste0(getwd(), '/figures/importance_pdp_top_9', Sys.Date(), '.png')
+# ggsave(file = paste0(getwd(), '/figures/importance_pdp_top_9_', Sys.Date(), '.png')
 #          , height = 6.5*2, width = 6.5*2)
 
 #   ggsave(file = paste0(getwd(), '/figures/cf_dins_binary/', variable, '_', Sys.Date(), '.png')

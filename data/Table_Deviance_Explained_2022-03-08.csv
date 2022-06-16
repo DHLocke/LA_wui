@@ -36,7 +36,7 @@ DEF,parcel_Water_P,Parcel land cover- percent water,"Percent water, parcel",0.09
 EXP,build_near_dest,Distance to nearest destroyed building (ft),Dist. to destroyed building,23.482,0,11134,Building,Structure assessment-DINS; Miranda calc'd in Arc
 LAND,build_Mean_builddens,Interpolated housing density based on a 1-km search radius NOTE - housing? Structure?,Housing density,2.255,0,11046,Point of building,Alex's data D:\ArcGISfiles\2017_LACounty\1_Data_20200320\Data_from_Alex\dens_1kmr_ha
 LAND,build_Mean_distall_road,Euclidian distance to any road (major and minor) (m),Dist. to any road,0.14,0,11122,Point of building,Alex's data D:\ArcGISfiles\2017_LACounty\1_Data_20200320\Data_from_Alex\dens_1kmr_ha
-LAND,build_Mean_distroad,Euclidian distance to major road (m),Dist. to major raod,1.29,0,11046,Point of building,Alex's data D:\ArcGISfiles\2017_LACounty\1_Data_20200320\Data_from_Alex\dist_psroad
+LAND,build_Mean_distroad,Euclidian distance to major road (m),Dist. to major road,1.29,0,11046,Point of building,Alex's data D:\ArcGISfiles\2017_LACounty\1_Data_20200320\Data_from_Alex\dist_psroad
 LAND,build_p_building_100,"Percent built land cover, 100 ft around building","Percent built, 100 ft ",3.714,1,11134,Building,UVM
 LAND,build_p_building_200,"Percent built land cover, 200 ft around building","Percent built, 200 ft ",4.824,1,11134,Building,UVM
 LAND,build_p_building_300,"Percent built land cover, 300 ft around building","Percent built, 300 ft ",5.178,1,11134,Building,UVM

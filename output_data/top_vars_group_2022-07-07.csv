@@ -1,34 +1,34 @@
-Type,Variable,n
-Defensible Space,parcel_Paved_P,3
-Exposure,build_near_dest,3
-Landscape Attributes,build_p_building_100,3
-Landscape Attributes,build_p_building_300,3
-Landscape Attributes,build_p_otherpaved_200,3
-Landscape Attributes,build_p_otherpaved_300,3
-Construction,build_area,2
-Construction,build_EAVES,2
-Construction,build_WINDOWPANE,2
-Defensible Space,parcel_Build_P,2
-Defensible Space,parcel_Can_P,2
-Defensible Space,parcel_Grass_P,2
-Landscape Attributes,build_Mean_builddens,2
-Landscape Attributes,build_Mean_distroad,2
-Landscape Attributes,build_p_building_200,2
-Landscape Attributes,build_p_otherpaved_100,2
-Landscape Attributes,build_p_road_300,2
-Landscape Attributes,build_p_soil_200,2
-Topography,build_Mean_elev_100m,2
-Topography,build_Mean_elev_30m,2
-Topography,build_Mean_slope_100m_DEM,2
-Construction,build_FENCEATTAC,1
-Construction,build_PATIOCOVER,1
-Construction,build_ROOFCONSTR,1
-Construction,build_VENTSCREEN,1
-Defensible Space,build_min_dist_shrub,1
-Landscape Attributes,build_p_grass_100,1
-Landscape Attributes,build_p_grass_200,1
-Landscape Attributes,build_p_grass_300,1
-Landscape Attributes,build_p_road_200,1
-Landscape Attributes,build_p_tree_100,1
-Landscape Attributes,build_p_tree_300,1
-Topography,build_Mean_slope_30m_DEM,1
+Type,Variable,Alias,count,Models
+Construction,build_WINDOWPANE,"Window pane (singlepane, multipane, unknown, no windows)",2,"cf_dins, Univariate"
+Construction,build_EAVES,"Eaves (enclosed, unenclosed, unknown, no eaves)",2,"cf_dins, Univariate"
+Construction,build_area,Building area (ft2),2,"cf_dins, cf_no_dins"
+Construction,build_VENTSCREEN,"Vent screen (mesh screen <= 1/8"", mesh screen > 1/8"", unscreened, unknown, no vents)",1,cf_dins
+Construction,build_ROOFCONSTR,"Roof materials (asphalt, concrete, metal, tile, wood, other, unknown)",1,cf_dins
+Construction,build_FENCEATTAC,"Fence materials (combustible, non-combustible, no fence, unknown)",1,cf_dins
+Construction,build_PATIOCOVER,"Carport/covered patio materials (combustible, non-combustible, unknown, no patio/carport)",1,cf_dins
+Defensible Space,parcel_Paved_P,Parcel land cover- percent paved,3,"cf_dins, cf_no_dins, Univariate"
+Defensible Space,parcel_Build_P,Parcel land cover- percent buildings,2,"cf_no_dins, Univariate"
+Defensible Space,parcel_Can_P,Parcel land cover- percent tree,2,"cf_no_dins, Univariate"
+Defensible Space,parcel_Grass_P,Parcel land cover- percent grass,2,"cf_no_dins, Univariate"
+Defensible Space,build_min_dist_shrub,Distance to nearest shrub (ft),1,cf_dins
+Exposure,build_near_dest,Distance to nearest destroyed building (ft),3,"cf_dins, cf_no_dins, Univariate"
+Landscape Attributes,build_p_otherpaved_300,"Percent paved land cover, 300 ft around building",3,"cf_dins, cf_no_dins, Univariate"
+Landscape Attributes,build_p_otherpaved_200,"Percent paved land cover, 200 ft around building",3,"cf_dins, cf_no_dins, Univariate"
+Landscape Attributes,build_p_building_300,"Percent built land cover, 300 ft around building",3,"cf_dins, cf_no_dins, Univariate"
+Landscape Attributes,build_p_building_100,"Percent built land cover, 100 ft around building",3,"cf_dins, cf_no_dins, Univariate"
+Landscape Attributes,build_Mean_distroad,Euclidian distance to major road (m),2,"cf_dins, cf_no_dins"
+Landscape Attributes,build_Mean_builddens,Interpolated housing density based on a 1-km search radius NOTE - housing? Structure?,2,"cf_dins, cf_no_dins"
+Landscape Attributes,build_p_otherpaved_100,"Percent paved land cover, 100 ft around building",2,"cf_dins, Univariate"
+Landscape Attributes,build_p_building_200,"Percent built land cover, 200 ft around building",2,"cf_no_dins, Univariate"
+Landscape Attributes,build_p_soil_200,"Percent soil land cover, 200 ft around building",2,"cf_no_dins, Univariate"
+Landscape Attributes,build_p_road_300,"Percent road land cover, 300 ft around building",2,"cf_no_dins, Univariate"
+Landscape Attributes,build_p_grass_100,"Percent grass land cover, 100 ft around building",1,cf_dins
+Landscape Attributes,build_p_tree_300,"Percent tree land cover, 300 ft around building",1,cf_no_dins
+Landscape Attributes,build_p_tree_100,"Percent tree land cover, 100 ft around building",1,cf_no_dins
+Landscape Attributes,build_p_grass_300,"Percent grass land cover, 300 ft around building",1,Univariate
+Landscape Attributes,build_p_road_200,"Percent road land cover, 200 ft around building",1,Univariate
+Landscape Attributes,build_p_grass_200,"Percent grass land cover, 200 ft around building",1,Univariate
+Topography,build_Mean_elev_100m,"Elevation, 100 m around building, derived from a 30 m digital elevation model (ft)",2,"cf_dins, cf_no_dins"
+Topography,build_Mean_elev_30m,"Elevation, 30 m around building, derived from a 30 m digital elevation model (ft)",2,"cf_dins, cf_no_dins"
+Topography,build_Mean_slope_100m_DEM,"Percentage slope, 100 m around building, derived from a 30 m digital elevation model",2,"cf_no_dins, Univariate"
+Topography,build_Mean_slope_30m_DEM,"Percentage slope, 30 m around building, derived from a 30 m digital elevation model",1,Univariate

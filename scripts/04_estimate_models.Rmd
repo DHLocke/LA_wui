@@ -697,9 +697,10 @@ auc %>% View()
 ```{r}
 
 #take variable_importance rank of 20 or higher
-#assumes variable_importance already in, above run on line 675)
+#assumes variable_importance already in, section 4 above run
 #assumes already read in tab_labs2 <- 
 #read_csv(paste0(getwd(), '/data/Table_Deviance_Explained_2022-06-13.csv'))
+ 
 
 top_n <- 20         # set n (can revise to 20 or any other value greater than zero and less than 71)
 
@@ -738,30 +739,10 @@ top_vars %>%
   ungroup() %>%
   pivot_wider(names_from = Model, values_from = Model) %>%
   # mutate(models = paste0(cf_dins cf_no_dins Univariate, ))
-  unite(cf_dins, cf_no_dins, Univariate, col = 'Models', sep = ', ') |> 
+  unite(cf_dins, cf_no_dins, Univariate, col = 'Models', sep = ', ')  %>%  
   mutate(Models = str_remove_all(Models, ', NA')
-         , Models = str_remove_all(Models, 'NA, '))
-  
-  # 
-  
-  # not there yet
-  # want this:
-  #
-  # type         variable name   n-count  models
-  # construction  variable1       3        cfnodins,cfdins, uni
-  # landscape     variable2       2         cfnodins,cfdins
-  # pivot_wider(
-  #   names_from =  ,
-  #   values_from = n
-  # )
-
-
-
-
-
-top_vars %>% 
-  group_by(Type, Variable) %>% 
-  tally(sort = T)-> top_vars_group #Dexter, wondering if I should try to also output the Models each appear in as another col. Any tips welcome.
+         , Models = str_remove_all(Models, 'NA, ')) %>% 
+  arrange(Type,desc(count)) ->top_vars_group
 
 top_vars_group %>%
    write_csv(., paste0(getwd(), '/output_data/top_vars_group_', Sys.Date(), '.csv')) #output_data/top_vars_group_2022-07-07.csv

@@ -364,8 +364,8 @@ table(predict_cf_no_dins)       # prediction
 
 # compare observed (aka truth) with prediction
 (table(  build_no_dins$damage_cat
-      , predict_cf_no_dins) |>
-  as.data.frame.matrix(row.names = c('true Destroyed', 'true Survived')) |> 
+      , predict_cf_no_dins) %>%
+  as.data.frame.matrix(row.names = c('true Destroyed', 'true Survived')) %>% 
   rownames_to_column() -> build_no_dins_accuracy_table)
 
 # accuracy = (TN + TP) / (TN + FP + FN + TP)
@@ -376,8 +376,8 @@ table(predict_cf_no_dins)       # prediction
 100*((TN + TP) / sum(build_no_dins_accuracy_table$Destroyed,
                      build_no_dins_accuracy_table$Survived))
 
-build_no_dins_accuracy_table |> 
-  adorn_percentages(denominator = 'all') |>
+build_no_dins_accuracy_table %>% 
+  adorn_percentages(denominator = 'all') %>%
   adorn_pct_formatting()
 
 
@@ -404,12 +404,12 @@ model.matrix(~0 + build_no_dins$damage_cat) %>% # one hot encoding trick
   mutate_all(., ~as.integer(.)) %>% 
   rename_all(., ~str_remove_all(., "build_no_dins\\$damage_cat")) %>%
   rename_all(., ~paste0(., '_true')) %>%
-  bind_cols(., predict_probs_cf_no_dins |> 
-              map(.x, .f = as_tibble) |> 
-              bind_rows() |> 
-              rename_all(~str_remove_all(., 'damage_cat.')) |> 
+  bind_cols(., predict_probs_cf_no_dins %>% 
+              map(.x, .f = as_tibble) %>% 
+              bind_rows() %>% 
+              rename_all(~str_remove_all(., 'damage_cat.')) %>% 
               rename_all(~paste0(., '_pred_cf'))
-  ) |> 
+  ) %>% 
   data.frame() -> class_test_build_no_dins
 
 class_test_build_no_dins %>% names
@@ -429,11 +429,11 @@ plot_roc_df <- multiROC::plot_roc_data(roc_res)
                # , multinomial_reg_idw = roc_res_idw$AUC$MNi %>% unlist()
                # , random_forest       =     roc_res$AUC$RFc %>% unlist()
                # , random_forest_idw   = roc_res_idw$AUC$RFi %>% unlist()
-) #|> mutate_if(is.double, round, 2)
+) #%>% mutate_if(is.double, round, 2)
   # arrange(desc(multinomial_reg))
 )
 
-auc |> View()
+auc %>% View()
 
 
 
@@ -481,8 +481,8 @@ table(predict_cf_dins_binary)       # prediction
 
 # compare observed (aka truth) with prediction
 (table( build_dins_binary$damage_cat
-      , predict_cf_dins_binary) |>
-  as.data.frame.matrix(row.names = c('true Destroyed', 'true Survived')) |> 
+      , predict_cf_dins_binary) %>%
+  as.data.frame.matrix(row.names = c('true Destroyed', 'true Survived')) %>% 
   rownames_to_column() -> cf_dins_binary_accuracy_table)
 
 # accuracy = (TN + TP) / (TN + FP + FN + TP)
@@ -494,8 +494,8 @@ table(predict_cf_dins_binary)       # prediction
                      cf_dins_binary_accuracy_table$Survived))
 
 
-cf_dins_binary_accuracy_table |> 
-  adorn_percentages(denominator = 'all') |>
+cf_dins_binary_accuracy_table %>% 
+  adorn_percentages(denominator = 'all') %>%
   adorn_pct_formatting()
 
 ```
@@ -520,12 +520,12 @@ model.matrix(~0 + build_dins_binary$damage_cat) %>% # one hot encoding trick
   mutate_all(., ~as.integer(.)) %>% 
   rename_all(., ~str_remove_all(., "build_dins_binary\\$damage_ca")) %>%
   rename_all(., ~paste0(., '_true')) %>%
-  bind_cols(., predict_probs_cf_dins_binary |> 
-              map(.x, .f = as_tibble) |> 
-              bind_rows() |> 
-              rename_all(~str_remove_all(., 'damage_cat.')) |> 
+  bind_cols(., predict_probs_cf_dins_binary %>% 
+              map(.x, .f = as_tibble) %>% 
+              bind_rows() %>% 
+              rename_all(~str_remove_all(., 'damage_cat.')) %>% 
               rename_all(~paste0(., '_pred_cf'))
-  ) |> 
+  ) %>% 
   data.frame() -> class_test_build_dins_binary
 
 class_test_build_dins_binary %>% names
@@ -545,11 +545,11 @@ plot_roc_df <- multiROC::plot_roc_data(roc_res)
                # , multinomial_reg_idw = roc_res_idw$AUC$MNi %>% unlist()
                # , random_forest       =     roc_res$AUC$RFc %>% unlist()
                # , random_forest_idw   = roc_res_idw$AUC$RFi %>% unlist()
-) #|> mutate_if(is.double, round, 2)
+) #%>% mutate_if(is.double, round, 2)
   # arrange(desc(multinomial_reg))
 )
 
-auc |> View()
+auc %>% View()
 
 
 
@@ -557,7 +557,7 @@ auc |> View()
 
 # (
 #   roc_all <- plot_roc_df %>% 
-#     bind_rows(plot_roc_df_idw) |> 
+#     bind_rows(plot_roc_df_idw) %>% 
 #     ggplot(aes(x = 1-Specificity, y = Sensitivity)) +
 #     geom_path(aes(color = Group, linetype=Method), size = 1) + # , alpha = .5) +
 #     geom_segment(aes(x = 0, y = 0, xend = 1, yend = 1), 
@@ -652,8 +652,8 @@ auc |> View()
 
 # reading back in deviance explained
 (tab_labs <- 
-  # read_csv(paste0(getwd(), '/data/Table_Deviance_Explained_2022-03-08.csv')) |>
-   read_csv(paste0(getwd(), '/data/Table_Deviance_Explained_2022-06-13.csv')) |>
+  # read_csv(paste0(getwd(), '/data/Table_Deviance_Explained_2022-03-08.csv')) %>%
+   read_csv(paste0(getwd(), '/data/Table_Deviance_Explained_2022-06-13.csv')) %>%
    mutate(Type = fct_recode(factor(Type), 
                               Exposure               = 'EXP'
                             , Construction           = 'CON'
@@ -666,7 +666,7 @@ auc |> View()
 # now that we have updated the deviance explained with the new data, we have a new table
 # but that new table doesn't have the hand-created
 # so we fold those back in here
-(old_labs <- read_csv(paste0(getwd(), '/data/Table_Deviance_Explained_2022-03-08.csv')) |> 
+(old_labs <- read_csv(paste0(getwd(), '/data/Table_Deviance_Explained_2022-03-08.csv')) %>% 
   tidylog::select(Variable = `Variable name`, Label))
 
 # join in aliases and type, repurpose directly below.
@@ -678,21 +678,67 @@ auc |> View()
                                          , '/output_data/variable_importance_2022-06-13.csv')) %>% 
     group_by(Model) %>% 
     mutate(rank = row_number(Model)) %>% 
-    ungroup() |> 
+    ungroup() %>%  
     left_join(
-      tab_labs |> tidylog::select(Variable = `Variable name`
+      tab_labs  %>%  tidylog::select(Variable = `Variable name`
                                   , Alias #, Label
                                   , Type
                                   , Scale)
-      , by = 'Variable') |> 
-    left_join(old_labs, by = 'Variable') |> # is this join ok with one-extra row in the y table?
+      , by = 'Variable') %>% 
+    left_join(old_labs, by = 'Variable') %>% # is this join ok with one-extra row in the y table?
     mutate(Variable = factor(Variable))
   )
 
 
 ```
+### A compare RForests and Uni- top 20 variables
 
-### A compare DINS - class vs binary
+
+```{r}
+
+#take variable_importance rank of 20 or higher
+#assumes variable_importance already in, above run on line 675)
+#assumes already read in tab_labs2 <- 
+#read_csv(paste0(getwd(), '/data/Table_Deviance_Explained_2022-06-13.csv'))
+
+top_n <- 20         # set n (can revise to 20 or any other value greater than zero and less than 71)
+
+variable_importance %>% 
+  group_by (Model) %>%
+   filter (rank<=top_n) %>% 
+    filter(Model!='cf_dins_binary') %>% 
+      tidylog::select(Variable, Model, Alias, Type)  -> top_pdp
+
+tab_labs2 %>% 
+  mutate(Type = fct_recode(factor(Type), 
+                              Exposure               = 'EXP'
+                            , Construction           = 'CON'
+                            , 'Defensible Space'     = 'DEF'
+                            , 'Landscape Attributes' = 'LAND'
+                            , Topography             = 'TOPO')
+          ) %>% 
+  mutate(Model = "Univariate") %>%  
+  rename(Variable= 'Variable name')  %>% 
+  arrange(desc(Deviance)) %>% 
+  slice(1:top_n) %>% 
+  tidylog::select(Variable, Model, Alias, Type) ->top_uni
+
+bind_rows(top_pdp, top_uni) -> top_vars
+
+table(top_vars$Type) #checking on, types are all correct
+table(top_vars$Model) #checking on, retains top 20 from each
+
+
+top_vars %>% 
+  group_by(Type, Variable) %>% 
+  tally(sort = T)-> top_vars_group #Dexter, wondering if I should try to also output the Models each appear in as another col. Any tips welcome.
+
+top_vars_group %>%
+   write_csv(., paste0(getwd(), '/output_data/top_vars_group_', Sys.Date(), '.csv')) #output_data/top_vars_group_2022-07-07.csv
+
+
+```
+### B compare DINS - class vs binary
 
 ```{r}
 #compare variable importance outcomes for two ways of considering DINS outcomes - 
@@ -723,15 +769,15 @@ ggscatter(Imp_wide, x = "cf_dins", y = "cf_dins_binary",
 ```
 
 
-### B graph variable importance
+### C graph variable importance
 ```{r}
-variable_importance |> 
+variable_importance %>% 
   tabyl(Model)
 
 (
-  variable_importance |> 
-    filter(Model == 'cf_no_dins') |> 
-    filter(rank < 21) |> 
+  variable_importance %>% 
+    filter(Model == 'cf_no_dins') %>% 
+    filter(rank < 21) %>% 
     ggplot(aes(  
         x = `Importance`
       , y = reorder(Label, `Importance`)
@@ -772,9 +818,9 @@ variable_importance |>
   )
 
 (
-  variable_importance |> 
-    filter(Model == 'cf_dins_binary') |> 
-    filter(rank < 21) |> 
+  variable_importance %>% 
+    filter(Model == 'cf_dins_binary') %>% 
+    filter(rank < 21) %>% 
     ggplot(aes(  
         x = `Importance`
       , y = reorder(Label, `Importance`)
@@ -926,11 +972,11 @@ top_n <- 9         # set n (can revise to 20 or any other value greater than zer
 #              # , center = TRUE
 #              # , alpha = .1
 #              , parallel = TRUE
-#              ) |> 
-#   as_tibble() |> 
-#   group_by(build_near_dest) |> 
-#   summarise(ci = list(mean_cl_normal(yhat))) |> 
-#   unnest(ci) |> 
+#              ) %>% 
+#   as_tibble() %>% 
+#   group_by(build_near_dest) %>% 
+#   summarise(ci = list(mean_cl_normal(yhat))) %>% 
+#   unnest(ci) %>% 
 #   rename(mean_pred = y, lower_ci = ymin, upper_ci = ymax) -> build_near_dest_pdp; toc(); stopCluster(cl) # ~1hr 10 mins (10 cores)
 
 
@@ -956,13 +1002,13 @@ pdp::partial(cf_no_dins               # the model
            , center = TRUE
            # , alpha = .1
            , parallel = TRUE
-           ) |> 
-  as_tibble() |> 
-  group_by(build_near_dest) |> 
-  summarise(ci = list(mean_cl_normal(yhat))) |> 
-  unnest(ci) |> 
-  rename(x = build_near_dest) |> 
-  mutate(iv = 'build_near_dest') |> 
+           ) %>% 
+  as_tibble() %>% 
+  group_by(build_near_dest) %>% 
+  summarise(ci = list(mean_cl_normal(yhat))) %>% 
+  unnest(ci) %>% 
+  rename(x = build_near_dest) %>% 
+  mutate(iv = 'build_near_dest') %>% 
   write_csv(paste0(getwd(), '/output_data/pdp/build_near_dest_', Sys.Date(), '.csv'))
 
  stopCluster(cl); toc(); beepr::beep() # ~1 hr 15 mins w 10 cores, 95 mins w 8 cores
@@ -970,7 +1016,7 @@ pdp::partial(cf_no_dins               # the model
 
 
 
-pdp_cf_no_dins_vars |> tabyl()
+pdp_cf_no_dins_vars %>% tabyl()
 
  
 
@@ -993,13 +1039,13 @@ pdp::partial(cf_no_dins               # the model
            , center = TRUE
            # , alpha = .1
            , parallel = TRUE
-           ) |> 
-  as_tibble() |> 
-  group_by(build_area) |> 
-  summarise(ci = list(mean_cl_normal(yhat))) |> 
-  unnest(ci) |> 
-  rename(x = build_area) |> 
-  mutate(iv = 'build_area') |> 
+           ) %>% 
+  as_tibble() %>% 
+  group_by(build_area) %>% 
+  summarise(ci = list(mean_cl_normal(yhat))) %>% 
+  unnest(ci) %>% 
+  rename(x = build_area) %>% 
+  mutate(iv = 'build_area') %>% 
   write_csv(paste0(getwd(), '/output_data/pdp/build_area_', Sys.Date(), '.csv'))
 
  stopCluster(cl); toc(); beepr::beep() # ~1 hr 13 mins, ~1.5 hr w 9 cores
@@ -1028,13 +1074,13 @@ pdp::partial(cf_no_dins               # the model
            , center = TRUE
            # , alpha = .1
            , parallel = TRUE
-           ) |> 
-  as_tibble() |> 
-  group_by(build_Mean_distroad) |> 
-  summarise(ci = list(mean_cl_normal(yhat))) |> 
-  unnest(ci) |> 
-  rename(x = build_Mean_distroad) |> 
-  mutate(iv = 'build_Mean_distroad') |> 
+           ) %>% 
+  as_tibble() %>% 
+  group_by(build_Mean_distroad) %>% 
+  summarise(ci = list(mean_cl_normal(yhat))) %>% 
+  unnest(ci) %>% 
+  rename(x = build_Mean_distroad) %>% 
+  mutate(iv = 'build_Mean_distroad') %>% 
   write_csv(paste0(getwd(), '/output_data/pdp/build_Mean_distroad_', Sys.Date(), '.csv'))
 
  stopCluster(cl); toc(); beepr::beep() # ~1 hr 20 mins, 1:30 with 10
@@ -1062,13 +1108,13 @@ pdp::partial(cf_no_dins               # the model
            , center = TRUE
            # , alpha = .1
            , parallel = TRUE
-           ) |> 
-  as_tibble() |> 
-  group_by(build_Mean_elev_100m) |> 
-  summarise(ci = list(mean_cl_normal(yhat))) |> 
-  unnest(ci) |> 
-  rename(x = build_Mean_elev_100m) |> 
-  mutate(iv = 'build_Mean_elev_100m') |> 
+           ) %>% 
+  as_tibble() %>% 
+  group_by(build_Mean_elev_100m) %>% 
+  summarise(ci = list(mean_cl_normal(yhat))) %>% 
+  unnest(ci) %>% 
+  rename(x = build_Mean_elev_100m) %>% 
+  mutate(iv = 'build_Mean_elev_100m') %>% 
   write_csv(paste0(getwd(), '/output_data/pdp/build_Mean_elev_100m_', Sys.Date(), '.csv'))
 
  stopCluster(cl); toc(); beepr::beep() # ~1 hr 20 mins; ~1 hr 25 10 cores
@@ -1099,13 +1145,13 @@ pdp::partial(cf_no_dins               # the model
            , center = TRUE
            # , alpha = .1
            , parallel = TRUE
-           ) |> 
-  as_tibble() |> 
-  group_by(build_p_building_300) |> 
-  summarise(ci = list(mean_cl_normal(yhat))) |> 
-  unnest(ci) |> 
-  rename(x = build_p_building_300) |> 
-  mutate(iv = 'build_p_building_300') |> 
+           ) %>% 
+  as_tibble() %>% 
+  group_by(build_p_building_300) %>% 
+  summarise(ci = list(mean_cl_normal(yhat))) %>% 
+  unnest(ci) %>% 
+  rename(x = build_p_building_300) %>% 
+  mutate(iv = 'build_p_building_300') %>% 
   write_csv(paste0(getwd(), '/output_data/pdp/build_p_building_300_', Sys.Date(), '.csv'))
 
  stopCluster(cl); toc(); beepr::beep() # ~1 hr 18 mins; ~1 hr with 12 cores
@@ -1132,13 +1178,13 @@ pdp::partial(cf_no_dins               # the model
            , center = TRUE
            # , alpha = .1
            , parallel = TRUE
-           ) |> 
-  as_tibble() |> 
-  group_by(build_Mean_slope_100m_DEM) |> 
-  summarise(ci = list(mean_cl_normal(yhat))) |> 
-  unnest(ci) |> 
-  rename(x = build_Mean_slope_100m_DEM) |> 
-  mutate(iv = 'build_Mean_slope_100m_DEM') |> 
+           ) %>% 
+  as_tibble() %>% 
+  group_by(build_Mean_slope_100m_DEM) %>% 
+  summarise(ci = list(mean_cl_normal(yhat))) %>% 
+  unnest(ci) %>% 
+  rename(x = build_Mean_slope_100m_DEM) %>% 
+  mutate(iv = 'build_Mean_slope_100m_DEM') %>% 
   write_csv(paste0(getwd(), '/output_data/pdp/build_Mean_slope_100m_DEM_', Sys.Date(), '.csv'))
 
  stopCluster(cl); toc(); beepr::beep() # ~1 hr 18 mins; ~1 hr with 12 cores
@@ -1165,13 +1211,13 @@ pdp::partial(cf_no_dins               # the model
            , center = TRUE
            # , alpha = .1
            , parallel = TRUE
-           ) |> 
-  as_tibble() |> 
-  group_by(parcel_Build_P) |> 
-  summarise(ci = list(mean_cl_normal(yhat))) |> 
-  unnest(ci) |> 
-  rename(x = parcel_Build_P) |> 
-  mutate(iv = 'parcel_Build_P') |> 
+           ) %>% 
+  as_tibble() %>% 
+  group_by(parcel_Build_P) %>% 
+  summarise(ci = list(mean_cl_normal(yhat))) %>% 
+  unnest(ci) %>% 
+  rename(x = parcel_Build_P) %>% 
+  mutate(iv = 'parcel_Build_P') %>% 
   write_csv(paste0(getwd(), '/output_data/pdp/parcel_Build_P_', Sys.Date(), '.csv'))
 
  stopCluster(cl); toc(); beepr::beep() # ~53 mins, 12 cores
@@ -1201,13 +1247,13 @@ pdp::partial(cf_no_dins               # the model
            , center = TRUE
            # , alpha = .1
            , parallel = TRUE
-           ) |> 
-  as_tibble() |> 
-  group_by(build_p_building_200) |> 
-  summarise(ci = list(mean_cl_normal(yhat))) |> 
-  unnest(ci) |> 
-  rename(x = build_p_building_200) |> 
-  mutate(iv = 'build_p_building_200') |> 
+           ) %>% 
+  as_tibble() %>% 
+  group_by(build_p_building_200) %>% 
+  summarise(ci = list(mean_cl_normal(yhat))) %>% 
+  unnest(ci) %>% 
+  rename(x = build_p_building_200) %>% 
+  mutate(iv = 'build_p_building_200') %>% 
   write_csv(paste0(getwd(), '/output_data/pdp/build_p_building_200_', Sys.Date(), '.csv'))
 
  stopCluster(cl); toc(); beepr::beep() # ~1 hr 12 mins w 10 cores, 50 mins 13 cores
@@ -1233,13 +1279,13 @@ pdp::partial(cf_no_dins               # the model
            , center = TRUE
            # , alpha = .1
            , parallel = TRUE
-           ) |> 
-  as_tibble() |> 
-  group_by(build_Mean_elev_30m) |> 
-  summarise(ci = list(mean_cl_normal(yhat))) |> 
-  unnest(ci) |> 
-  rename(x = build_Mean_elev_30m) |> 
-  mutate(iv = 'build_Mean_elev_30m') |> 
+           ) %>% 
+  as_tibble() %>% 
+  group_by(build_Mean_elev_30m) %>% 
+  summarise(ci = list(mean_cl_normal(yhat))) %>% 
+  unnest(ci) %>% 
+  rename(x = build_Mean_elev_30m) %>% 
+  mutate(iv = 'build_Mean_elev_30m') %>% 
   write_csv(paste0(getwd(), '/output_data/pdp/build_Mean_elev_30m_', Sys.Date(), '.csv'))
 
  stopCluster(cl); toc(); beepr::beep() # ~1 hr 45 mins, 1 hr 15 mins with 10 cores
@@ -1268,13 +1314,13 @@ pdp::partial(cf_no_dins               # the model
 #            , center = TRUE
 #            # , alpha = .1
 #            , parallel = TRUE
-#            ) |> 
-#   as_tibble() |> 
-#   group_by(parcel_Can_P) |> 
-#   summarise(ci = list(mean_cl_normal(yhat))) |> 
-#   unnest(ci) |> 
-#   rename(x = parcel_Can_P) |> 
-#   mutate(iv = 'parcel_Can_P') |> 
+#            ) %>% 
+#   as_tibble() %>% 
+#   group_by(parcel_Can_P) %>% 
+#   summarise(ci = list(mean_cl_normal(yhat))) %>% 
+#   unnest(ci) %>% 
+#   rename(x = parcel_Can_P) %>% 
+#   mutate(iv = 'parcel_Can_P') %>% 
 #   write_csv(paste0(getwd(), '/output_data/pdp/parcel_Can_P_', Sys.Date(), '.csv'))
 # 
 #  stopCluster(cl); toc(); beepr::beep() # ~53 mins, 12 cores
@@ -1301,13 +1347,13 @@ pdp::partial(cf_no_dins               # the model
 #            , center = TRUE
 #            # , alpha = .1
 #            , parallel = TRUE
-#            ) |> 
-#   as_tibble() |> 
-#   group_by(build_p_otherpaved_300) |> 
-#   summarise(ci = list(mean_cl_normal(yhat))) |> 
-#   unnest(ci) |> 
-#   rename(x = build_p_otherpaved_300) |> 
-#   mutate(iv = 'build_p_otherpaved_300') |> 
+#            ) %>% 
+#   as_tibble() %>% 
+#   group_by(build_p_otherpaved_300) %>% 
+#   summarise(ci = list(mean_cl_normal(yhat))) %>% 
+#   unnest(ci) %>% 
+#   rename(x = build_p_otherpaved_300) %>% 
+#   mutate(iv = 'build_p_otherpaved_300') %>% 
 #   write_csv(paste0(getwd(), '/output_data/pdp/build_p_otherpaved_300_', Sys.Date(), '.csv'))
 # 
 #  stopCluster(cl); toc(); beepr::beep() # ~53 mins, 12 cores
@@ -1343,7 +1389,7 @@ pdp::partial(cf_no_dins               # the model
 top_n <- 6          # set n (can revise to 20 or any other value greater than zero and less than 71)
 (pdp_cf_dins_vars <- variable_importance %>% filter(Model == 'cf_dins_binary') %>% slice(1:top_n) %>% pull(Variable)) 
 
-pdp_cf_dins_vars |> tibble()
+pdp_cf_dins_vars %>% tibble()
 
 detectCores(); # detect the number of cores of your cpu
 split <- 10
@@ -1367,13 +1413,13 @@ pdp::partial(cf_dins_binary               # the model
            , center = TRUE
            # , alpha = .1
            , parallel = TRUE
-           ) |> 
-  as_tibble() |> 
-  group_by(build_WINDOWPANE) |> 
-  summarise(ci = list(mean_cl_normal(yhat))) |> 
-  unnest(ci) |> 
-  rename(x_chr = build_WINDOWPANE) |> 
-  mutate(iv = 'build_WINDOWPANE') |> 
+           ) %>% 
+  as_tibble() %>% 
+  group_by(build_WINDOWPANE) %>% 
+  summarise(ci = list(mean_cl_normal(yhat))) %>% 
+  unnest(ci) %>% 
+  rename(x_chr = build_WINDOWPANE) %>% 
+  mutate(iv = 'build_WINDOWPANE') %>% 
   write_csv(paste0(getwd(), '/output_data/pdp_dins/build_WINDOWPANE_', Sys.Date(), '.csv'))
 
  stopCluster(cl); toc(); beepr::beep() # ~45 seconds 500 trees and 10 cores.
@@ -1403,13 +1449,13 @@ pdp::partial(cf_dins_binary               # the model
            , center = TRUE
            # , alpha = .1
            , parallel = TRUE
-           ) |> 
-  as_tibble() |> 
-  group_by(build_EAVES) |> 
-  summarise(ci = list(mean_cl_normal(yhat))) |> 
-  unnest(ci) |> 
-  rename(x_chr = build_EAVES) |> 
-  mutate(iv = 'build_EAVES') |> 
+           ) %>% 
+  as_tibble() %>% 
+  group_by(build_EAVES) %>% 
+  summarise(ci = list(mean_cl_normal(yhat))) %>% 
+  unnest(ci) %>% 
+  rename(x_chr = build_EAVES) %>% 
+  mutate(iv = 'build_EAVES') %>% 
   write_csv(paste0(getwd(), '/output_data/pdp_dins/build_EAVES_', Sys.Date(), '.csv'))
 
  stopCluster(cl); toc(); beepr::beep() # 45s
@@ -1436,13 +1482,13 @@ pdp::partial(cf_dins_binary               # the model
            , center = TRUE
            # , alpha = .1
            , parallel = TRUE
-           ) |> 
-  as_tibble() |> 
-  group_by(build_near_dest) |> 
-  summarise(ci = list(mean_cl_normal(yhat))) |> 
-  unnest(ci) |> 
-  rename(x = build_near_dest) |> 
-  mutate(iv = 'build_near_dest') |> 
+           ) %>% 
+  as_tibble() %>% 
+  group_by(build_near_dest) %>% 
+  summarise(ci = list(mean_cl_normal(yhat))) %>% 
+  unnest(ci) %>% 
+  rename(x = build_near_dest) %>% 
+  mutate(iv = 'build_near_dest') %>% 
   write_csv(paste0(getwd(), '/output_data/pdp_dins/build_near_dest_', Sys.Date(), '.csv'))
 
 stopCluster(cl); toc(); beepr::beep() # ~90 seconds
@@ -1470,13 +1516,13 @@ pdp::partial(cf_dins_binary               # the model
            , center = TRUE
            # , alpha = .1
            , parallel = TRUE
-           ) |> 
-  as_tibble() |> 
-  group_by(build_p_otherpaved_300) |> 
-  summarise(ci = list(mean_cl_normal(yhat))) |> 
-  unnest(ci) |> 
-  rename(x = build_p_otherpaved_300) |> 
-  mutate(iv = 'build_p_otherpaved_300') |> 
+           ) %>% 
+  as_tibble() %>% 
+  group_by(build_p_otherpaved_300) %>% 
+  summarise(ci = list(mean_cl_normal(yhat))) %>% 
+  unnest(ci) %>% 
+  rename(x = build_p_otherpaved_300) %>% 
+  mutate(iv = 'build_p_otherpaved_300') %>% 
   write_csv(paste0(getwd(), '/output_data/pdp_dins/build_p_otherpaved_300_', Sys.Date(), '.csv'))
 
 stopCluster(cl); toc(); beepr::beep() # ~100s
@@ -1503,13 +1549,13 @@ pdp::partial(cf_dins_binary               # the model
            , center = TRUE
            # , alpha = .1
            , parallel = TRUE
-           ) |> 
-  as_tibble() |> 
-  group_by(build_VENTSCREEN) |> 
-  summarise(ci = list(mean_cl_normal(yhat))) |> 
-  unnest(ci) |> 
-  rename(x_chr = build_VENTSCREEN) |> 
-  mutate(iv = 'build_VENTSCREEN') |> 
+           ) %>% 
+  as_tibble() %>% 
+  group_by(build_VENTSCREEN) %>% 
+  summarise(ci = list(mean_cl_normal(yhat))) %>% 
+  unnest(ci) %>% 
+  rename(x_chr = build_VENTSCREEN) %>% 
+  mutate(iv = 'build_VENTSCREEN') %>% 
   write_csv(paste0(getwd(), '/output_data/pdp_dins/build_VENTSCREEN_', Sys.Date(), '.csv'))
 
 stopCluster(cl); toc(); beepr::beep() # ~45s
@@ -1538,13 +1584,13 @@ stopCluster(cl); toc(); beepr::beep() # ~45s
 #            , center = TRUE
 #            # , alpha = .1
 #            , parallel = TRUE
-#            ) |> 
-#   as_tibble() |> 
-#   group_by(build_min_dist_shrub) |> 
-#   summarise(ci = list(mean_cl_normal(yhat))) |> 
-#   unnest(ci) |> 
-#   rename(x = build_min_dist_shrub) |> 
-#   mutate(iv = 'build_min_dist_shrub') |> 
+#            ) %>% 
+#   as_tibble() %>% 
+#   group_by(build_min_dist_shrub) %>% 
+#   summarise(ci = list(mean_cl_normal(yhat))) %>% 
+#   unnest(ci) %>% 
+#   rename(x = build_min_dist_shrub) %>% 
+#   mutate(iv = 'build_min_dist_shrub') %>% 
 #   write_csv(paste0(getwd(), '/output_data/pdp_dins/build_min_dist_shrub_', Sys.Date(), '.csv'))
 # 
 # stopCluster(cl); toc(); beepr::beep() # ~100s
@@ -1569,13 +1615,13 @@ pdp::partial(cf_dins_binary               # the model
            , center = TRUE
            # , alpha = .1
            , parallel = TRUE
-           ) |> 
-  as_tibble() |> 
-  group_by(build_Mean_distroad) |> 
-  summarise(ci = list(mean_cl_normal(yhat))) |> 
-  unnest(ci) |> 
-  rename(x = build_Mean_distroad) |> 
-  mutate(iv = 'build_Mean_distroad') |> 
+           ) %>% 
+  as_tibble() %>% 
+  group_by(build_Mean_distroad) %>% 
+  summarise(ci = list(mean_cl_normal(yhat))) %>% 
+  unnest(ci) %>% 
+  rename(x = build_Mean_distroad) %>% 
+  mutate(iv = 'build_Mean_distroad') %>% 
   write_csv(paste0(getwd(), '/output_data/pdp_dins/build_Mean_distroad_', Sys.Date(), '.csv'))
 
 stopCluster(cl); toc(); beepr::beep() # ~100s
@@ -1601,15 +1647,15 @@ top_n <- 9         # set n (can revise to 20 or any other value greater than zer
 
 
 pdp_cf_no_dins_vars
-pdp_cf_no_dins_vars |> data_frame()
+pdp_cf_no_dins_vars %>% data_frame()
 
 (
   pdp_cf_no_dins_tibble <- tibble(files = dir('output_data/pdp', full.names = TRUE)) %>%
-    mutate(file_contents = map(files, ~read_csv(., col_types = cols()))) |> # col_types = cols() just to be quiet
-    unnest(file_contents) |> 
-    select(-files) |> 
-    left_join(variable_importance |> distinct(iv = Variable, Alias, Label, Type)
-              , by = 'iv') |> 
+    mutate(file_contents = map(files, ~read_csv(., col_types = cols()))) %>% # col_types = cols() just to be quiet
+    unnest(file_contents) %>% 
+    select(-files) %>% 
+    left_join(variable_importance %>% distinct(iv = Variable, Alias, Label, Type)
+              , by = 'iv') %>% 
     mutate(Label = factor(
         Label
       , levels = c(
@@ -1641,19 +1687,19 @@ pdp_cf_no_dins_vars |> data_frame()
         # , 'Percent paved, 300 ft'
         )
       , ordered = TRUE)
-      ) |> 
+      ) %>% 
     mutate(iv = factor(iv, levels = pdp_cf_no_dins_vars, labels = pdp_cf_no_dins_vars, ordered = TRUE)) # not really need anymore because we use Label instead
   )
 
 
-pdp_cf_no_dins_tibble |> tabyl(iv)
-pdp_cf_no_dins_tibble |> tabyl(Label)
-# pdp_cf_no_dins_tibble |> tabyl(x)
-bind_cols(pdp_cf_no_dins_tibble |> tabyl(iv),  
-pdp_cf_no_dins_tibble |> tabyl(Label))
+pdp_cf_no_dins_tibble %>% tabyl(iv)
+pdp_cf_no_dins_tibble %>% tabyl(Label)
+# pdp_cf_no_dins_tibble %>% tabyl(x)
+bind_cols(pdp_cf_no_dins_tibble %>% tabyl(iv),  
+pdp_cf_no_dins_tibble %>% tabyl(Label))
 
 (
-  b_g_build <- pdp_cf_no_dins_tibble |> 
+  b_g_build <- pdp_cf_no_dins_tibble %>% 
     ggplot(aes(x, y, fill = Type)) + 
     geom_ribbon(aes(ymin = ymin, ymax = ymax)) +
     # geom_line(color = 'red') + 
@@ -1693,7 +1739,7 @@ library(patchwork)
 (importance_pdp_1 <- a_importance_graph_no_dins + 
   inset_element(b_g_build , left = 0.15, bottom = 0.03, right = .95, top = .93))
   
-# importance_pdp_1 |>
+# importance_pdp_1 %>%
 # ggsave(file = paste0(getwd(), '/figures/importance_pdp_top_9_', Sys.Date(), '.png')
 #          , height = 6.5*2, width = 6.5*2)
 
@@ -1709,24 +1755,24 @@ pdp_cf_dins_vars
 
 (
   pdp_cf_dins_tibble <- tibble(files = dir('output_data/pdp_dins', full.names = TRUE)) %>%
-    mutate(file_contents = map(files,~read_csv(., col_types = cols()))) |> #, col_types = 'fdddf'))) |> 
+    mutate(file_contents = map(files,~read_csv(., col_types = cols()))) %>% #, col_types = 'fdddf'))) %>% 
     # mutate(file_contents = map(files, ~mutate(., ifelse(is.character(.$iv),))))
-    unnest(file_contents) |> 
-    select(-files) |> 
-    left_join(variable_importance |> distinct(iv = Variable, Alias, Label, Type)
-              , by = 'iv') |> 
+    unnest(file_contents) %>% 
+    select(-files) %>% 
+    left_join(variable_importance %>% distinct(iv = Variable, Alias, Label, Type)
+              , by = 'iv') %>% 
     mutate(iv = factor(iv, levels = pdp_cf_dins_vars, labels = pdp_cf_dins_vars, ordered = TRUE)) 
   )
 
-pdp_cf_dins_tibble |> tabyl(iv)
-pdp_cf_dins_tibble |> tabyl(Alias, iv)
-# pdp_cf_no_dins_tibble |> tabyl(x)
+pdp_cf_dins_tibble %>% tabyl(iv)
+pdp_cf_dins_tibble %>% tabyl(Alias, iv)
+# pdp_cf_no_dins_tibble %>% tabyl(x)
 
 
 
 # # great start to graphs!
-# pdp_cf_no_dins_tibble |>
-#   filter(is.na(x_chr)) |>
+# pdp_cf_no_dins_tibble %>%
+#   filter(is.na(x_chr)) %>%
 #   ggplot(aes(x, y)) +
 #   geom_ribbon(aes(ymin = ymin, ymax = ymax)) +
 #   geom_line(color = 'red') +
@@ -1735,8 +1781,8 @@ pdp_cf_dins_tibble |> tabyl(Alias, iv)
 #   facet_wrap(~str_wrap(Alias, 30), scales = 'free_x') +
 #   NULL
 # 
-# pdp_cf_no_dins_tibble |> 
-#   filter(!is.na(x_chr)) |>
+# pdp_cf_no_dins_tibble %>% 
+#   filter(!is.na(x_chr)) %>%
 #   # ggplot(aes(x_chr, y)) + 
 #   ggplot(aes(y, x_chr)) + 
 #   # geom_errorbar(aes(ymin = ymin, ymax = ymax), width = .1, size = 1) + 
@@ -1747,8 +1793,8 @@ pdp_cf_dins_tibble |> tabyl(Alias, iv)
 #   facet_wrap(~iv) +
 #   NULL
 # 
-# pdp_cf_no_dins_tibble |>
-#   filter(!is.na(x_chr)) |>
+# pdp_cf_no_dins_tibble %>%
+#   filter(!is.na(x_chr)) %>%
 #   ggplot(aes(x_chr, y)) +
 #   # ggplot(aes(y, x_chr)) +
 #   geom_errorbar(aes(ymin = ymin, ymax = ymax), width = .1, size = 1) +
@@ -1764,8 +1810,8 @@ pdp_cf_dins_tibble |> tabyl(Alias, iv)
 
 
 (
-  b_build_WINDOWPANE <- pdp_cf_dins_tibble |>
-    filter(iv == 'build_WINDOWPANE') |>
+  b_build_WINDOWPANE <- pdp_cf_dins_tibble %>%
+    filter(iv == 'build_WINDOWPANE') %>%
     ggplot(aes(x_chr, y)) +
     geom_hline(yintercept = 0, col = 'dark gray', size = 1) +
     geom_errorbar(aes(ymin = ymin, ymax = ymax), width = .1, size = 1) +
@@ -1801,8 +1847,8 @@ pdp_cf_dins_tibble |> tabyl(Alias, iv)
   )
 
 (
-  c_build_EAVES <- pdp_cf_dins_tibble |>
-    filter(iv == 'build_EAVES') |>
+  c_build_EAVES <- pdp_cf_dins_tibble %>%
+    filter(iv == 'build_EAVES') %>%
     ggplot(aes(x_chr, y)) +
     geom_hline(yintercept = 0, col = 'dark gray', size = 1) +
     geom_errorbar(aes(ymin = ymin, ymax = ymax), width = .1, size = 1) +
@@ -1837,8 +1883,8 @@ pdp_cf_dins_tibble |> tabyl(Alias, iv)
   )
 
 (
-  d_build_near_dest <- pdp_cf_dins_tibble |>
-    filter(iv == 'build_near_dest') |>
+  d_build_near_dest <- pdp_cf_dins_tibble %>%
+    filter(iv == 'build_near_dest') %>%
     ggplot(aes(x, y, fill = Type)) +
     geom_ribbon(aes(ymin = ymin, ymax = ymax)) +
     geom_line() +
@@ -1874,8 +1920,8 @@ pdp_cf_dins_tibble |> tabyl(Alias, iv)
 
 
 # (
-#   e_build_p_otherpaved_200 <- pdp_cf_dins_tibble |>
-#     filter(iv == 'build_p_otherpaved_200') |>
+#   e_build_p_otherpaved_200 <- pdp_cf_dins_tibble %>%
+#     filter(iv == 'build_p_otherpaved_200') %>%
 #     ggplot(aes(x, y, fill = Type)) +
 #     geom_ribbon(aes(ymin = ymin, ymax = ymax)) +
 #     geom_line() +
@@ -1912,8 +1958,8 @@ pdp_cf_dins_tibble |> tabyl(Alias, iv)
 
 
 (
-  e_build_p_otherpaved_300 <- pdp_cf_dins_tibble |>
-    filter(iv == 'build_p_otherpaved_300') |>
+  e_build_p_otherpaved_300 <- pdp_cf_dins_tibble %>%
+    filter(iv == 'build_p_otherpaved_300') %>%
     ggplot(aes(x, y, fill = Type)) +
     geom_ribbon(aes(ymin = ymin, ymax = ymax)) +
     geom_line() +
@@ -1949,8 +1995,8 @@ pdp_cf_dins_tibble |> tabyl(Alias, iv)
 
 
 (
-  f_build_VENTSCREEN <- pdp_cf_dins_tibble |>
-    filter(iv == 'build_VENTSCREEN') |>
+  f_build_VENTSCREEN <- pdp_cf_dins_tibble %>%
+    filter(iv == 'build_VENTSCREEN') %>%
     ggplot(aes(x_chr, y)) +
     geom_hline(yintercept = 0, col = 'dark gray', size = 1) +
     geom_errorbar(aes(ymin = ymin, ymax = ymax), width = .1, size = 1) +
@@ -1987,8 +2033,8 @@ pdp_cf_dins_tibble |> tabyl(Alias, iv)
 
 
 # (
-#   g_build_min_dist_shrub <- pdp_cf_dins_tibble |>
-#     filter(iv == 'build_min_dist_shrub') |>
+#   g_build_min_dist_shrub <- pdp_cf_dins_tibble %>%
+#     filter(iv == 'build_min_dist_shrub') %>%
 #     ggplot(aes(x, y, fill = Type)) +
 #     geom_ribbon(aes(ymin = ymin, ymax = ymax)) +
 #     geom_line() +
@@ -2024,8 +2070,8 @@ pdp_cf_dins_tibble |> tabyl(Alias, iv)
 
 
 (
-  g_build_Mean_distroad <- pdp_cf_dins_tibble |>
-    filter(iv == 'build_Mean_distroad') |>
+  g_build_Mean_distroad <- pdp_cf_dins_tibble %>%
+    filter(iv == 'build_Mean_distroad') %>%
     ggplot(aes(x, y, fill = Type)) +
     geom_ribbon(aes(ymin = ymin, ymax = ymax)) +
     geom_line() +
@@ -2060,7 +2106,7 @@ pdp_cf_dins_tibble |> tabyl(Alias, iv)
   )
 
 
-pdp_cf_no_dins_tibble |> tabyl(iv)
+pdp_cf_no_dins_tibble %>% tabyl(iv)
 # library(patchwork)
 # a_importance_graph_dins / 
 #   (b_build_WINDOWPANE + c_build_EAVES + d_build_near_dest) / 
@@ -2079,14 +2125,13 @@ insets <- (b_build_WINDOWPANE + c_build_EAVES + d_build_near_dest) /
   inset_element(insets, left = 0.3, bottom = 0.05, right = .95, top = .8))
   
 
-importance_pdp_2 |>
+importance_pdp_2 %>%
 ggsave(file = paste0(getwd(), '/figures/importance_pdp_2_', Sys.Date(), '.png')
          , height = 6.5*2, width = 6.5*2)
 
 
 ```
-
-
+ 
 
 ```{r, citations}
 lapply(packages, citation)

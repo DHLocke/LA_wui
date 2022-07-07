@@ -21,11 +21,10 @@ This assumes "02_Woosley_combine_data.Rmd" was run
 packs <- c('tidyverse'        # a must have!
            # , 'tidylog'        # makes things very verbose for 2x checking 
            # , 'magrittr'       # all of the pipes
-           # , 'janitor'        # cleans things up
+            , 'janitor'        # cleans things up
            # , 'sf'             # simple features
            # , 'mapview'        # quick webmaps for zoom/pan viz
            , 'gtsummary'      # for descriptive table
-           # , 'patchwork'
            # #'tidycensus',     # access to Census data in a tidy way 
            # #'party',          # random forests
            # , 'dataMaid'       # nice reports
@@ -193,13 +192,17 @@ build <- read_csv(paste0(getwd(), '/output_data/building_2022-06-10.csv')) %>%
 
 
 
-## 2 descriptive statistics & table for pub
+## 2 descriptive statistics & Table for pub
 ```{r eval=FALSE, include=FALSE}
 
-names(build)
+#summary information for paper text
+
+length(unique(build$parcel_area)) #size of parcel areas
+tabyl(build$build_has_tree_overhang) # 71.05%
+ tabyl(build$build_min_dist_tree==0) 
 
 #DINS has 12% survived only
-table(build$damage_binary,build$build_DINS)
+table(build$damage_cat,build$build_DINS)
 # generates report of univariate distributions with added info
 system.time(makeDataReport(build, file = paste0(getwd(), '/output_data/dataMaid_',
                                     gsub('[[:punct:]]', '_', Sys.time()), '.Rmd')))
@@ -252,8 +255,9 @@ tab_labs %>%
                               'Landscape Attributes' = 'LAND')) %>% 
   slice(1,14,5,2:4,15,6:13,16:48) -> vars_to_include_tbl_2 #using slice to do custom reorder of variables for table presentation
 # FIXME slice is really dangerous here - just be careful and double, triple check you got what you wanted
-#Ah, is there function you recommend better? It doesn't drop any, just rearranges their order.
- 
+# #Ah, is there function you recommend better? It doesn't drop any, just rearranges their order.
+# It works, so don't change it. In a spreadsheet an order field could be added and then arrange() could be used to sort the table by that column. Or in the code it could be made an #ordered factor manually.. if anything causes that file to change its order (items are added or dropped) then the slice with index numbers are all off. If there are no changes, then #its not a problem. I just flagged an instance to be cautious about on the heals of re-doing the deviance table where items were added and dropped and the order was altered for the #PDP/ICE graphs..
+
 
 #BUILD Table 1 with theme - type = defensible space 
 vars_to_include_tbl_2 %>% 
@@ -264,7 +268,8 @@ tbl_DEF <- build %>%
   select(damage_cat, any_of(vars_to_include_tbl_2DEF$`Variable name`)) %>%  
   tbl_summary (by = damage_cat, type = list(where(is.numeric) ~ "continuous")) %>%  #Dexter, I think this is forcing build_p_water10 to be continuous and looks like output is still the same  
   add_overall() %>%  
-  add_p()
+  add_p()%>%  
+  as_gt()
 
 #BUILD Table 2 with theme - type = landscape
 vars_to_include_tbl_2 %>% 
@@ -275,77 +280,25 @@ tbl_LAND <- build %>%
   select(damage_cat, any_of(vars_to_include_tbl_2LAND$`Variable name`)) %>%  
   tbl_summary(by = damage_cat) %>%  
   add_overall() %>%  
-  add_p() 
+  add_p() %>%  
+  as_gt()
 
 tbl_desc <- tbl_stack(list(tbl_DEF, tbl_LAND), group_header = c("Defensible Space", "Landscape Attributes")) %>% 
-            as_gt() %>%
-              gt::tab_style(
+             gt::tab_style(
               style = gt::cell_text(weight = "bold"),
               locations = gt::cells_row_groups(groups = everything()))
 
+
 #Dexter, this is still rather long - do you think this will work for paper? Should we consider placing the tables side by side or other formatting?
 # save out a big stacked table
-tbl_desc  %>%  
-  gt::gtsave(paste0(getwd(), '/figures/Table_Descript_' , Sys.Date(), '.png'))
+#tbl_desc  %>%  
+#  gt::gtsave(paste0(getwd(), '/figures/Table_Descript_' , Sys.Date(), '.png'))
+#save out individual tables
+tbl_LAND %>%  
+  gt::gtsave(paste0(getwd(), '/figures/Table_Descript_Land' , Sys.Date(), '.png'))
+tbl_DEF %>%  
+  gt::gtsave(paste0(getwd(), '/figures/Table_Descript_Def' , Sys.Date(), '.png'))
 
-
-
-# #### OLDER TEXT ON TABLE - CAN REMOVE?
-# # TODO change order to be grouped by theme. 
-# build %>%  
-#   select(-damage_severity, -build_DINS) %>%  # to be all-inclusive
-#   tbl_summary(by = damage_cat) %>%  
-#   add_overall() %>%  
-#   add_p() %>%  
-#   as_gt() %>% 
-#   gt::gtsave(paste0(getwd(), '/figures/Table_Descript_ALL_VARS' , Sys.Date(), '.html'))
-#  
-# test<-build %>% 
-#   select(build_p_water_10, build_p_water_100) %>% 
-#   tbl_summary (type = list(where(is.numeric) ~ "continuous2"))
-
-# # part 1 - builds a table about defensible space and building and parcel area
-# build %>%
-#   select(damage_binary, parcel_area, build_area, build_min_dist_tree, build_near_build, build_min_dist_shrub, build_has_tree_overhang, ) %>%  # cols of interest
-#   tbl_summary(#by =damage_binary,                                     # create summary table, can turn on or off by damage
-#      digits = all_continuous() ~ 1,
-#      type = all_continuous() ~ "continuous2",       # indicate that you want to print multiple statistics
-#      statistic = list(all_continuous() ~ c("{mean} ({sd})",                            #line 1: mean and SD
-#                                           "{median} ({p25}, {p75})",                   # line 2: median IQR
-#                                           "{min}-{max}"),                              # line 3: min and max
-#          all_categorical() ~ c("{n} / {N} ({p}%)")),
-#       label  = list(                                              # display labels for column names
-#           damage_binary   ~ "Building Destroyed"),
-#         missing_text = "Missing"  )->t1
-# # 
-# 
-# # part 2 - for those buildings with tree overhang, summary of percent overhang and height
-# build %>% 
-#   select(damage_binary, build_has_tree_overhang, build_perc_overhang, build_overhang_ht) %>%  
-#   mutate(build_perc_overhang = build_perc_overhang*100) %>%
-#     filter(build_has_tree_overhang == '1') %>%  
-#         tbl_summary(#by =damage_binary, # create summary table, can turn on or off by damage
-#             digits = all_continuous() ~ 1,
-#             type = all_continuous() ~ "continuous2",       # indicate that you want to print multiple statistics 
-#             statistic = list(all_continuous() ~ c("{mean} ({sd})",                            #line 1: mean and SD
-#                                           "{median} ({p25}, {p75})",                   # line 2: median IQR
-#                                           "{min}-{max}"),                              # line 3: min and max
-#             all_categorical() ~ c("{n} / {N} ({p}%)")),
-#       label  = list(                                              # display labels for column names
-#           damage_binary   ~ "Building Destroyed"),
-#         missing_text = "Missing"  )->t2
-# 
-# tbl_desc <- tbl_stack(list(t1, t2))  #combines tables
-#     
-# 
-# tbl_desc %>% #exports as csv
-#       gtsummary::as_tibble()  %>% 
-#           write_csv(., paste0(getwd(), '/data/Table_Descript_', Sys.Date(), '.csv'))
-#   
-# tbl_desc %>% #exports as image
-#       as_gt() %>%             # convert to gt table
-#            gt::gtsave(., paste0(getwd(), '/figures/Table_Descript_' , Sys.Date(), '.png'))
-# reading back in deviance explained
 
 ```
 

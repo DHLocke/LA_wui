@@ -1,0 +1,34 @@
+Type,Variable,n
+Defensible Space,parcel_Paved_P,3
+Exposure,build_near_dest,3
+Landscape Attributes,build_p_building_100,3
+Landscape Attributes,build_p_building_300,3
+Landscape Attributes,build_p_otherpaved_200,3
+Landscape Attributes,build_p_otherpaved_300,3
+Construction,build_area,2
+Construction,build_EAVES,2
+Construction,build_WINDOWPANE,2
+Defensible Space,parcel_Build_P,2
+Defensible Space,parcel_Can_P,2
+Defensible Space,parcel_Grass_P,2
+Landscape Attributes,build_Mean_builddens,2
+Landscape Attributes,build_Mean_distroad,2
+Landscape Attributes,build_p_building_200,2
+Landscape Attributes,build_p_otherpaved_100,2
+Landscape Attributes,build_p_road_300,2
+Landscape Attributes,build_p_soil_200,2
+Topography,build_Mean_elev_100m,2
+Topography,build_Mean_elev_30m,2
+Topography,build_Mean_slope_100m_DEM,2
+Construction,build_FENCEATTAC,1
+Construction,build_PATIOCOVER,1
+Construction,build_ROOFCONSTR,1
+Construction,build_VENTSCREEN,1
+Defensible Space,build_min_dist_shrub,1
+Landscape Attributes,build_p_grass_100,1
+Landscape Attributes,build_p_grass_200,1
+Landscape Attributes,build_p_grass_300,1
+Landscape Attributes,build_p_road_200,1
+Landscape Attributes,build_p_tree_100,1
+Landscape Attributes,build_p_tree_300,1
+Topography,build_Mean_slope_30m_DEM,1

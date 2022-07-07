@@ -730,8 +730,18 @@ table(top_vars$Model) #checking on, retains top 20 from each
 
 
 top_vars %>% 
-  arrange(Alias) %>% 
-  tidylog::select(Model, Alias) %>% 
+  ungroup() %>% # just because it was stil grouped.. not needed.
+  arrange(Model) %>% # cosmetic, helps with debugging, not really needed
+  tidylog::select(Type, Variable, Alias, Model) %>% # reorder to match example below
+  group_by(Variable) %>%
+  mutate(count = n()) %>% # add count
+  ungroup() %>%
+  pivot_wider(names_from = Model, values_from = Model) %>%
+  # mutate(models = paste0(cf_dins cf_no_dins Univariate, ))
+  unite(cf_dins, cf_no_dins, Univariate, col = 'Models', sep = ', ') |> 
+  mutate(Models = str_remove_all(Models, ', NA')
+         , Models = str_remove_all(Models, 'NA, '))
+  
   # 
   
   # not there yet

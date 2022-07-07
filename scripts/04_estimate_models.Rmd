@@ -730,6 +730,26 @@ table(top_vars$Model) #checking on, retains top 20 from each
 
 
 top_vars %>% 
+  arrange(Alias) %>% 
+  tidylog::select(Model, Alias) %>% 
+  # 
+  
+  # not there yet
+  # want this:
+  #
+  # type         variable name   n-count  models
+  # construction  variable1       3        cfnodins,cfdins, uni
+  # landscape     variable2       2         cfnodins,cfdins
+  # pivot_wider(
+  #   names_from =  ,
+  #   values_from = n
+  # )
+
+
+
+
+
+top_vars %>% 
   group_by(Type, Variable) %>% 
   tally(sort = T)-> top_vars_group #Dexter, wondering if I should try to also output the Models each appear in as another col. Any tips welcome.
 

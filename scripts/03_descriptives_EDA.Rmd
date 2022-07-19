@@ -221,7 +221,20 @@ build %>%
   )
   
 
-#building size by parcel_Build_P
+#distance to building
+build %>% 
+  group_by(damage_cat) %>%     # group data by damage_cat
+  summarise(                                                          
+    build_n       = n(),         # number of rows per group
+    mean_anybldg = mean(build_near_build)  ,#mean
+    median_anybldg = median (build_near_build), #median
+    mean_burnbldg = mean(build_near_dest)  ,#mean
+    median_burnbldg = median (build_near_dest) #median
+  )
+  
+
+
+#damage cat and parcel_Build_P
 build %>% 
   group_by(damage_cat) %>%     # group data by damage_cat
   summarise(                                                          

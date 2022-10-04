@@ -808,7 +808,7 @@ variable_importance %>%
       ),
       labels = c(
           'Construction'
-        , 'Defensible Sapce'
+        , 'Defensible Space'
         , 'Exposure'
         , 'Landscape Attributes'
         , 'Topography'
@@ -851,7 +851,7 @@ variable_importance %>%
        ),
       labels = c(
           'Construction'
-        , 'Defensible Sapce'
+        , 'Defensible Space'
         , 'Exposure'
         , 'Landscape Attributes'
         , 'Topography'
@@ -1664,7 +1664,7 @@ pdp_cf_no_dins_vars %>% data_frame()
   pdp_cf_no_dins_tibble <- tibble(files = dir('output_data/pdp', full.names = TRUE)) %>%
     mutate(file_contents = map(files, ~read_csv(., col_types = cols()))) %>% # col_types = cols() just to be quiet
     unnest(file_contents) %>% 
-    select(-files) %>% 
+    tidylog::select(-files) %>% 
     left_join(variable_importance %>% distinct(iv = Variable, Alias, Label, Type)
               , by = 'iv') %>% 
     mutate(Label = factor(
@@ -1726,7 +1726,7 @@ pdp_cf_no_dins_tibble %>% tabyl(Label))
         )
       , labels = c(
           'Construction'
-        , 'Defensible Sapce'
+        , 'Defensible Space'
         , 'Exposure'
         , 'Landscape Attributes'
         , 'Topography'
@@ -1769,7 +1769,7 @@ pdp_cf_dins_vars
     mutate(file_contents = map(files,~read_csv(., col_types = cols()))) %>% #, col_types = 'fdddf'))) %>% 
     # mutate(file_contents = map(files, ~mutate(., ifelse(is.character(.$iv),))))
     unnest(file_contents) %>% 
-    select(-files) %>% 
+    dplyr::select(-files) %>% 
     left_join(variable_importance %>% distinct(iv = Variable, Alias, Label, Type)
               , by = 'iv') %>% 
     mutate(iv = factor(iv, levels = pdp_cf_dins_vars, labels = pdp_cf_dins_vars, ordered = TRUE)) 
@@ -1837,7 +1837,7 @@ pdp_cf_dins_tibble %>% tabyl(Alias, iv)
       ),
       labels = c(
           'Construction'
-        , 'Defensible Sapce'
+        , 'Defensible Space'
         , 'Exposure'
         , 'Landscape Attributes'
         , 'Topography'
@@ -1874,7 +1874,7 @@ pdp_cf_dins_tibble %>% tabyl(Alias, iv)
       ),
       labels = c(
           'Construction'
-        , 'Defensible Sapce'
+        , 'Defensible Space'
         , 'Exposure'
         , 'Landscape Attributes'
         , 'Topography'
@@ -1909,7 +1909,7 @@ pdp_cf_dins_tibble %>% tabyl(Alias, iv)
       ),
       labels = c(
           'Construction'
-        , 'Defensible Sapce'
+        , 'Defensible Space'
         , 'Exposure'
         , 'Landscape Attributes'
         , 'Topography'
@@ -1946,7 +1946,7 @@ pdp_cf_dins_tibble %>% tabyl(Alias, iv)
 #       ),
 #       labels = c(
 #           'Construction'
-#         , 'Defensible Sapce'
+#         , 'Defensible Space'
 #         , 'Exposure'
 #         , 'Landscape Attributes'
 #         , 'Topography'
@@ -1984,7 +1984,7 @@ pdp_cf_dins_tibble %>% tabyl(Alias, iv)
       ),
       labels = c(
           'Construction'
-        , 'Defensible Sapce'
+        , 'Defensible Space'
         , 'Exposure'
         , 'Landscape Attributes'
         , 'Topography'
@@ -2022,7 +2022,7 @@ pdp_cf_dins_tibble %>% tabyl(Alias, iv)
       ),
       labels = c(
           'Construction'
-        , 'Defensible Sapce'
+        , 'Defensible Space'
         , 'Exposure'
         , 'Landscape Attributes'
         , 'Topography'
@@ -2059,7 +2059,7 @@ pdp_cf_dins_tibble %>% tabyl(Alias, iv)
 #       ),
 #       labels = c(
 #           'Construction'
-#         , 'Defensible Sapce'
+#         , 'Defensible Space'
 #         , 'Exposure'
 #         , 'Landscape Attributes'
 #         , 'Topography'
@@ -2096,7 +2096,7 @@ pdp_cf_dins_tibble %>% tabyl(Alias, iv)
       ),
       labels = c(
           'Construction'
-        , 'Defensible Sapce'
+        , 'Defensible Space'
         , 'Exposure'
         , 'Landscape Attributes'
         , 'Topography'
@@ -2124,7 +2124,8 @@ pdp_cf_no_dins_tibble %>% tabyl(iv)
 #   (e_build_p_otherpaved_200 +  f_build_VENTSCREEN + g_build_min_dist_shrub) + 
 #   plot_annotation(tag_levels = 'A')
 
-
+# space between plots
+# https://github.com/thomasp85/patchwork/issues/46
 insets <- (b_build_WINDOWPANE + c_build_EAVES + d_build_near_dest) / 
   (#e_build_p_otherpaved_200 
     e_build_p_otherpaved_300
@@ -2133,7 +2134,7 @@ insets <- (b_build_WINDOWPANE + c_build_EAVES + d_build_near_dest) /
      )
 
 (importance_pdp_2 <- a_importance_graph_dins + 
-  inset_element(insets, left = 0.3, bottom = 0.05, right = .95, top = .8))
+  inset_element(insets, left = 0.3, bottom = 0.01, right = .99, top = .8))
   
 
 importance_pdp_2 %>%

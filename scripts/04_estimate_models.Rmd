@@ -233,6 +233,10 @@ build_dins %>% drop_na() %>% dim() # not going to be practical for randomForest:
 
 build_dins %>% tabyl(damage_severity)
 
+build_dins |> #tabyl(build_VENTSCREEN)
+  # filter(build_DINS == 1) |> 
+  tabyl(build_VENTSCREEN, damage_severity)
+
 ```
 
 ## 2 fit random forest models

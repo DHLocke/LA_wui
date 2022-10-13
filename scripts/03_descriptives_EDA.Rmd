@@ -678,9 +678,11 @@ build %>%
     tabyl(damage_binary,parcel_Roll_HomeOwnersExemp)%>%
       adorn_percentages() 
 
-
-# summary(lm(damage_binary ~ build_near_dest, build))
-# summary(lm(damage_binary ~ build_near_exp, build))
+# add a binary outcome back in for glms
+build <- build %>%  
+  mutate(damage_binary = ifelse(damage_cat == 'Destroyed', 1, 0))
+summary(lm(damage_binary ~ build_near_dest, build))
+ summary(lm(damage_binary ~ build_near_exp, build))
 
 
 

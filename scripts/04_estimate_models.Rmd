@@ -212,7 +212,7 @@ build %>% tabyl(build_DINS)
 # subset
 build_dins <- build %>% 
   filter(build_DINS == 1) %>% 
-  select(-build_DINS, -damage_cat)
+  tidylog::select(-build_DINS, -damage_cat)
   # dropping the DV for the smaller model
 
 # Miranda, even after dropping the non-DINS data are there are a lot of NA's in the DINS columns
@@ -232,6 +232,11 @@ dim(build_dins)
 build_dins %>% drop_na() %>% dim() # not going to be practical for randomForest::randomForest
 
 build_dins %>% tabyl(damage_severity)
+
+# 10/13/2022 looking at class balance with windows, eaves, and vents
+build_dins %>% 
+  tidylog::select(build_VENTSCREEN,build_WINDOWPANE,build_EAVES) %>% 
+  tabyl(build_VENTSCREEN);tabyl(build_WINDOWPANE)
 
 ```
 

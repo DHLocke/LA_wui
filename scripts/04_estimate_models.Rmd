@@ -236,7 +236,20 @@ build_dins %>% tabyl(damage_severity)
 # 10/13/2022 looking at class balance with windows, eaves, and vents
 build_dins %>% 
   tidylog::select(build_VENTSCREEN,build_WINDOWPANE,build_EAVES) %>% 
-  tabyl(build_VENTSCREEN);tabyl(build_WINDOWPANE)
+  tabyl(build_WINDOWPANE) -> window_prop
+
+build_dins %>% 
+  tidylog::select(build_VENTSCREEN,build_WINDOWPANE,build_EAVES) %>% 
+  tabyl(build_EAVES) -> eaves_prop
+
+build_dins %>% 
+  tidylog::select(build_VENTSCREEN,build_WINDOWPANE,build_EAVES) %>% 
+  tabyl(build_VENTSCREEN)  ->ventscreen_prop
+
+window_prop;eaves_prop;ventscreen_prop
+
+build_dins %>% 
+  filter(build_VENTSCREEN == "Unscreened") %>% View()
 
 ```
 

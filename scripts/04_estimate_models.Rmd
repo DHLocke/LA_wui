@@ -281,7 +281,7 @@ build_gis <- read_sf(dsn = paste0(getwd(), '/data/Outgoing_BuildingSumms_DHL2020
 
 #export only ID Build and Geometries output_data
 build_gis %>% 
-  st_write(., paste0(getwd(), '/output_data/build_gis_ASyphard_', Sys.Date(), '.gpkg')) 
+  st_write(., paste0(getwd(), '/output_data/build_gis_ASyphard_', gsub("-", "_", Sys.Date()), '.gpkg')) 
 
 
 # create final parcel geospatial data
@@ -299,9 +299,11 @@ parcel_gis<-read_sf(dsn = paste0(getwd(), '/data/Outgoing_BuildingSumms_DHL20200
 # 
 # plot(test$Can_P, test$parcel_Can_P) #only one observation is off; thus AIN works to join
 
+
+
 #export parcel data
 parcel_gis %>% 
-  st_write(., paste0(getwd(), '/output_data/parcel_gis_ASyphard_', Sys.Date(), '.gpkg')) 
+  st_write(., paste0(getwd(), '/output_data/parcel_gis_ASyphard_', gsub("-", "_", Sys.Date()), '.gpkg')) 
 
 ```
 

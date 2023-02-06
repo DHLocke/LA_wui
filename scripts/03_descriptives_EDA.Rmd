@@ -355,6 +355,7 @@ tbl_DEF %>%
 # TODO check out error message.
 build %>%
   tidylog::select_if(is_double) %>% # just numerically-encoded variables
+  select(!build_DINS) %>%
   tab_corr(.
            , triangle = 'lower'
            # , file = paste0(getwd(), '/output_data/correlations_',

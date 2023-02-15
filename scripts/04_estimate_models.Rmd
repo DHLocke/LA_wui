@@ -22,7 +22,7 @@ packs <- c('tidyverse'        # a must have!
            , 'tidylog'        # makes things very verbose for 2x checking 
            , 'magrittr'       # all of the pipes
            , 'janitor'        # cleans things up
-           # , 'sf'             # simple features
+           , 'sf'             # simple features
            # , 'mapview'        # quick webmaps for zoom/pan viz
            #'tidycensus',     # access to Census data in a tidy way
            #'party',          # random forests
@@ -170,10 +170,10 @@ build %>%
 (build_gis <- read_sf(dsn = paste0(getwd(),
                                   '/data/Outgoing_BuildingSumms_DHL20200423.gdb'),
                      layer = 'Buildings_ParcelID_DINS',
-                     quiet = FALSE) |> 
-  tidylog::select (ID_Build) |> 
-  distinct(ID_Build, Shape) |> 
-  right_join(build |> select(ID_Build), by = 'ID_Build')) # filtering GIS to match table
+                     quiet = FALSE)  %>%  
+  tidylog::select (ID_Build) %>%  
+  distinct(ID_Build, Shape) %>%  
+  right_join(build %>%  select(ID_Build), by = 'ID_Build')) # filtering GIS to match table
 
 ```
 
@@ -316,7 +316,7 @@ parcel_gis %>%
 ```{r}
 
 # pretty table for pub
-build |> 
+build %>%  
   tidylog::select_if(is_double) %>% # just numerically-encoded variables
   select(!build_DINS & !ID_Build) %>%
   sjPlot::tab_corr(.
@@ -339,8 +339,8 @@ build |>
   arrange(desc(value)))
 
 # find large correlations
-cors_tibble |> 
-  filter(value > .7) #|> View() # 70, highly correlated pairs, oof.
+cors_tibble %>%  
+  filter(value > .7) #%>%  View() # 70, highly correlated pairs, oof.
 
 # many are from the same land cover variable but with a different buffer distance
 # lets fit univariate glms and use the predictor per group (same var diff buffer)
@@ -423,28 +423,28 @@ var_redundancy_group <-
 #### check deviance of individual predictors
 ```{r}
 
-# (sample_ids <- build |> sample_n(1000) |> pull(ID_Build)) # creates dispersed data.. 
-(sample_ids <- build |> slice(1:1500) |> pull(ID_Build))
-build_gis |> filter(ID_Build %in% sample_ids) |> mapview::mapview()
+# (sample_ids <- build %>%  sample_n(1000) %>%  pull(ID_Build)) # creates dispersed data.. 
+(sample_ids <- build %>%  slice(1:1500) %>%  pull(ID_Build))
+build_gis %>%  filter(ID_Build %in% sample_ids) %>%  mapview::mapview()
 
 library(sfdep)
 # full_files = map(full_files, ~filter(., state == 'PA')),
 tic(); glm_spatial_diag <- 
-  build |> 
-  tibble() |> # for sanity
-  select(!c(damage_cat, damage_severity, build_DINS)) |> # drop distracting cols
-  select(where(is.numeric)) |>                           # drop categorical preds (no cors)
-  # filter(ID_Build %in% sample_ids) |>                    # filter down to test
-  pivot_longer(cols = !c(ID_Build, damage_binary)) |>    # reshape
-  left_join(build_gis, by = 'ID_Build') |>               # make spatial
-  st_as_sf() |>                                          # make sf
-  group_by(name) |>                                      # package up
-  nest() |> 
-  ungroup() |> 
+  build %>%  
+  tibble() %>%  # for sanity
+  select(!c(damage_cat, damage_severity, build_DINS)) %>%  # drop distracting cols
+  select(where(is.numeric)) %>%                            # drop categorical preds (no cors)
+  # filter(ID_Build %in% sample_ids) %>%                     # filter down to test
+  pivot_longer(cols = !c(ID_Build, damage_binary)) %>%     # reshape
+  left_join(build_gis, by = 'ID_Build') %>%                # make spatial
+  st_as_sf() %>%                                           # make sf
+  group_by(name) %>%                                       # package up
+  nest() %>%  
+  ungroup() %>%  
   mutate(  data        = map(data,  ~drop_na(.x))
          , model       = map(data,  ~glm(damage_binary ~ value, family = binomial(), .x))
-         , nbs         = map(data,  ~sfdep::st_knn(sf::st_geometry(.x), 5)),
-         , wts         = map(nbs,   ~st_weights(.x, style = 'W', allow_zero = TRUE), .progress = TRUE)
+         , nbs         = map(data,  ~sfdep::st_knn(sf::st_geometry(.x), 5)), #Feb 14 2023 doesn't run - no applicable method for 'st_geometry' applied to an object of class "c('tbl_df', 'tbl', 'data.frame')"
+         , wts         = map(nbs,   ~st_weights(.x, style = 'W', allow_zero = TRUE), .progress = TRUE) 
          , performance = map(model, ~performance::performance(.x))
          , dsqr        = map(model, ~Dsquared(.x))
          , resids      = map(model, ~residuals(.x))
@@ -457,22 +457,22 @@ tic(); glm_spatial_diag <-
 glm_spatial_diag # handsome object!
 
 # get performance metrics
-glm_spatial_diag |> 
-  select(name, dsqr, performance) |> 
-  unnest(dsqr) |> 
+glm_spatial_diag %>%  
+  select(name, dsqr, performance) %>%  
+  unnest(dsqr) %>%  
   unnest(performance) # helpful
 
 # update deviance explained 
-glm_spatial_diag |> 
-  select(name, dsqr, data) |> 
-  mutate(n = map(data, ~nrow(.))) |> 
-  select(-data) |> 
-  unnest(dsqr) |> 
-  unnest(n) |> 
-  mutate(`Deviance Explained` = 100*dsqr) |> 
-  select(`Variable name` = name, n, `Deviance Explained`) |> 
+glm_spatial_diag %>%  
+  select(name, dsqr, data) %>%  
+  mutate(n = map(data, ~nrow(.))) %>%  
+  select(-data) %>%  
+  unnest(dsqr) %>%  
+  unnest(n) %>%  
+  mutate(`Deviance Explained` = 100*dsqr) %>%  
+  select(`Variable name` = name, n, `Deviance Explained`) %>%  
   right_join(
-    read_csv(paste0(getwd(), '/data/Table_Deviance_Explained_2022-06-13.csv')) |> 
+    read_csv(paste0(getwd(), '/data/Table_Deviance_Explained_2022-06-13.csv')) %>%  
       rename(old_n = n)
       # mutate(Type = fct_recode(factor(Type), 
       #                         Exposure               = 'EXP'
@@ -481,23 +481,23 @@ glm_spatial_diag |>
       #                       , 'Landscape Attributes' = 'LAND'
       #                       , Topography             = 'TOPO')
     , by = 'Variable name'
-    ) |> #View()
+    ) %>%  #View()
   mutate(`Deviance Explained (%)` = round(ifelse(is.na(`Deviance Explained`), Deviance, `Deviance Explained`), 2)
          , n= ifelse(is.na(n), old_n, n)
-         ) |> 
-  select(Theme = Type, `Variable name`, Description = Alias, `Deviance Explained (%)`, n, Source) |> 
-  arrange(Theme) #|> 
+         ) %>%  
+  select(Theme = Type, `Variable name`, Description = Alias, `Deviance Explained (%)`, n, Source) %>%  
+  arrange(Theme) #%>%  
   # write_csv(paste0(getwd(), '/data/Table_Deviance_Explained_2023-01-01.csv'))
 
 
 # get performance metrics, among (potentially) redundant predictors
 (top_perform <- 
-  glm_spatial_diag |>
-  select(name, dsqr, performance) |> 
-  unnest(dsqr) |> 
-  unnest(performance) |> 
-  left_join(var_redundancy_group, by = 'name') |> 
-  group_by(group) |> 
+  glm_spatial_diag %>% 
+  select(name, dsqr, performance) %>%  
+  unnest(dsqr) %>%  
+  unnest(performance) %>%  
+  left_join(var_redundancy_group, by = 'name') %>%  
+  group_by(group) %>%  
   summarise(  max_d    = name[which.max(dsqr)]
             , max_r    = name[which.max(R2_Tjur)]
             , min_AIC  = name[which.min(AIC)]
@@ -508,10 +508,10 @@ glm_spatial_diag |>
 # get winning vars
 (vars_to_include <- 
   bind_rows(
-    var_redundancy_group |> # within group best
-      filter(name %in% top_perform$max_d) |> # using deviance explained, could use other metric..
+    var_redundancy_group %>%  # within group best
+      filter(name %in% top_perform$max_d) %>%  # using deviance explained, could use other metric..
       filter(!is.na(group))
-    , var_redundancy_group |> # those without a group
+    , var_redundancy_group %>%  # those without a group
       filter(is.na(group))
     )
   )
@@ -532,30 +532,30 @@ glm_spatial_diag |>
   )
 
 # find large correlations
-cors_tibble_reduced |> 
-  filter(value > .7) #|> View() # parcel_Build_P, build_p_building_300 ugh
+cors_tibble_reduced %>%  
+  filter(value > .7) #%>%  View() # parcel_Build_P, build_p_building_300 ugh
 
-glm_spatial_diag |>
-  filter(name == 'parcel_Build_P' | name == 'build_p_building_300') |> 
-  select(name, dsqr, performance) |> 
-  unnest(performance) |> 
+glm_spatial_diag %>% 
+  filter(name == 'parcel_Build_P' | name == 'build_p_building_300') %>%  
+  select(name, dsqr, performance) %>%  
+  unnest(performance) %>%  
   unnest(dsqr) 
 
 # # cut build_p_building_300 since it has lower dsqr, higher AIC, AICc, BIC and lower R2
 vars_to_include <-
-  vars_to_include |>
+  vars_to_include %>% 
   filter(name != 'build_p_building_300')
 
 # are the residual spatially autocorrelated? 
-glm_spatial_diag |>  
-  select(name, mi) |>
-  unnest(mi) |> 
-  rename(stat = rowname, value = unlist..x.) |> 
-  type_convert() |> 
-  pivot_wider(names_from = stat, values_from = value) |> 
-  left_join(vars_to_include |> select(name) |> mutate(keep = 1)
-            , by = 'name') |> 
-  # arrange(desc(`estimate.Moran I statistic`)) |>
+glm_spatial_diag %>%   
+  select(name, mi) %>% 
+  unnest(mi) %>%  
+  rename(stat = rowname, value = unlist..x.) %>%  
+  type_convert() %>%  
+  pivot_wider(names_from = stat, values_from = value) %>%  
+  left_join(vars_to_include %>%  select(name) %>%  mutate(keep = 1)
+            , by = 'name') %>%  
+  # arrange(desc(`estimate.Moran I statistic`)) %>% 
   ggplot(aes(`estimate.Moran I statistic`, reorder(name, `estimate.Moran I statistic`))) +
   geom_col(aes(fill = keep)) + 
   theme_bw(12) + 
@@ -566,12 +566,12 @@ glm_spatial_diag |>
 # # what does a maximal glm look like?
 # max_glm <- glm(  damage_binary ~ .
 #                , family = binomial()
-#                , data = build |> select(damage_binary, vars_to_include$name) |> 
+#                , data = build %>%  select(damage_binary, vars_to_include$name) %>%  
 #                  drop_na())
 # 
-# max_glm |> sjPlot::plot_model() + xlim(.5, 2)
+# max_glm %>%  sjPlot::plot_model() + xlim(.5, 2)
 # 
-# max_glm |> performance::performance() # ~84% accuracy?
+# max_glm %>%  performance::performance() # ~84% accuracy?
 
 ```
 
@@ -592,10 +592,10 @@ spat <-
     rowid = 1:344,
     lon = runif(344, 38.753907, 39.720585),
     lat = runif(344, -77.293825, -75.866819)
-    ) |> 
+    ) %>%  
   st_as_sf(coords = c('lat', 'lon'), crs = st_crs(4326))
 
-spat |> mapview::mapview() # confirmed, random points in Baltimore region
+spat %>%  mapview::mapview() # confirmed, random points in Baltimore region
 
 # in the real project we have waaay too many redundant predictors. We are doing bivariate regression
 # so that we can group predictors thematically, and pick the most predictive in that group. 
@@ -604,16 +604,16 @@ spat |> mapview::mapview() # confirmed, random points in Baltimore region
 # circumstances. Thanks for your interest and for taking a look
 
 glm_spatial_diag <- 
-  dat |> 
-  select(sex, where(is.numeric)) |>            # exclude categorical data
-  mutate(sex = ifelse(sex == 'male', 1, 0)) |> # dependent variable in logistic reg
-  rowid_to_column() |>                         # pivot prep 
-  pivot_longer(cols = !c(rowid, sex)) |> 
-  left_join(spat, by = 'rowid') |>             # get spatial data joined in
-  st_as_sf() |>                                # make sf
-  group_by(name) |>                            # now we have packets of data in "data" listcol
-  nest() |>                                    # rowid, dependent, independent, coords
-  ungroup() |>                                 # and the dependent variable is in the "name" col
+  dat %>%  
+  select(sex, where(is.numeric)) %>%             # exclude categorical data
+  mutate(sex = ifelse(sex == 'male', 1, 0)) %>%  # dependent variable in logistic reg
+  rowid_to_column() %>%                          # pivot prep 
+  pivot_longer(cols = !c(rowid, sex)) %>%  
+  left_join(spat, by = 'rowid') %>%              # get spatial data joined in
+  st_as_sf() %>%                                 # make sf
+  group_by(name) %>%                             # now we have packets of data in "data" listcol
+  nest() %>%                                     # rowid, dependent, independent, coords
+  ungroup() %>%                                  # and the dependent variable is in the "name" col
   mutate(  data        = map(data,  ~drop_na(.x))
          , model       = map(data,  ~glm(sex ~ value, family = binomial(), .x))
          , nbs         = map(data,  ~sfdep::st_knn(sf::st_geometry(.x), 5)),
@@ -625,25 +625,25 @@ glm_spatial_diag <-
 
 
 # are the residual spatially autocorrelated? (no because the runif coords to make fake spatial data)
-glm_spatial_diag |> 
-  select(name, mi) |> 
-  mutate(mi = map(mi, broom::tidy)) |> 
+glm_spatial_diag %>%  
+  select(name, mi) %>%  
+  mutate(mi = map(mi, broom::tidy)) %>%  
   unnest_wider(mi)
 
 glm_spatial_diag # handsome
 
 # get performance metrics
-glm_spatial_diag |> 
-  select(name, performance) |> 
+glm_spatial_diag %>%  
+  select(name, performance) %>%  
   unnest(performance) # helpful
 
 # are the residual spatially autocorrelated? (no because the runif coords to make fake spatial data)
-glm_spatial_diag |> 
-  select(name, mi) |> 
-  unnest(mi) |> 
-  rename(stat = rowname, value = unlist..x.) |> 
-  type_convert() |> 
-  pivot_wider(names_from = stat, values_from = value) |> 
+glm_spatial_diag %>%  
+  select(name, mi) %>%  
+  unnest(mi) %>%  
+  rename(stat = rowname, value = unlist..x.) %>%  
+  type_convert() %>%  
+  pivot_wider(names_from = stat, values_from = value) %>%  
   arrange(desc(`estimate.Moran I statistic`))
 
 ```
@@ -667,7 +667,7 @@ n_tree <- 500 # May 20, 2022 because we want graphs this centry
 # tic(); rf_no_dins <- randomForest::randomForest(
 #   damage_cat ~ .
 #   # need full dataset, can't keep NA's
-#   , data = build_no_dins |> select(damage_cat, vars_to_include$name) |> drop_na()
+#   , data = build_no_dins %>%  select(damage_cat, vars_to_include$name) %>%  drop_na()
 #   , type = 'classification' # not regression
 #   , mtry = 5
 #   , ntree = n_tree # 10 ~.5 seconds,100 ~5s, 200 ~7.5s, 3 ~12s, ... 5 ~23s 
@@ -681,7 +681,7 @@ n_tree <- 500 # May 20, 2022 because we want graphs this centry
 # # random forest via party::cforest which accepts missing data and is slower
 # tic(); cf_no_dins <- party::cforest(
 #   damage_cat ~ .
-  # , data = build_no_dins |>                   # notice no drop_na here
+  # , data = build_no_dins %>%                    # notice no drop_na here
   #   select(damage_cat, vars_to_include$name)  # this is new based on Todd Hawbaker's feedback
 #   , controls =
 #     cforest_control(
@@ -718,7 +718,7 @@ n_tree <- 500
 # random forest via party::cforest which accepts missing data and is slower
 tic(); cf_dins <- party::cforest(
   damage_severity ~ . # severity, not binary
-  , data = build_dins |>  # notice build_dins here, no "no" in the object name.
+  , data = build_dins %>%   # notice build_dins here, no "no" in the object name.
     select(  damage_severity
            , build_DECKPORCHO
            , build_EAVES
@@ -754,7 +754,7 @@ build_dins_binary <- build %>%
 # random forest via party::cforest which accepts missing data and is slower
 tic(); cf_dins_binary <- party::cforest(
   damage_cat ~ . # binary
-  , data = build_dins_binary |>  # notice build_dins_binary here, no "no" in the object name.
+  , data = build_dins_binary %>%   # notice build_dins_binary here, no "no" in the object name.
     select(  damage_cat
            , build_DECKPORCHO
            , build_EAVES
@@ -792,14 +792,14 @@ load('../Massive_forests/cf_dins_2022-02-23.Rdata') #
 
 # tic(); cf_no_dins_ll <- party::cforest(
 #   damage_cat ~ .
-#   , data = build_no_dins |>                                 # notice no drop_na here
-#     select(ID_Build, damage_cat, vars_to_include$name) |>   # this is new based on Todd Hawbaker's feedback
+#   , data = build_no_dins %>%                                  # notice no drop_na here
+#     select(ID_Build, damage_cat, vars_to_include$name) %>%    # this is new based on Todd Hawbaker's feedback
 #     left_join(                                              # fold the x/y coordinates in 
-#       build_gis |>
+#       build_gis %>% 
 #         st_centroid() %>% # get building centroids
 #         cbind(., st_coordinates(.)) %>%
 #         st_drop_geometry()
-#       , by = 'ID_Build') |> 
+#       , by = 'ID_Build') %>%  
 #     select(-ID_Build)
 #   , controls =
 #     cforest_control(
@@ -853,7 +853,7 @@ build_no_dins_ll_accuracy_table %>%
 
 # tic(); vi_cf_no_dins_ll <- vi(cf_no_dins_ll, scale = TRUE) %>% mutate(Model = 'cf_no_dins_ll', n_tree = n_tree); toc() # ~4 mins
 
-# vi_cf_no_dins_ll |> write_csv(paste0(getwd(), '/output_data/variable_importance_ll_', Sys.Date(), '.csv'))
+# vi_cf_no_dins_ll %>%  write_csv(paste0(getwd(), '/output_data/variable_importance_ll_', Sys.Date(), '.csv'))
 
 (vi_cf_no_dins_ll <- read_csv('output_data/variable_importance_ll_2023-02-02.csv'))
 ```
@@ -865,7 +865,7 @@ build_no_dins_ll_accuracy_table %>%
 
 tic(); cf_dins_binary_ll <- party::cforest(
   damage_cat ~ .
-  , data = build_dins_binary |>         # notice build_dins_binary here, no "no" in the object name
+  , data = build_dins_binary %>%          # notice build_dins_binary here, no "no" in the object name
     select(ID_Build
            , damage_cat
            , vars_to_include$name       # this is new based on Todd Hawbaker's feedback
@@ -879,13 +879,13 @@ tic(); cf_dins_binary_ll <- party::cforest(
            , build_VEGCLEARAN
            , build_VENTSCREEN
            , build_WINDOWPANE
-           ) |>   
+           ) %>%    
     left_join(                           # fold the x/y coordinates in 
-      build_gis |>
+      build_gis %>% 
         st_centroid() %>%                # get building centroids
         cbind(., st_coordinates(.)) %>%
         st_drop_geometry()
-      , by = 'ID_Build') |> 
+      , by = 'ID_Build') %>%  
     select(-ID_Build)
   , controls =
     cforest_control(
@@ -944,7 +944,7 @@ build_dins_ll_accuracy_table %>%
 # tic(); vi_cf_dins_ll <- vi(cf_dins_binary_ll, scale = TRUE) %>% 
 #   mutate(Model = 'cf_dins_ll', n_tree = n_tree); toc() # ~40 seconds
 # 
-# vi_cf_dins_ll |>
+# vi_cf_dins_ll %>% 
 #   write_csv(paste0(getwd(), '/output_data/variable_importance_vi_cf_dins_ll_', Sys.Date(), '.csv'))
 
 (vi_cf_no_dins_ll <- read_csv('output_data/variable_importance_vi_cf_dins_ll_2023-02-03.csv'))
@@ -1226,33 +1226,33 @@ predict_cf_dins_binary_probs_ll # DINS, WITH lat/long predictions
 
 # get residuals for model with and without lat long as predictors 
 (spat_resids <- 
-  build_no_dins |> 
-  tibble() |> 
-  select(ID_Build, damage_binary) |> 
-  left_join(build_gis, by = 'ID_Build') |>               # make spatial
-  st_as_sf() |> 
+  build_no_dins %>%  
+  tibble() %>%  
+  select(ID_Build, damage_binary) %>%  
+  left_join(build_gis, by = 'ID_Build') %>%                # make spatial
+  st_as_sf() %>%  
   bind_cols(
-    predict_cf_no_dins_prob |> 
-      unlist() |> 
-      tibble() |> 
-      select(pred_prob_dest = `unlist(predict_cf_no_dins_prob)`) |> 
-      mutate(row = rep(1: 10901, each = 2)) |> # pay attention, a little dangerous.
-      group_by(row) |> 
-      slice(1) |> 
-      ungroup() |> 
+    predict_cf_no_dins_prob %>%  
+      unlist() %>%  
+      tibble() %>%  
+      select(pred_prob_dest = `unlist(predict_cf_no_dins_prob)`) %>%  
+      mutate(row = rep(1: 10901, each = 2)) %>%  # pay attention, a little dangerous.
+      group_by(row) %>%  
+      slice(1) %>%  
+      ungroup() %>%  
       select(pred_prob_dest)
     # ,
     #   
-    #   predict_cf_no_dins_prob_ll |> 
-    #   unlist() |> 
-    #   tibble() |> 
-    #   select(pred_prob_dest_ll = `unlist(predict_cf_no_dins_prob_ll)`) |> 
-    #   mutate(row = rep(1: 10901, each = 2)) |> # pay attention, a little dangerous.
-    #   group_by(row) |> 
-    #   slice(1) |> 
-    #   ungroup() |> 
+    #   predict_cf_no_dins_prob_ll %>%  
+    #   unlist() %>%  
+    #   tibble() %>%  
+    #   select(pred_prob_dest_ll = `unlist(predict_cf_no_dins_prob_ll)`) %>%  
+    #   mutate(row = rep(1: 10901, each = 2)) %>%  # pay attention, a little dangerous.
+    #   group_by(row) %>%  
+    #   slice(1) %>%  
+    #   ungroup() %>%  
     #   select(pred_prob_dest_ll)
-    ) |> 
+    ) %>%  
   # mutate(resid = damage_binary - pred_prob_dest)) # NOT CORRECT
   # https://stats.stackexchange.com/questions/166585/pearson-vs-deviance-residuals-in-logistic-regression
   # sign(y-pred_p) * ifelse(y==1,sqrt(-2*log(pred_p)),sqrt(-2*log(1-pred_p)))
@@ -1269,18 +1269,18 @@ predict_cf_dins_binary_probs_ll # DINS, WITH lat/long predictions
 
 
 # MORANS I OF RESIDUALS  
-spat_resids |> 
-  st_drop_geometry() |>
-  select(ID_Build, starts_with('deviance')) |> 
-  pivot_longer(-ID_Build) |> 
+spat_resids %>%  
+  st_drop_geometry() %>% 
+  select(ID_Build, starts_with('deviance')) %>%  
+  pivot_longer(-ID_Build) %>%  
   ggplot(aes(value)) + 
   geom_histogram() + 
   facet_wrap(~name)
   
-# spat_resids |> mapview::mapview(zcol = 'deviance_residuals')
+# spat_resids %>%  mapview::mapview(zcol = 'deviance_residuals')
 
 spat_resids <- 
-  spat_resids |> 
+  spat_resids %>%  
   mutate(
       nbs = sfdep::st_knn(sf::st_geometry(Shape), 5)
     , wts = sfdep::st_weights(nbs, style = 'W', allow_zero = TRUE)
@@ -1342,24 +1342,24 @@ maxd <- 50
 
 # put the residuals into a grid or two dimmensional matrix
 resid_xy <- 
-  spat_resids |> 
+  spat_resids %>%  
   st_centroid() %>% # get building centroids
   cbind(., st_coordinates(.)) %>%
-  st_drop_geometry() |> 
-  mutate(x = X / 1000, y = Y / 1000) |> 
+  st_drop_geometry() %>%  
+  mutate(x = X / 1000, y = Y / 1000) %>%  
   select(resid = deviance_residuals, x, y)
 
 # resid_xy <- 
-#   spat_resids |> 
+#   spat_resids %>%  
 #   st_centroid() %>% # get building centroids
 #   cbind(., st_coordinates(.)) %>%
-#   st_drop_geometry() |> 
-#   mutate(x = X / 1000, y = Y / 1000) |> 
+#   st_drop_geometry() %>%  
+#   mutate(x = X / 1000, y = Y / 1000) %>%  
 #   select(resid = deviance_residuals_ll, x, y) # HAS LAT LONG
 
 # subsample residuals
-n <- resid_xy |> nrow()
-samp_res_xy <- resid_xy |> sample_n(1000)
+n <- resid_xy %>%  nrow()
+samp_res_xy <- resid_xy %>%  sample_n(1000)
 
 geo_resids <- as.geodata(samp_res_xy, coords.col = 2:3, data.col = 1)
 
@@ -1388,33 +1388,33 @@ Hmisc::errbar(geo_resid_var$u, geo_resid_var$v, yplus, yminus, add=T)
 # again for DINS
 # get residuals for model with and without lat long as predictors 
 (spat_resids_dins <- 
-  build_dins |> 
-  tibble() |> 
-  select(ID_Build, damage_binary) |> 
-  left_join(build_gis, by = 'ID_Build') |>               # make spatial
-  st_as_sf() |> 
+  build_dins %>%  
+  tibble() %>%  
+  select(ID_Build, damage_binary) %>%  
+  left_join(build_gis, by = 'ID_Build') %>%                # make spatial
+  st_as_sf() %>%  
   bind_cols(
-    predict_cf_dins_binary_probs |> 
-      unlist() |> 
-      tibble() |> 
-      select(pred_prob_dest = `unlist(predict_cf_dins_binary_probs)`) |> 
-      mutate(row = rep(1: 1485, each = 2)) |> # pay attention, a little dangerous.
-      group_by(row) |> 
-      slice(1) |> 
-      ungroup() |> 
+    predict_cf_dins_binary_probs %>%  
+      unlist() %>%  
+      tibble() %>%  
+      select(pred_prob_dest = `unlist(predict_cf_dins_binary_probs)`) %>%  
+      mutate(row = rep(1: 1485, each = 2)) %>%  # pay attention, a little dangerous.
+      group_by(row) %>%  
+      slice(1) %>%  
+      ungroup() %>%  
       select(pred_prob_dest)
     # ,
     #   
-    #   predict_cf_dins_binary_probs_ll |> 
-    #   unlist() |> 
-    #   tibble() |> 
-    #   select(pred_prob_dest_ll = `unlist(predict_cf_dins_binary_probs_ll)`) |> 
-    #   mutate(row = rep(1: 1485, each = 2)) |> # pay attention, a little dangerous.
-    #   group_by(row) |> 
-    #   slice(1) |> 
-    #   ungroup() |> 
+    #   predict_cf_dins_binary_probs_ll %>%  
+    #   unlist() %>%  
+    #   tibble() %>%  
+    #   select(pred_prob_dest_ll = `unlist(predict_cf_dins_binary_probs_ll)`) %>%  
+    #   mutate(row = rep(1: 1485, each = 2)) %>%  # pay attention, a little dangerous.
+    #   group_by(row) %>%  
+    #   slice(1) %>%  
+    #   ungroup() %>%  
     #   select(pred_prob_dest_ll)
-    ) |> 
+    ) %>%  
   # mutate(resid = damage_binary - pred_prob_dest)) # NOT CORRECT
   # https://stats.stackexchange.com/questions/166585/pearson-vs-deviance-residuals-in-logistic-regression
   # sign(y-pred_p) * ifelse(y==1,sqrt(-2*log(pred_p)),sqrt(-2*log(1-pred_p)))
@@ -1432,16 +1432,16 @@ Hmisc::errbar(geo_resid_var$u, geo_resid_var$v, yplus, yminus, add=T)
 
 # put the residuals into a grid or two dimmensional matrix
 resid_xy_dins <- 
-  spat_resids_dins |> 
+  spat_resids_dins %>%  
   st_centroid() %>% # get building centroids
   cbind(., st_coordinates(.)) %>%
-  st_drop_geometry() |> 
-  mutate(x = X / 1000, y = Y / 1000) |> 
+  st_drop_geometry() %>%  
+  mutate(x = X / 1000, y = Y / 1000) %>%  
   select(resid = deviance_residuals, x, y)
 
 # subsample residuals
-n <- resid_xy_dins |> nrow()
-samp_res_xy_dins <- resid_xy_dins |> sample_n(1000)
+n <- resid_xy_dins %>%  nrow()
+samp_res_xy_dins <- resid_xy_dins %>%  sample_n(1000)
 
 geo_resids <- as.geodata(samp_res_xy_dins, coords.col = 2:3, data.col = 1)
 
@@ -1523,10 +1523,10 @@ Hmisc::errbar(geo_resid_var$u, geo_resid_var$v, yplus, yminus, add=T)
 
 
 (variable_importance <- 
-    read_csv('output_data/variable_importance_2023-02-03.csv') |> 
-    group_by(Model) |> 
-    mutate(rank = row_number(Model)) |> 
-    ungroup() |> 
+    read_csv('output_data/variable_importance_2023-02-03.csv') %>%  
+    group_by(Model) %>%  
+    mutate(rank = row_number(Model)) %>%  
+    ungroup() %>%  
     left_join(old_labs, by = 'Variable')
   )
 
@@ -2536,7 +2536,7 @@ pdp_cf_no_dins_vars
 pdp_cf_no_dins_vars %>% data_frame()
 
 (
-  pdp_cf_no_dins_tibble <- tibble(files = dir('output_data/pdp', full.names = TRUE)) |> 
+  pdp_cf_no_dins_tibble <- tibble(files = dir('output_data/pdp', full.names = TRUE)) %>%  
     filter(files != 'output_data/pdp/dins') %>%
     mutate(file_contents = map(files, ~read_csv(., col_types = cols()))) %>% # col_types = cols() just to be quiet
     unnest(file_contents) %>% 
@@ -2585,7 +2585,7 @@ pdp_cf_no_dins_vars %>% data_frame()
       , ordered = TRUE)
       ) %>%
     # not really need anymore because we use Label instead
-    mutate(iv = factor(iv, levels = pdp_cf_no_dins_vars, labels = pdp_cf_no_dins_vars, ordered = TRUE)) |> 
+    mutate(iv = factor(iv, levels = pdp_cf_no_dins_vars, labels = pdp_cf_no_dins_vars, ordered = TRUE)) %>%  
     droplevels()
   )
 
@@ -2594,7 +2594,7 @@ pdp_cf_no_dins_tibble %>% tabyl(iv)
 pdp_cf_no_dins_tibble %>% tabyl(Label)
 # pdp_cf_no_dins_tibble %>% tabyl(x)
 bind_cols(pdp_cf_no_dins_tibble %>% tabyl(iv),  
-pdp_cf_no_dins_tibble %>% tabyl(Label) |> drop_na())
+pdp_cf_no_dins_tibble %>% tabyl(Label) %>%  drop_na())
 
 (
   b_g_build <- pdp_cf_no_dins_tibble %>% 

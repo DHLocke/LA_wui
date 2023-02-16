@@ -449,7 +449,7 @@ tic(); glm_spatial_diag <-
   ungroup() %>%  
   mutate(  data        = map(data,  ~drop_na(.x))
          , model       = map(data,  ~glm(damage_binary ~ value, family = binomial(), .x))
-         , nbs         = map(data,  ~sfdep::st_knn(sf::st_geometry(.x), 5)), #Feb 14 2023 doesn't run - no applicable method for 'st_geometry' applied to an object of class "c('tbl_df', 'tbl', 'data.frame')"
+         , nbs         = map(data,  ~sfdep::st_knn(sf::st_geometry(.x), 5))
          , wts         = map(nbs,   ~st_weights(.x, style = 'W', allow_zero = TRUE), .progress = TRUE) 
          , performance = map(model, ~performance::performance(.x))
          , dsqr        = map(model, ~Dsquared(.x))

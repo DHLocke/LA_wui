@@ -338,6 +338,12 @@ build %>%
   filter(var1 != var2) %>%
   arrange(desc(value)))
 
+# cors_tibble |> 
+#   write_csv(
+#     paste0(getwd(), '/output_data/correlations_',
+#            gsub('[[:punct:]]', '_', Sys.time()), '.csv')
+#     )
+
 # find large correlations
 cors_tibble %>%  
   filter(value > .7) #%>%  View() # 70, highly correlated pairs, oof.

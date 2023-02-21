@@ -579,6 +579,20 @@ glm_spatial_diag %>%
 # 
 # max_glm %>%  performance::performance() # ~84% accuracy?
 
+
+# table for paper with only pruned variables
+# Feb 21 2023
+# full_table <- 
+#      read_csv(paste0(getwd(), '/data/Table_Deviance_Explained_2023-02-15.csv'))  %>%  #latest deviance explained
+#     left_join(vars_to_include %>% #add in variables to include
+#            mutate (small_table = 1) %>% 
+#                 select(name, small_table), by = c('Variable name' = 'name')) %>% #join and retain all
+#             mutate ( small_table = if_else (Theme == 'CON', 1, small_table)) #recode so that all CON (DINS materials data) are retained for small table
+# 
+# #export this back out
+# full_table %>% 
+#   write_csv(paste0(getwd(), '/data/Full_Table_Deviance_Explained_', Sys.Date(), '.csv'))
+#             
 ```
 
 
@@ -1587,55 +1601,56 @@ Why are we doing this?
 # assumes already read in 
 tab_labs2 <- 
 # read_csv(paste0(getwd(), '/data/Table_Deviance_Explained_2022-06-13.csv'))
-  read_csv(paste0(getwd(), '/data/Table_Deviance_Explained_2023-01-01.csv'))
+  read_csv(paste0(getwd(), '/data/Table_Deviance_Explained_2023-02-15.csv'))
 
 
-top_n <- 20         # set n (can revise to 20 or any other value greater than zero and less than 71)
+# top_n <- 20         # set n (can revise to 20 or any other value greater than zero and less than 71)
 top_n <- 21         # we now only have 21.. so 
 
 variable_importance %>% 
   group_by(Model) %>%
   filter(rank <= top_n) %>% 
   filter(Model != 'cf_dins_binary') %>% 
-  tidylog::select(Variable, Model, Label, Type)  -> top_pdp
+  mutate (Description = Label,
+          Theme = Type) %>% 
+  tidylog::select(Variable, Model, Description, Theme)  -> top_pdp
 
 tab_labs2 %>% 
-  mutate(Type = fct_recode(factor(Type), 
-                              Exposure               = 'EXP'
-                            , Construction           = 'CON'
-                            , 'Defensible Space'     = 'DEF'
-                            , 'Landscape Attributes' = 'LAND'
-                            , Topography             = 'TOPO')
-          ) %>% 
+  # mutate(Type = fct_recode(factor(Type), 
+  #                             Exposure               = 'EXP'
+  #                           , Construction           = 'CON'
+  #                           , 'Defensible Space'     = 'DEF'
+  #                           , 'Landscape Attributes' = 'LAND'
+  #                           , Topography             = 'TOPO')
+  #         ) %>% 
   mutate(Model = "Univariate") %>%  
   rename(Variable= 'Variable name')  %>% 
-  arrange(desc(Deviance)) %>% 
+  arrange(desc('Deviance Explained (%)')) %>% 
   slice(1:top_n) %>% 
-  tidylog::select(Variable, Model, Alias, Type) ->top_uni
+  tidylog::select(Variable, Model, Description, Theme) ->top_uni
 
 bind_rows(top_pdp, top_uni) -> top_vars
 
-table(top_vars$Type) #checking on, types are all correct
+table(top_vars$Theme) #checking on, types are all correct
 table(top_vars$Model) #checking on, retains top 20 from each
 
 
 top_vars %>% 
   ungroup() %>% # just because it was stil grouped.. not needed.
   arrange(Model) %>% # cosmetic, helps with debugging, not really needed
-  tidylog::select(Type, Variable, Alias, Model) %>% # reorder to match example below
+  tidylog::select(Theme, Variable, Model) %>% # reorder to match example below
   group_by(Variable) %>%
-  mutate(count = n()) %>% # add count
+  mutate(count = n()) %>%  # add count
   ungroup() %>%
   pivot_wider(names_from = Model, values_from = Model) %>%
   # mutate(models = paste0(cf_dins cf_no_dins Univariate, ))
   unite(cf_dins, cf_no_dins, Univariate, col = 'Models', sep = ', ')  %>%  
   mutate(Models = str_remove_all(Models, ', NA')
          , Models = str_remove_all(Models, 'NA, ')) %>% 
-  arrange(Type,desc(count)) ->top_vars_group
+  arrange(Theme,desc(count)) ->top_vars_group
 
 top_vars_group %>%
-   write_csv(., paste0(getwd(), '/output_data/top_vars_group_', Sys.Date(), '.csv')) #output_data/top_vars_group_2022-07-07.csv
-
+   write_csv(., paste0(getwd(), '/output_data/top_vars_group_', Sys.Date(), '.csv')) # 
 
 ```
 ### B compare DINS - class vs binary

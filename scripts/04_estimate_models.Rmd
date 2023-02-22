@@ -1616,16 +1616,12 @@ variable_importance %>%
   tidylog::select(Variable, Model, Description, Theme)  -> top_pdp
 
 tab_labs2 %>% 
-  # mutate(Type = fct_recode(factor(Type), 
-  #                             Exposure               = 'EXP'
-  #                           , Construction           = 'CON'
-  #                           , 'Defensible Space'     = 'DEF'
-  #                           , 'Landscape Attributes' = 'LAND'
-  #                           , Topography             = 'TOPO')
-  #         ) %>% 
+  rename(Dev= "Deviance Explained (%)") %>% 
+  arrange(desc(Dev)) ->test
+
+%>% 
   mutate(Model = "Univariate") %>%  
   rename(Variable= 'Variable name')  %>% 
-  arrange(desc('Deviance Explained (%)')) %>% 
   slice(1:top_n) %>% 
   tidylog::select(Variable, Model, Description, Theme) ->top_uni
 

@@ -1,0 +1,42 @@
+Theme,Variable,count,Models
+CON,build_EAVES,2,"cf_dins, Univariate"
+CON,build_WINDOWPANE,2,"cf_dins, Univariate"
+CON,build_area,2,"cf_dins, cf_no_dins"
+CON,parcel_year_built,2,"cf_dins, cf_no_dins"
+CON,build_VENTSCREEN,1,cf_dins
+CON,build_ROOFCONSTR,1,cf_dins
+CON,build_FENCEATTAC,1,cf_dins
+CON,build_PATIOCOVER,1,cf_dins
+CON,build_DECKPORCHO,1,cf_dins
+DEF,parcel_Build_P,3,"cf_dins, cf_no_dins, Univariate"
+DEF,build_min_dist_shrub,2,"cf_dins, cf_no_dins"
+DEF,parcel_Paved_P,1,Univariate
+DEF,parcel_Grass_P,1,Univariate
+DEF,parcel_Can_P,1,Univariate
+DEF,build_VEGCLEARAN,1,cf_dins
+DEF,build_PROPANETAN,1,cf_dins
+DEF,build_near_build,1,cf_no_dins
+DEF,build_overhang_ht,1,cf_no_dins
+DEF,build_min_dist_tree,1,cf_no_dins
+EXP,build_near_dest,3,"cf_dins, cf_no_dins, Univariate"
+LAND,build_p_otherpaved_300,3,"cf_dins, cf_no_dins, Univariate"
+LAND,build_p_soil_200,3,"cf_dins, cf_no_dins, Univariate"
+LAND,build_p_tree_100,3,"cf_dins, cf_no_dins, Univariate"
+LAND,build_p_road_300,2,"cf_no_dins, Univariate"
+LAND,build_p_grass_300,2,"cf_no_dins, Univariate"
+LAND,build_Mean_distroad,2,"cf_dins, cf_no_dins"
+LAND,build_Mean_builddens,2,"cf_dins, cf_no_dins"
+LAND,parcel_area,2,"cf_dins, cf_no_dins"
+LAND,build_p_building_300,1,Univariate
+LAND,build_p_building_200,1,Univariate
+LAND,build_p_otherpaved_200,1,Univariate
+LAND,build_p_building_100,1,Univariate
+LAND,build_p_road_200,1,Univariate
+LAND,build_p_otherpaved_100,1,Univariate
+LAND,build_p_grass_200,1,Univariate
+LAND,build_p_shrub_300,1,cf_no_dins
+LAND,build_p_water_100,1,cf_no_dins
+TOPO,build_Mean_slope_30m_DEM,2,"cf_no_dins, Univariate"
+TOPO,build_Mean_elev_30m,2,"cf_dins, cf_no_dins"
+TOPO,build_Mean_slope_100m_DEM,1,Univariate
+TOPO,build_Mean_aspect_100m_DEM,1,cf_no_dins

@@ -581,16 +581,16 @@ glm_spatial_diag %>%
 
 
 # table for paper with only pruned variables
-# Feb 21 2023
-# full_table <- 
+# Feb 23 2023
+# full_table <-
 #      read_csv(paste0(getwd(), '/data/Table_Deviance_Explained_2023-02-15.csv'))  %>%  #latest deviance explained
 #     left_join(vars_to_include %>% #add in variables to include
-#            mutate (small_table = 1) %>% 
+#            mutate (small_table = 1) %>%
 #                 select(name, small_table), by = c('Variable name' = 'name')) %>% #join and retain all
-#             mutate ( small_table = if_else (Theme == 'CON', 1, small_table)) #recode so that all CON (DINS materials data) are retained for small table
-# 
-# #export this back out
-# full_table %>% 
+#             mutate ( small_table = if_else (Source == 'Structure assessment-DINS', 1, small_table)) #recode so that all DINS materials data are retained for small table
+# # 
+# # #export this back out
+# full_table %>%
 #   write_csv(paste0(getwd(), '/data/Full_Table_Deviance_Explained_', Sys.Date(), '.csv'))
 #             
 ```
@@ -1613,20 +1613,19 @@ variable_importance %>%
   filter(Model != 'cf_dins_binary') %>% 
   mutate (Description = Label,
           Theme = Type) %>% 
-  tidylog::select(Variable, Model, Description, Theme)  -> top_pdp
+  tidylog::select(Variable, Model, Theme)  -> top_pdp
 
 tab_labs2 %>% 
-  rename(Dev= "Deviance Explained (%)") %>% 
-  arrange(desc(Dev)) ->test
-
-%>% 
+  rename(Dev= "Deviance Explained (%)") %>% #was not sorting without shorter name
+  arrange(desc(Dev)) %>% 
   mutate(Model = "Univariate") %>%  
   rename(Variable= 'Variable name')  %>% 
   slice(1:top_n) %>% 
-  tidylog::select(Variable, Model, Description, Theme) ->top_uni
+  tidylog::select(Variable, Model, Theme) ->top_uni
 
 bind_rows(top_pdp, top_uni) -> top_vars
 
+View(top_vars)
 table(top_vars$Theme) #checking on, types are all correct
 table(top_vars$Model) #checking on, retains top 20 from each
 

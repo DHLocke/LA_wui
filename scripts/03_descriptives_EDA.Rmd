@@ -287,64 +287,94 @@ table(build$parcel_UseType,build$parcel_Roll_HomeOwnersExemp) #Among residential
 #     filter(build_has_tree_overhang == '1') %>% view()
 
 
-#Summary tables on defensible space - descriptive summary for pub
-
+#Summary table / descriptive summary for pub
+#updated Feb 2023 to be only those variables retained for Random Forests
 
 tab_labs <- 
-  read_csv(paste0(getwd(), '/data/Table_Deviance_Explained_2022-03-08.csv'))
+  read_csv(paste0(getwd(), '/data/Full_Table_Deviance_Explained_2023-02-23.csv')) %>% 
+  filter (small_table == 1) 
 
-tab_labs %>%  
-  filter(Table2 == 1) %>%
-  tidylog::select('Variable name', Type) %>% 
-  mutate(Type = fct_recode(factor(Type),
-                              'Defensible Space'     = 'DEF',
-                              'Landscape Attributes' = 'LAND')) %>% 
-  slice(1,14,5,2:4,15,6:13,16:48) -> vars_to_include_tbl_2 #using slice to do custom reorder of variables for table presentation
-# FIXME slice is really dangerous here - just be careful and double, triple check you got what you wanted
-# #Ah, is there function you recommend better? It doesn't drop any, just rearranges their order.
-# It works, so don't change it. In a spreadsheet an order field could be added and then arrange() could be used to sort the table by that column. Or in the code it could be made an #ordered factor manually.. if anything causes that file to change its order (items are added or dropped) then the slice with index numbers are all off. If there are no changes, then #its not a problem. I just flagged an instance to be cautious about on the heals of re-doing the deviance table where items were added and dropped and the order was altered for the #PDP/ICE graphs..
+#create a list of labels for table
+# tab_labs2 <-tab_labs %>% 
+#   tidylog::select ('Variable name', Description) %>% 
+#   unite(labels, 'Variable name':Description, sep= " ~ ", 
+#         remove = FALSE)
+# tab_labs2$labels #printed out and edited to make list below
 
+# shorter, readable names with updated units
+label_list <-list( 
+  build_near_dest ~ "Dist. to destroyed building (m)"
+ ,  build_area ~ "Building area (m2)"                                                                               
+ ,  build_DECKPORCHO ~ "On-grade deck/porch materials"   
+ ,  build_EAVES ~ "Eaves"                                                  
+ ,  build_EXTERIORSI ~ "Exterior siding"                                  
+ ,  build_FENCEATTAC ~ "Fence materials"                           
+ ,  build_PATIOCOVER ~ "Carport/covered patio materials"   
+ ,  build_ROOFCONSTR ~ "Roof materials"                       
+ ,  build_VENTSCREEN ~ "Vent screen"      
+ ,  build_WINDOWPANE ~ "Window pane"                                    
+ ,  parcel_year_built ~ "Year built"                                                              
+ ,  build_min_dist_shrub ~ "Dist. to shrub (m)"                                                          
+ ,  build_min_dist_tree ~ "Dist. to tree (m)"                                                            
+ ,  build_near_build ~ "Dist. nearest building (m)"                                                           
+ ,  build_overhang_ht ~ "Av height of trees overhanging building (m)"                                          
+ ,  parcel_Build_P ~ "Parcel land cover - percent buildings" 
+ ,  build_PROPANETAN ~ "Distance to propane tank (ft)"             
+ ,  build_VEGCLEARAN ~ "Defensible space-vegetation clearance (ft)"
+ ,  build_p_grass_300 ~ "Percent grass, 91.4 m (300 ft)"                         
+ ,  build_p_otherpaved_300 ~ "Percent paved, 91.4 m (300 ft)"                  
+ ,  build_p_road_300 ~ "Percent road, 91.4 m (300 ft)"                                             
+ ,  build_p_shrub_300 ~ "Percent shrub, 91.4 m (300 ft)"                                           
+ ,  build_p_soil_200 ~ "Percent soil, 61 m (200 ft) "                                             
+ ,  build_p_tree_100 ~ "Percent tree, 30.5 m (100 ft) "                                             
+ ,  build_p_water_100 ~ "Percent water, 30.5 m (100 ft) "                        
+ ,  parcel_area ~ "Parcel area (m2)"                   
+ ,  build_Mean_builddens ~ "Building density"   
+ ,  build_Mean_distroad ~ "Distance to major road (m)"  
+,  build_Mean_aspect_100m_DEM ~ "Aspect, 100 m around build"        
+,  build_Mean_elev_30m ~ "Elevation, 30 m around build (m)"        
+,  build_Mean_slope_30m_DEM ~ "Slope (%) 30 m around build" 
+)
 
-#BUILD Table 1 with theme - type = defensible space 
-vars_to_include_tbl_2 %>% 
-  filter(Type == 'Defensible Space') %>% 
-  tidylog::select('Variable name') -> vars_to_include_tbl_2DEF
+#for display table also convert units to metric
+convert.to.m2 <- function(x, na.rm=FALSE) (x/10.764) #from ft2 to m2
+convert.to.m <- function(x, na.rm=FALSE) (x/3.281) #from ft to m
 
-tbl_DEF <- build %>% 
-  select(damage_cat, any_of(vars_to_include_tbl_2DEF$`Variable name`)) %>%  
-  tbl_summary (by = damage_cat, type = list(where(is.numeric) ~ "continuous")) %>%  #Dexter, I think this is forcing build_p_water10 to be continuous and looks like output is still the same  
+#create table
+# Wilcoxon rank sum tests for continuous variables and Fisher's exact test for categorical variables. 
+## define custom test
+# https://stackoverflow.com/questions/61360954/error-in-add-p-for-variable-x-and-test-fisher-test-p-value-omitted
+fisher.test.simulate.p.values <- function(data, variable, by, ...) {
+  result <- list()
+  test_results <- stats::fisher.test(data[[variable]], data[[by]], simulate.p.value = TRUE)
+  result$p <- test_results$p.value
+  result$test <- test_results$method
+  result
+}
+
+#create table
+tbl <- build %>% 
+  mutate_at(c("parcel_area", "build_area"), convert.to.m2) %>%  #from ft2 to m2  conversion
+  mutate_at(c 
+            ("build_min_dist_shrub"
+              ,"build_min_dist_tree"
+              ,"build_near_build"                                                            
+              ,"build_overhang_ht"
+              ,"build_near_dest"
+              ,"build_Mean_elev_30m"
+              , "build_Mean_distroad"), convert.to.m) %>%  #from ft to m conversion
+  select(damage_cat, any_of(tab_labs$`Variable name`)) %>%  
+  tbl_summary (label = label_list, by = damage_cat) %>%    
   add_overall() %>%  
-  add_p()%>%  
-  as_gt()
-
-#BUILD Table 2 with theme - type = landscape
-vars_to_include_tbl_2 %>% 
-  filter(Type == 'Landscape Attributes') %>% 
-  tidylog::select('Variable name') -> vars_to_include_tbl_2LAND
-
-tbl_LAND <- build %>% 
-  select(damage_cat, any_of(vars_to_include_tbl_2LAND$`Variable name`)) %>%  
-  tbl_summary(by = damage_cat) %>%  
-  add_overall() %>%  
-  add_p() %>%  
-  as_gt()
-
-tbl_desc <- tbl_stack(list(tbl_DEF, tbl_LAND), group_header = c("Defensible Space", "Landscape Attributes")) %>% 
-             gt::tab_style(
-              style = gt::cell_text(weight = "bold"),
-              locations = gt::cells_row_groups(groups = everything()))
-
-
-#Dexter, this is still rather long - do you think this will work for paper? Should we consider placing the tables side by side or other formatting?
-# save out a big stacked table
-#tbl_desc  %>%  
-#  gt::gtsave(paste0(getwd(), '/figures/Table_Descript_' , Sys.Date(), '.png'))
-#save out individual tables
-tbl_LAND %>%  
-  gt::gtsave(paste0(getwd(), '/figures/Table_Descript_Land' , Sys.Date(), '.png'))
-tbl_DEF %>%  
-  gt::gtsave(paste0(getwd(), '/figures/Table_Descript_Def' , Sys.Date(), '.png'))
-
+  add_p(test = list(all_categorical() ~  "fisher.test.simulate.p.values",
+                   all_continuous() ~ "wilcox.test")) %>% 
+  bold_labels()
+               
+library(flextable)
+tbl %>% 
+  as_flex_table () %>% 
+  flextable::save_as_docx(path = paste0(getwd(), '/figures/Table_Descript_' , Sys.Date(), '.docx'))
+ 
 
 ```
 

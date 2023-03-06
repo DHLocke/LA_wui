@@ -1,0 +1,33 @@
+Variable name,Deviance Explained (%),Source
+build_area,0.06,DINS
+build_DECKPORCHO,0.47,DINS
+build_EAVES,5.36,DINS
+build_EXTERIORSI,0.16,DINS
+build_FENCEATTAC,1.12,DINS
+build_PATIOCOVER,0.21,DINS
+build_ROOFCONSTR,2.17,DINS
+build_VENTSCREEN,0.53,DINS
+build_WINDOWPANE,4.68,DINS
+parcel_year_built,0.01,Parcel
+build_min_dist_shrub,0.5,Land Cover
+build_min_dist_tree,0.38,Land Cover
+build_near_build,0.51,Land Cover
+build_overhang_ht,0.56,Land Cover
+build_PROPANETAN,1.85,DINS
+build_VEGCLEARAN,0.96,DINS
+parcel_Build_P,6.97,Land Cover
+build_near_dest,23.22,derived from DINS
+build_Mean_builddens,2.24,Syphard et al. (2017)
+build_Mean_distroad,1.28,Syphard et al. (2017)
+build_Mean_distroad,1.28,Syphard et al. (2017)
+build_p_grass_300,3.62,Land Cover
+build_p_otherpaved_300,5.94,Land Cover
+build_p_road_300,4.18,Land Cover
+build_p_shrub_300,1.19,Land Cover
+build_p_soil_200,2.79,Land Cover
+build_p_tree_100,2.6,Land Cover
+build_p_water_100,0.07,Land Cover
+parcel_area,0.31,Land Cover
+build_Mean_aspect_100m_DEM,0.18,30 m DEM
+build_Mean_elev_30m,0.06,30 m DEM
+build_Mean_slope_30m_DEM,3.59,30 m DEM

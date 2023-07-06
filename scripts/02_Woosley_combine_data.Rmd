@@ -176,6 +176,63 @@ glimpse(build)
 
 ```
 
+### b. WUI data
+```{r}
+# looking to see if buildings are in WUI, for JEM reviews July 6 2023
+
+#bring in WUI data for LA County
+wui<- read_sf(dsn = paste0(getwd(), '/data/LA_County_WUI_block_1990_2020_change_v4.gdb'),
+                      layer = 'LA_County_WUI_block_1990_2020_change_v4',
+                      quiet = FALSE) 
+
+wui <-st_transform(wui, crs=2229) #have to put in same CRS as build (below)
+ 
+# IDs for final data set (n= 10901)
+build_IDs <- read_csv(paste0(getwd(), '/output_data/building_2022-06-10.csv')) %>%
+  tidylog::select(
+    ID_Build)
+
+#geospatial data for DINS data (n=11,140), but filter to only those with build_IDs for final data set (n=10901)
+build <- read_sf(dsn = paste0(getwd(), '/data/Outgoing_BuildingSumms_DHL20200423.gdb'),
+                      layer = 'Buildings_ParcelID_DINS',
+                      quiet = FALSE) %>% 
+  tidylog::select(ID_Build : Mean_distall_road,
+                  structures_DAMAGE = Buildings_ParcelID_DINS_intersects_DAMAGE, # renaming
+                  starts_with('NEAR_'),
+                  Shape_Length, Shape_Area) %>% 
+  mutate(damage_cat =
+           as.factor(
+           case_when(is.na(structures_DAMAGE) ~ 'Survived',
+                     structures_DAMAGE == 'Affected (1-9%)' ~ 'Survived',
+                     structures_DAMAGE == 'Minor (10-25%)' ~ 'Survived',
+                     structures_DAMAGE == 'Major (26-50%)' ~ 'Destroyed',
+                     structures_DAMAGE == 'Destroyed (>50%)' ~ 'Destroyed')),
+         damage_binary = ifelse(damage_cat == 'Destroyed', 1, 0),
+         damage_severity = 
+           case_when(
+               is.na(structures_DAMAGE) ~ 1,
+                     structures_DAMAGE == 'Affected (1-9%)' ~ 2,
+                     structures_DAMAGE == 'Minor (10-25%)' ~ 3,
+                     structures_DAMAGE == 'Major (26-50%)' ~ 4,
+                     structures_DAMAGE == 'Destroyed (>50%)' ~ 5),
+         area = as.double(st_area(.))) %>% 
+  distinct(ID_Build, Shape, .keep_all = TRUE) %>% #9/20/21 - how many is this dropping, this is only when ID_Build and Shape are the same?
+  rename_at(vars(-starts_with('ID'), -starts_with('damage_')), ~paste0('build_',.)) %>% 
+  right_join(build_IDs, by = c('ID_Build' = 'ID_Build'))
+
+head(build)
+
+wui_table <- build |>
+ st_centroid () |> # makes points
+ st_join(wui) |> # does the intersection/spatial join
+ st_drop_geometry() |> # pulls the attribute table out
+  janitor::tabyl(WUICLASS2020, damage_binary) # cross tabulates, where destroyed is the destroyed or not and wui_cat is the wui category.
+
+wui_table %>% 
+janitor::adorn_totals() #here here here, figure out the exact way you want to present this
+
+ 
+```
 
 
 

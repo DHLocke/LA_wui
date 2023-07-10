@@ -222,16 +222,39 @@ build <- read_sf(dsn = paste0(getwd(), '/data/Outgoing_BuildingSumms_DHL20200423
 
 head(build)
 
-wui_table <- build |>
+wui_table_full <- build |> #fulltable with all WUI classes
  st_centroid () |> # makes points
  st_join(wui) |> # does the intersection/spatial join
  st_drop_geometry() |> # pulls the attribute table out
-  janitor::tabyl(WUICLASS2020, damage_binary) # cross tabulates, where destroyed is the destroyed or not and wui_cat is the wui category.
+    janitor::tabyl(WUICLASS2020, damage_binary) # cross tabulates, where destroyed is the destroyed or not and wui_cat is the wui category.
 
-wui_table %>% 
-janitor::adorn_totals() #here here here, figure out the exact way you want to present this
-
+wui_table <- build |> #make table with WUI condensed classes
+ st_centroid () |> # makes points
+ st_join(wui) |> # does the intersection/spatial join
+ st_drop_geometry() |> # pulls the attribute table out
+  mutate(WUICLASS_SHORT =
+           as.factor(
+           case_when(WUICLASS2020 == "High_Dens_Interface" | WUICLASS2020 == "Low_Dens_Interface" | WUICLASS2020 == "Med_Dens_Interface" ~                            'WUI_Interface',
+                     WUICLASS2020 == "Low_Dens_Intermix" | WUICLASS2020 == "Med_Dens_Intermix" ~  'WUI_Intermix',
+                     WUICLASS2020 == "Med_Dens_NoVeg"   | WUICLASS2020 ==    "Uninhabited_NoVeg" | WUICLASS2020 ==  "Uninhabited_Veg" |                                  WUICLASS2020 ==   "Water"  ~ "NonWUI_noVeg",
+                      WUICLASS2020 == "Very_Low_Dens_NoVeg" | WUICLASS2020 == "Very_Low_Dens_Veg" ~  'NonWUI_Veg')))|>
+  mutate(damage_binstring =
+           as.factor(
+           case_when(damage_binary == 0  ~  "Survived", 
+           damage_binary == 1  ~  "Destroyed")))|>
+    janitor::tabyl(WUICLASS_SHORT, damage_binstring)
+  
+#here here - want to get this table to look good
  
+wui_table %>%  
+    mutate (Total_build = Destroyed + Survived)|>
+  arrange (desc(Total_build)) |>
+   mutate (Dest_rate = Destroyed/Total_build*100) |>
+   mutate (Prop_build = Total_build/10901*100) |>
+  mutate (Prop_all_loss = Destroyed/1302*100) |>
+  tidylog::select (WUICLASS_SHORT, Destroyed, Survived, Total_build, Prop_build, Prop_all_loss, Dest_rate) -> table_for_paper
+
+table_for_paper 
 ```
 
 

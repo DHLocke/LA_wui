@@ -252,9 +252,13 @@ wui_table %>%
    mutate (Dest_rate = Destroyed/Total_build*100) |>
    mutate (Prop_build = Total_build/10901*100) |>
   mutate (Prop_all_loss = Destroyed/1302*100) |>
-  tidylog::select (WUICLASS_SHORT, Destroyed, Survived, Total_build, Prop_build, Prop_all_loss, Dest_rate) -> table_for_paper
+  tidylog::select (WUICLASS_SHORT, Destroyed, Survived, Total_build, Prop_build, Prop_all_loss, Dest_rate) |>
+  untabyl() %>% 
+  janitor::adorn_totals() -> wui_table_for_paper
 
-table_for_paper 
+wui_table_for_paper  %>% 
+  write_csv(., paste0(getwd(), '/output_data/wui_by_building_', Sys.Date(), '.csv')) #output and then reformat for supplementary table
+
 ```
 
 

@@ -377,11 +377,11 @@ library(flextable)
 #   as_flex_table () %>%
 #   flextable::save_as_docx(path = paste0(getwd(), '/figures/Table_Descript_' , Sys.Date(), '.docx'))
 
-#write out only cols needed from tab_labs
+# write out only cols needed from tab_labs
 # names(tab_labs)
-# tab_labs %>% 
-#   arrange("Theme", "Variable name") %>% 
-#   tidylog::select ("Variable name", "Deviance Explained (%)", Source) %>% 
+# tab_labs %>%
+#   arrange("Theme", "Variable name") %>%
+#   tidylog::select ("Variable name", "Deviance Explained (%)", Source) %>%
 #       mutate(Source =as.factor(case_when(
 #                          Source == "Structure assessment-DINS" ~ "DINS",
 #                          Source == "LA County data" ~ "Parcel",
@@ -389,9 +389,225 @@ library(flextable)
 #                          Source == "Structure assessment-DINS; Miranda calc'd in Arc" ~ "derived from DINS",
 #                          Source == "Alex's data D:\\ArcGISfiles\\2017_LACounty\\1_Data_20200320\\Data_from_Alex\\dens_1kmr_ha" ~ "Syphard et al. (2017)",
 #                          Source == "Alex's data D:\\ArcGISfiles\\2017_LACounty\\1_Data_20200320\\Data_from_Alex\\dist_psroad"~ "Syphard et al. (2017)",
-#                         Source == "UVM DEM and nDSM--Miranda and Dexter did this" ~ "30 m DEM"))) %>% 
-# write_csv(., paste0(getwd(), '/data/Table_Deviance_Explained_LimVarsCols', Sys.Date(), '.csv')) 
+#                         Source == "UVM DEM and nDSM--Miranda and Dexter did this" ~ "30 m DEM"))) %>%
+# write_csv(., paste0(getwd(), '/data/Table_Deviance_Explained_LimVarsCols', Sys.Date(), '.csv'))
 
+# revisions for paper July 13 2023
+#
+
+# destruction rates for categorical data
+# ideally this would map or loop through all the build_DECKPORCHO:build_WINDOWPANE variables
+# instead, I just edited the word document output table
+build %>% 
+  filter (build_DINS==1) %>% 
+      tidylog::select(damage_cat, build_DECKPORCHO:build_WINDOWPANE) %>% 
+   mutate(damage_binary =
+           case_when (damage_cat == 'Destroyed' ~ 1,
+                      damage_cat == 'Survived' ~ 0)) %>% 
+  group_by (build_DECKPORCHO) %>% 
+  summarise (count = n(),
+             dest_rate = sum(damage_binary)/count *100) %>% 
+  tidylog::select(-count)
+ 
+
+#histogram of destruction rates by year built, using 1997 as code implementation /classification line
+build %>% 
+  mutate_at(c("parcel_area", "build_area"), convert.to.m2) %>%  #from ft2 to m2  conversion
+  mutate_at(c 
+            ("build_min_dist_shrub"
+              ,"build_min_dist_tree"
+              ,"build_near_build"                                                            
+              ,"build_overhang_ht"
+              ,"build_near_dest"
+              ,"build_Mean_elev_30m"
+              , "build_Mean_distroad"), convert.to.m) %>%  #from ft to m conversion
+  select(damage_cat, any_of(tab_labs$`Variable name`)) %>% 
+        mutate(year_cat =
+           as.factor(
+           case_when(parcel_year_built <1997 ~ str_wrap('1. Before 1997 (n=8,366)', 14),
+                     parcel_year_built >= 1997 ~ str_wrap('2. After 1997 (n=1,534)',14),
+                     is.na (parcel_year_built) ~ str_wrap ('3. NA (n=1,001)',6) ))) %>%
+  mutate(damage_binary =
+           case_when (damage_cat == 'Destroyed' ~ 1,
+                      damage_cat == 'Survived' ~ 0)) %>% 
+  group_by (year_cat) %>% 
+  summarise (count = n(),
+             dest_rate = sum(damage_binary)/count *100) %>% 
+    ggplot(aes(year_cat, dest_rate))+geom_col()+
+    theme_bw(12)+ 
+  ylab("Destruction rate (%)") + xlab ("Year built (from parcel data)") ->supp_hist_1  
+str_wrap('1. Before 1997 (n=8,366)', 14)
+          
+#exploring similar histograms for other continuous variables, use quintiles
+
+#have to read in build from above, line 103
+build %>% 
+  mutate_at(c("parcel_area", "build_area"), convert.to.m2) %>%  #from ft2 to m2  conversion
+  mutate_at(c 
+            ("build_min_dist_shrub"
+              ,"build_min_dist_tree"
+              ,"build_near_build"                                                            
+              ,"build_overhang_ht"
+              ,"build_near_dest"
+              ,"build_Mean_elev_30m"
+              , "build_Mean_distroad"), convert.to.m) %>%  #from ft to m conversion
+  select(damage_cat, any_of(tab_labs$`Variable name`)) %>% 
+        mutate(year_cat =
+           as.factor(
+           case_when(parcel_year_built <1997 ~ '1. Before 1997 (n=8,366)',
+                     parcel_year_built >= 1997 ~ '2. After 1997 (n=1,534)',
+                     is.na (parcel_year_built) ~ '3. NA (n=1,001)' ))) %>%
+  mutate(damage_binary =
+           case_when (damage_cat == 'Destroyed' ~ 1,
+                      damage_cat == 'Survived' ~ 0)) %>% 
+  tidylog::select(damage_binary, build_area,build_min_dist_shrub:build_Mean_slope_30m_DEM) ->build_for_hist
+
+names(build_for_hist) 
+
+
+#in theory could loop or create destruction rates for each variable of interest
+#made graphs manually for 5 other variables
+
+#variable - build_near_dest; supp_hist_2
+# quintile labels
+label_text <-unname(quantile(build$build_near_dest, probs = seq(.2, 1, 0.20)))
+
+  L1<- round(label_text[[1]],1)
+  L2<- round(label_text[[2]],1)
+  L3<- round(label_text[[3]],1)
+  L4<- round(label_text[[4]],1)
+  L5<- round(label_text[[5]],1)
+
+   
+build_for_hist |>
+  mutate(build_near_dest_cat = recode(findInterval(build_near_dest, quantile(build_near_dest, probs = seq(.2, 1, 0.20), na.rm=TRUE)), 
+                                `0` = str_wrap (paste('1. 20 (<', L1, ')', sep=""),5), 
+                                `1` = str_wrap (paste('2. 40 (', L1, '-', L2,')', sep=""),5)  , 
+                                `2` =  str_wrap (paste('3. 60 (', L2, '-', L3,')', sep=""),5) ,
+                                `3` =  str_wrap (paste('4. 80 (', L3, '-', L4,')', sep=""),5) ,
+                            .default =  str_wrap(paste('5. 100 (', L4, '-', L5,')', sep=""),6))) |> 
+  group_by (build_near_dest_cat) |> 
+    summarise (count = n(),
+             dest_rate = sum(damage_binary)/count *100) |> 
+    ggplot(aes(as.factor(build_near_dest_cat), dest_rate))+geom_col() +
+  theme_bw(12) + 
+  ylab("Destruction rate (%)") + xlab ("Dist. to destroyed building (m), Quintiles") ->supp_hist_2  
+
+
+#variable - Building area ; supp_hist_3
+# quintile labels
+label_text <-unname(quantile(build$build_area, probs = seq(.2, 1, 0.20)))
+
+  L1<- round(label_text[[1]],1)
+  L2<- round(label_text[[2]],1)
+  L3<- round(label_text[[3]],1)
+  L4<- round(label_text[[4]],1)
+  L5<- round(label_text[[5]],1)
+
+build_for_hist |>
+  mutate(build_area_dest_cat = recode(findInterval(build_area, quantile(build_area, probs = seq(.2, 1, 0.20), na.rm=TRUE)), 
+                                 `0` = str_wrap (paste('1. 20 (<', L1, ')', sep=""),5), 
+                                `1` = str_wrap (paste('2. 40 (', L1, '-', L2,')', sep=""),5)  , 
+                                `2` =  str_wrap (paste('3. 60 (', L2, '-', L3,')', sep=""),5) ,
+                                `3` =  str_wrap (paste('4. 80 (', L3, '-', L4,')', sep=""),5) ,
+                            .default =  str_wrap(paste('5. 100 (', L4, '-', L5,')', sep=""),6))) |> 
+  group_by (build_area_dest_cat) |> 
+    summarise (count = n(),
+             dest_rate = sum(damage_binary)/count *100) |> 
+    ggplot(aes(as.factor(build_area_dest_cat), dest_rate))+geom_col() +
+  theme_bw(12) + 
+  ylab("Destruction rate (%)") + xlab ("Building area (m2), Quintiles") ->supp_hist_3  
+
+
+#variable - build_Mean_distroad.	Distance to major road (m)  ; supp_hist_4
+# quintile labels
+label_text <-unname(quantile(build$build_Mean_distroad, probs = seq(.2, 1, 0.20),na.rm = TRUE))
+
+  L1<- round(label_text[[1]],1)
+  L2<- round(label_text[[2]],1)
+  L3<- round(label_text[[3]],1)
+  L4<- round(label_text[[4]],1)
+  L5<- round(label_text[[5]],1)
+
+build_for_hist |>
+  mutate(build_Mean_distroad_dest_cat = recode(findInterval(build_Mean_distroad, quantile(build_Mean_distroad, probs = seq(.2, 1, 0.20), na.rm=TRUE)), 
+                                `0` = str_wrap (paste('1. 20 (<', L1, ')', sep=""),5), 
+                                `1` = str_wrap (paste('2. 40 (', L1, '-', L2,')', sep=""),5)  , 
+                                `2` =  str_wrap (paste('3. 60 (', L2, '-', L3,')', sep=""),5) ,
+                                `3` =  str_wrap (paste('4. 80 (', L3, '-', L4,')', sep=""),5) ,
+                            .default =  str_wrap(paste('5. 100 (', L4, '-', L5,')', sep=""),6))) |> 
+  group_by (build_Mean_distroad_dest_cat) |> 
+    summarise (count = n(),
+             dest_rate = sum(damage_binary)/count *100) |> 
+    ggplot(aes(as.factor(build_Mean_distroad_dest_cat), dest_rate))+geom_col() +
+  theme_bw(12) + 
+  ylab("Destruction rate (%)") + xlab ("Distance to major road (m), Quintiles") ->supp_hist_4  
+
+
+
+
+#variable - parcel_Build_P	Parcel land cover - % buildings  ; supp_hist_5
+# quintile labels
+label_text <-unname(quantile(build$parcel_Build_P, probs = seq(.2, 1, 0.20)))
+
+  L1<- round(label_text[[1]],1)
+  L2<- round(label_text[[2]],1)
+  L3<- round(label_text[[3]],1)
+  L4<- round(label_text[[4]],1)
+  L5<- round(label_text[[5]],1)
+
+build_for_hist |>
+  mutate(parcel_Build_P_dest_cat = recode(findInterval(parcel_Build_P, quantile(parcel_Build_P, probs = seq(.2, 1, 0.20), na.rm=TRUE)), 
+                                `0` = str_wrap (paste('1. 20 (<', L1, ')', sep=""),5), 
+                                `1` = str_wrap (paste('2. 40 (', L1, '-', L2,')', sep=""),5)  , 
+                                `2` =  str_wrap (paste('3. 60 (', L2, '-', L3,')', sep=""),5) ,
+                                `3` =  str_wrap (paste('4. 80 (', L3, '-', L4,')', sep=""),5) ,
+                            .default =  str_wrap(paste('5. 100 (', L4, '-', L5,')', sep=""),6))) |> 
+  group_by (parcel_Build_P_dest_cat) |> 
+    summarise (count = n(),
+             dest_rate = sum(damage_binary)/count *100) |> 
+    ggplot(aes(as.factor(parcel_Build_P_dest_cat), dest_rate))+geom_col() +
+  theme_bw(12) + 
+  ylab("Destruction rate (%)") + xlab ("Parcel land cover - %, Quintiles") ->supp_hist_5  
+
+
+#variable - build_Mean_elev_30m	Elevation, 30 m around build (m) ; supp_hist_6
+# quintile labels
+label_text <-unname(quantile(build$build_Mean_elev_30m, probs = seq(.2, 1, 0.20)))
+
+  L1<- round(label_text[[1]],1)
+  L2<- round(label_text[[2]],1)
+  L3<- round(label_text[[3]],1)
+  L4<- round(label_text[[4]],1)
+  L5<- round(label_text[[5]],1)
+
+build_for_hist |>
+  mutate(build_Mean_elev_30m_dest_cat = recode(findInterval(build_Mean_elev_30m, quantile(build_Mean_elev_30m, probs = seq(.2, 1, 0.20), na.rm=TRUE)), 
+                                `0` = str_wrap (paste('1. 20 (<', L1, ')', sep=""),5), 
+                                `1` = str_wrap (paste('2. 40 (', L1, '-', L2,')', sep=""),5)  , 
+                                `2` =  str_wrap (paste('3. 60 (', L2, '-', L3,')', sep=""),5) ,
+                                `3` =  str_wrap (paste('4. 80 (', L3, '-', L4,')', sep=""),5) ,
+                            .default =  str_wrap(paste('5. 100 (', L4, '-', L5,')', sep=""),6))) |> 
+  group_by (build_Mean_elev_30m_dest_cat) |> 
+    summarise (count = n(),
+             dest_rate = sum(damage_binary)/count *100) |> 
+    ggplot(aes(as.factor(build_Mean_elev_30m_dest_cat), dest_rate))+geom_col() +
+  theme_bw(12) + 
+  ylab("Destruction rate (%)") + xlab ("Elevation, 30 m around build (m), Quintiles") ->supp_hist_6
+
+
+library(patchwork)
+# uses patchwork to combine and then exports
+p_comb <- supp_hist_1 + supp_hist_2 + supp_hist_3+ supp_hist_4 + supp_hist_5+ supp_hist_6+ plot_layout(ncol= 2, widths = c(3,3), guides="collect")&   theme(axis.text.x  = element_text(size = 14))& theme(axis.title = element_text(size = 14)) #note these widths are not working asyou want 
+
+ p_comb %>%
+ggsave(file = paste0(getwd(), '/figures/Supplement_Destruct_',  Sys.Date(), '.png')
+       , width = 6*2.75
+       , height = 6*2
+       , dpi = 100)
+   
+   
+ 
  
 ```
 
